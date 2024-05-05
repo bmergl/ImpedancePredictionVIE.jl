@@ -3,6 +3,17 @@ uuid = "8c2cd995-ea21-4a46-b32f-ef7a1103453b"
 authors = ["bmergl"]
 version = "1.0.0-DEV"
 
+[deps]
+BEAST = "bb4162c7-ba94-5a20-af32-d8ec4428bdd1"
+CompScienceMeshes = "3e66a162-7b8c-5da0-b8f8-124ecd2c3ae1"
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Plotly = "58dd65bb-95f3-509e-9936-c39a10fdeae7"
+PlotlyBase = "a03496cd-edff-5a9b-9e67-9cda94a718b5"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+SauterSchwab3D = "0a13313b-1c00-422e-8263-562364ed9544"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [compat]
 julia = "1.6.7"
 
