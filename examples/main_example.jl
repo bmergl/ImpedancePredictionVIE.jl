@@ -48,7 +48,6 @@ for fsh in X.fns
         c1 = fsh[1].coeff
         c2 = fsh[2].coeff
         @assert c1 == c2*(-1)
-        # Stopp eigentlich über f(Ort) Stetigkeit prüfen!
     end
 end
 
@@ -92,29 +91,71 @@ inv_τ_val = inv_τ(p)
 # help(p)
 
 # Anregung
-u_top = ones(length(topnodes)) * 0.5 # Volle Symmetrie!
+u_top = ones(length(topnodes)) * 0.5  # Volle Symmetrie!
 u_bottom = ones(length(bottomnodes)) * (-0.5)
 ex = append!(deepcopy(u_top), u_bottom)
 
 
 
-# Operatoren
-TL_Γ = IPVIE1.tl_Γ()
-TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64)
+# Operatoren I: τ = const. => ΔΦ=0 und ΔΦ=-ΔΦ in den Greenschen Satz eingesetzt, was ja prinz. erl. sein sollte 
+# TL_Γ = IPVIE1.tl_Γ()
+# TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64)
 
-TR_ΓΩ = IPVIE1.tr_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
-TR_ΓΓ = IPVIE1.tr_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val) - Identity()
+# TR_ΓΩ = IPVIE1.tr_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+# TR_ΓΓ = IPVIE1.tr_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
 
-BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
-BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = -1.0, gammatype = Float64)   # n̂ richtung stimmt....
+# BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+# BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = -1.0, gammatype = Float64)   # n̂ richtung stimmt....
 
-BR_Ω =  IPVIE1.br_Ω(alpha = -1.0, invtau = inv_τ)
-BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
-BR_ΩΩ = IPVIE1.br_ΩΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
-BR_ΓΓ = IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val) - Identity()
-BR_ΩΓ = IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+# BR_Ω =  IPVIE1.br_Ω(alpha = -1.0, invtau = inv_τ)
+# BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΩΩ = IPVIE1.br_ΩΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΓΓ = IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+# BR_ΩΓ = IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+#Ergebnisse sind eine Katastrophe...
+# Merkwürdig: BR_ΓΓ, BR_ΩΓ, TR_ΓΓ weglassen (also die mit faktor 2.0) => Vektorfeld im inneren schön!!! 
 
 
+
+# Operatoren II: τ = const. => ΔΦ=0 und ΔΦ unverändert gelassen
+# TL_Γ = IPVIE1.tl_Γ()
+# TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64)
+
+# TR_ΓΩ = IPVIE1.tr_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+# TR_ΓΓ = 0.0*IPVIE1.tr_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+
+# BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+# BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = -1.0, gammatype = Float64)   # n̂ richtung stimmt....
+
+# BR_Ω =  -IPVIE1.br_Ω(alpha = -1.0, invtau = inv_τ)
+# BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΩΩ = IPVIE1.br_ΩΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΓΓ = 0.0*IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+# BR_ΩΓ = 0.0*IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+# Ergebnisse sind eine Katastrophe...
+
+
+#Operatoren: τ = const. - recht gute Kombi - aber keine passende Herleitung
+TL_Γ =  IPVIE1.tl_Γ()
+TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+
+TR_ΓΩ = 1.0*IPVIE1.tr_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+TR_ΓΓ = 0.0*IPVIE1.tr_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ_val) # SL GEHÖRT VMTL NICHT DAZU
+
+BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = -1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = 1.0, gammatype = Float64)   # n̂ richtung stimmt....
+
+BR_Ω =  IPVIE1.br_Ω(alpha = 1.0, invtau = inv_τ) #(1/2)* würde passendes J liefern...
+BR_ΓΩ = 1.0*IPVIE1.br_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+BR_ΩΩ = -1.0*IPVIE1.br_ΩΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+BR_ΓΓ = 0.0*IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+BR_ΩΓ = 0.0*IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+
+
+
+TEST = IPVIE1.br_Ω(alpha = 1.0, invtau = x -> 1.0)
+@assert norm(assemble(Identity(),X,X)-assemble(TEST,X,X)) < 1e-12
+@assert norm(assemble(Identity(),y,ntrc(X))-assemble(TEST,y,ntrc(X))) < 1e-12
 
 # LHS
 @hilbertspace k l # Zeilen    k -> a      l -> bvec
@@ -180,12 +221,12 @@ J_MoM2 = BEAST.grideval(points2, u[length(y)+1:end], X)
 # als ZWISCHEN den ELEKTRODENSPANNUNGEN!
 @show maximum(u[1:length(y)])
 @show minimum(u[1:length(y)])
-""
-##
+
 Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM2)
 #[Jallz[i] >= 0.0 && error("") for i in 1:1:length(Jallz)]
 @show sum(Jallz)/length(Jallz)
-
+""
+##
 @show sum(abs.(Jallx))/length(Jallx) # Ist Liniendurchschnitt 
 @show sum(abs.(Jally))/length(Jally) # Ist Liniendurchschnitt
 @show sum(Jallx)/length(Jallx) # Ist Liniendurchschnitt

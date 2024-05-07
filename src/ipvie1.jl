@@ -12,13 +12,14 @@ module IPVIE1    # HAUPTMODUL: Konstruktor für Operatoren der Version 1
     
     function tl_Γ() # 3D
         
-        return (1/2)*Identity() # "Identity()" PLUS Anteil von doublelayer: "-(1/2)*Identity()"
+        return Identity() # Später hier - 1/2....
     end
 
     function tl_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
+        #alpha != 1.0 && error("Can't change tl_ΓΓ, see tl_Γ connection!")
 
-        return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) #"-(1/2)*Identity()" zu tl_Γ verschoben
+        return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) + alpha*(-1/2)*Identity()
     end
 
     
@@ -43,7 +44,7 @@ module IPVIE1    # HAUPTMODUL: Konstruktor für Operatoren der Version 1
     function bl_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
 
-        return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) -(1/2)*Identity()
+        return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) + alpha*(-1/2)*Identity()
     end
 
     function bl_ΩΓ(; gammatype = ComplexF64, alpha = -1.0) # 5D
