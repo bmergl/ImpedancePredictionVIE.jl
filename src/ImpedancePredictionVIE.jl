@@ -15,7 +15,7 @@ include("ipvie1.jl")
 include("vieops1.jl")
 include("ipvie2.jl")
 include("vieops2.jl")
-include("integrals_5D_6D.jl")
+include("integrals.jl")
 include("geometry.jl")
 
 

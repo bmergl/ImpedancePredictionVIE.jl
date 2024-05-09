@@ -6,8 +6,6 @@
 
 ##### SauterSchwab3D 5D/6D ######################################################################
 
-abstract type BoundaryOperatorΩΓ <: BEAST.BoundaryOperator end
-
 # top right (tr) block ##########################################################################
 
 struct tr_ΓΩ{T,U,P} <: BEAST.BoundaryOperator
@@ -125,20 +123,6 @@ end
 
 ##### ∫_Γ and ∫_Ω -> LocalOperator ################################################################
 
-abstract type MaterialIdentity <: BEAST.LocalOperator end
-
-struct KernelValsMaterialIdentity{U}
-    tau::U # nehmen gleiche Notation wie in VIE Part
-end
-
-function BEAST.kernelvals(localop::MaterialIdentity, p)
-
-    tau = localop.tau(cartesian(p)) #skalare oder tensorielle Funktion der Ortes
-
-    return KernelValsMaterialIdentity(tau)
-end
-
-BEAST.scalartype(localop::MaterialIdentity) = typeof(localop.α)  # typeof(tau) geht ja schlecht weil tau function ist
 
 struct br_Ω{T,U} <: MaterialIdentity 
     α::T
@@ -165,35 +149,6 @@ function BEAST.integrand(localop::MaterialIdentity, kerneldata, x, g, f) # ist j
 
     return α * dot(gx, Tx * fx) # geht auch wenn g und f skalar sind
 end
-
-###################################################################################################
-# abstract type MaterialIdentity2 <: MaterialIdentity end
-# struct bl_Ω{T,U} <: MaterialIdentity2 
-#     α::T
-#     tau::U
-# end
-# function BEAST.integrand(localop::MaterialIdentity2, kerneldata, x, g, f) # ist ja für beide gleich...
-
-#     gx = g.value
-#     dfx = f.gradient
-
-#     Tx = kerneldata.tau
-
-
-#     α = localop.α
-
-#     #Tx = kerneldata.tau(cartesian(x)) # anderes als bei VIE... Denkfehler!
-#     #@show x
-#     # @show α
-#     #@show Tx
-#     # @show gx
-#     #@show fx
-#     # @show Tx * fx
-#     #error()
-
-#     return α * dot(gx, Tx * fx) # geht auch wenn g und f skalar sind
-# end
-
 
 
 
