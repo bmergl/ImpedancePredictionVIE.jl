@@ -32,6 +32,8 @@ y_d = lagrangec0d1(Γ, dirichletnodes, Val{3})
 # INFO: dirichletnodes[i] gehört zu y_d.pos[i] also "Spannungsvektor": [10V 10V ..... 10V 0V 0V ..... 0V 0V]
 #Visu.fnspos(y_d, Visu.mesh(Γ))
 
+
+
 # linearlag auf Γ_nc
 y = lagrangec0d1(Γ_nc, dirichlet = true) 
 #Visu.fnspos(y, Visu.mesh(Γ))
@@ -41,34 +43,52 @@ y = lagrangec0d1(Γ_nc, dirichlet = true)
 swgfaces = SWGfaces(Ω, Γ_nc) # Quadratische Komplexität ist extrem langsam!!!! ----> Octree???
 X = nedelecd3d(Ω, Mesh(Ω.vertices, swgfaces))#X = nedelecd3d(Ω)
 
+for fsh in X.fns
+    if length(fsh) == 2
+        c1 = fsh[1].coeff
+        c2 = fsh[2].coeff
+        @assert c1 == c2*(-1)
+    end
+end
+
 ntrc = X -> BEAST.ntrace(X, Γ)
-w = ntrc(X)
 @show length(swgfaces)
-@assert length(X.pos) == length(swgfaces)
+#@assert length(X.pos) == length(swgfaces)
 #ntrc(X).fns
 #Visu.fnspos(X, Visu.mesh(Γ))
 #Visu.fnspos(ntrc(X), Visu.mesh(Γ_c))
 
-
+@show numfunctions(X)
 @show numfunctions(y)
 @show numfunctions(y_d)
-@show numfunctions(w)
-@show numfunctions(X)
+
+
 ## #########################################################
 
 
 κ = x -> 1.0
-κ0 = 1.0
 
-τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
+τ, inv_τ = gen_tau_invtau(problemtype = :current, kappa = κ)
 p = SVector(0.0,0.0,0.0)
 τ(p)
 inv_τ(p)
-τ0
-χ(p)
+inv_τ_val = inv_τ(p)
+
+#τ0 = 1.0
+#χ(p)
 #χ0
 #χ_min_χ0I(p)
 #χ(p) - χ0
+
+# function gen_help(itau, tau0)
+#     function help(x)
+#         itaux = itau(x)
+#         return itaux - 1/tau0
+#     end
+#     return help
+# end
+# help = gen_help(inv_τ, τ0)
+# help(p)
 
 # Anregung
 u_top = ones(length(topnodes)) * 0.5  # Volle Symmetrie!
@@ -76,44 +96,72 @@ u_bottom = ones(length(bottomnodes)) * (-0.5)
 ex = append!(deepcopy(u_top), u_bottom)
 
 
-# Definiton der Operatoren
-B11_Γ = IPVIE2.B11_Γ(a = 1.0, gammatype = Float64)
-B11_ΓΓ = IPVIE2.B11_Γ(a = 1.0, gammatype = Float64)
-B12_ΓΓ = IPVIE2.B12_Γ(a = 1.0, gammatype = Float64)
-B13_ΓΓ = IPVIE2.B13_ΓΓ(a = 1.0, gammatype = Float64)
-B13_ΓΩ = IPVIE2.B13_ΓΩ(a = 1.0, gammatype = Float64)
 
-B21_ΓΓ = IPVIE2.B21_ΓΓ(a = 1.0, gammatype = Float64)
-B22_Γ = IPVIE2.B22_Γ(a = 1.0, gammatype = Float64)
-B22_ΓΓ = IPVIE2.B22_ΓΓ(a = 1.0, gammatype = Float64)
-B23_ΓΓ = IPVIE2.B23_ΓΓ(a = 1.0, gammatype = Float64)
-B23_ΩΩ = IPVIE2.B23_ΩΩ(a = 1.0, gammatype = Float64)
+# Operatoren I: τ = const. => ΔΦ=0 und ΔΦ=-ΔΦ in den Greenschen Satz eingesetzt, was ja prinz. erl. sein sollte 
+# TL_Γ = IPVIE1.tl_Γ()
+# TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64)
 
-B31_ΓΓ = IPVIE2.B31_ΓΓ(a = 1.0, gammatype = Float64)
-B31_ΩΓ = IPVIE2.B31_ΩΓ(a = 1.0, gammatype = Float64)
-B32_ΓΓ = IPVIE2.B32_ΓΓ(a = 1.0, gammatype = Float64)
-B32_ΩΓ = IPVIE2.B32_ΩΓ(a = 1.0, gammatype = Float64)
-B33_Ω = IPVIE2.B33_Ω(a = 1.0, gammatype = Float64)
-B33_ΓΓ = IPVIE2.B33_ΓΓ(a = 1.0, gammatype = Float64)
-B33_ΓΩ = IPVIE2.B33_ΓΩ(a = 1.0, gammatype = Float64)
-B33_ΩΓ = IPVIE2.B33_ΩΓ(a = 1.0, gammatype = Float64)
-B33_ΩΩ = IPVIE2.B33_ΩΩ(a = 1.0, gammatype = Float64)
+# TR_ΓΩ = IPVIE1.tr_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+# TR_ΓΓ = IPVIE1.tr_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+
+# BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+# BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = -1.0, gammatype = Float64)   # n̂ richtung stimmt....
+
+# BR_Ω =  IPVIE1.br_Ω(alpha = -1.0, invtau = inv_τ)
+# BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΩΩ = IPVIE1.br_ΩΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΓΓ = IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+# BR_ΩΓ = IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+#Ergebnisse sind eine Katastrophe...
+# Merkwürdig: BR_ΓΓ, BR_ΩΓ, TR_ΓΓ weglassen (also die mit faktor 2.0) => Vektorfeld im inneren schön!!! 
 
 
-BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
 
-# Manuelle assemble zum testen 
-assemble(B11_Γ,y,y)
-assemble(B11_ΓΓ,y,y)
-assemble(B11_ΓΓ,y,y)
+# Operatoren II: τ = const. => ΔΦ=0 und ΔΦ unverändert gelassen
+# TL_Γ = IPVIE1.tl_Γ()
+# TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64)
+
+# TR_ΓΩ = IPVIE1.tr_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+# TR_ΓΓ = 0.0*IPVIE1.tr_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+
+# BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+# BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = -1.0, gammatype = Float64)   # n̂ richtung stimmt....
+
+# BR_Ω =  -IPVIE1.br_Ω(alpha = -1.0, invtau = inv_τ)
+# BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΩΩ = IPVIE1.br_ΩΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+# BR_ΓΓ = 0.0*IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+# BR_ΩΓ = 0.0*IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+# Ergebnisse sind eine Katastrophe...
+
+
+#Operatoren: τ = const. - recht gute Kombi - aber keine passende Herleitung
+TL_Γ =  IPVIE1.tl_Γ()
+TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+
+TR_ΓΩ = 1.0*IPVIE1.tr_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+TR_ΓΓ = 0.0*IPVIE1.tr_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ_val) # SL GEHÖRT VMTL NICHT DAZU
+
+BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = -1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
+BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = 1.0, gammatype = Float64)   # n̂ richtung stimmt....
+
+BR_Ω =  IPVIE1.br_Ω(alpha = 1.0, invtau = inv_τ) #(1/2)* würde passendes J liefern...
+BR_ΓΩ = 1.0*IPVIE1.br_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+BR_ΩΩ = -1.0*IPVIE1.br_ΩΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+BR_ΓΓ = 0.0*IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+BR_ΩΓ = 0.0*IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+
+
+
+TEST = IPVIE1.br_Ω(alpha = 1.0, invtau = x -> 1.0)
+@assert norm(assemble(Identity(),X,X)-assemble(TEST,X,X)) < 1e-12
+@assert norm(assemble(Identity(),y,ntrc(X))-assemble(TEST,y,ntrc(X))) < 1e-12
 
 # LHS
-@hilbertspace i j k # Zeilen
-@hilbertspace l m n # Spalten
+@hilbertspace k l # Zeilen    k -> a      l -> bvec
+@hilbertspace j m # Spalten   j -> a      m -> bvec
 
 lhs = @varform(
-    
-
     TL_Γ[k,j] + TL_ΓΓ[k,j] +
     TR_ΓΩ[k,m] + TR_ΓΓ[k,ntrc(m)] +
     BL_ΓΓ[ntrc(l),j] + BL_ΩΓ[l,j] +
@@ -121,7 +169,7 @@ lhs = @varform(
 )
 
 
-lhsd = @discretise lhs i∈y j∈w k∈X l∈y m∈w n∈X
+lhsd = @discretise lhs k∈y l∈X j∈y m∈X
 lhsd_test = lhsd.test_space_dict
 lhsd_trial = lhsd.trial_space_dict
 testSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_test)
@@ -131,15 +179,15 @@ S = Matrix(M)
 
 
 # RHS
-#@hilbertspace i j k # Zeilen
-@hilbertspace o # Spalten, !!! Nur eine Blockspalte
+#@hilbertspace k l # Zeilen
+@hilbertspace n # Spalten, !!! Nur eine Blockspalte
 
 rhs = @varform( # Vorlage für nicht-quadratische Matrix ...
     -TL_Γ[k,n] -TL_ΓΓ[k,n] +
     -BL_ΓΓ[ntrc(l),n] -BL_ΩΓ[l,n]
 )
 
-rhsd = @discretise rhs i∈y j∈w k∈X o∈y_d
+rhsd = @discretise rhs k∈y l∈X n∈y_d
 rhsd_test = rhsd.test_space_dict
 rhsd_trial = rhsd.trial_space_dict
 testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)

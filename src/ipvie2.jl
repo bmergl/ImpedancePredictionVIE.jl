@@ -28,10 +28,11 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
 
     # B13 Block
     # MaterialSL nötig!!! ############
-    function B13_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, invtau = nothing) # 5D
+    function B13_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) # 5D
         gamma = gammatype(0.0)
+        chi === nothing && error("")
 
-        return #evtl gibt es den op in beast schon !mainMod.tr_ΓΩ(gamma, alpha, invtau)
+        return Mod.gradG_ΓΩ(alpha, gamma, chi)
     end
 
     # B21 Block
@@ -61,7 +62,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     function B23_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 5D
         gamma = gammatype(0.0)
 
-        return #Dyade... + Zusatzterm???
+        return Mod.n_dyadG_ΓΩ(gamma, alpha, tau) # + Zusatzterm??????
     end
 
     # B31 Block
@@ -74,7 +75,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         tau = x -> 1.0  # VIE-kernelvals needs tau
 
-        return # DEF THIS OF GENERAL... does not ex in BEAST ... mainMod.bl_ΩΓ(gamma, alpha, tau)
+        return Mod.div_ngradG_ΩΓ(gamma, alpha, tau) # DEF THIS OF GENERAL... does not ex in BEAST ... mainMod.bl_ΩΓ(gamma, alpha, tau)
     end
 
     # B32 Block
@@ -87,38 +88,38 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         tau = x -> 1.0  # VIE-kernelvals needs tau
 
-        return # DEF THIS OF GENERAL... does not ex in BEAST ... mainMod.bl_ΩΓ(gamma, alpha, tau)
+        return Mod.div_G_ΩΓ(gamma, alpha, tau) # DEF THIS OF GENERAL... does not ex in BEAST ... mainMod.bl_ΩΓ(gamma, alpha, tau)
     end
 
     # B33 Block
     function B33_Ω(; alpha = -1.0, invtau = nothing) # 3D (Material Identity)
         invtau === nothing && error("invtau=FUNCTION missing in B33_Ω")
 
-        return mainMod.MatIdΩ(alpha, invtau)  
+        return Mod.MatIdΩ(alpha, invtau)  
     end
     function B33_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) #
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return #...
+        return # ???
     end
     function B33_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) #
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return #...
+        return Mod.n_gradG_ΓΩ(gamma, alpha, chi)#...
     end
     function B33_ΩΓ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) #
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return #...
+        return Mod.div_G_ΩΓ(alpha, gamma, chi)#...
     end
     function B33_ΩΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) #
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return #...
+        return Mod.div_gradG_ΩΩ(alpha, gamma, tau)#...
     end
 
 

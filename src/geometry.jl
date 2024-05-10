@@ -238,6 +238,103 @@ end
 
 
 
+function gen_tau_chi(; problemtype = :current, omega = nothing, kappa = nothing, epsilon = nothing, kappa0 = nothing, epsilon0 = nothing, arbitrary_meshpoint = SVector(0.0,0.0,0.0) )
+    @warn "kappa(x), epsilon(x) must refer to the mesh, x must be a 3 dimensional vector!"
+
+    p = arbitrary_meshpoint
+    
+    if problemtype == :current
+        kappa === nothing && error("Add kappa=FUNCTION IN X")
+        epsilon0 === nothing && error("Add epsilon0=CONSTANT SCALAR")
+        ((size(kappa0, 1) != 1) || (size(kappa0, 2) != 1)) && error("kappa0 has to be a scalar value!")
+        !(size(kappa(p), 1) == size(kappa(p), 2)) && error("Format error")
+
+        s = size(kappa(p), 1)
+        !((s==1)||(s==3)) && error("kappa must return skalar 1×1 or tensor 3×3")
+
+        s==1 && (I = Float64(1.0)) 
+        s==3 && (I = SMatrix{3,3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]))  #DAS I KANN ALLES WEG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        tau = x -> kappa(x)
+        tau0 = 1/kappa0
+
+        size(kappa(p),1) == 3 && error("NOT READY...ntrace of Tensor*Vector problem...")
+
+    elseif problemtype == :dielectic
+        error("NOT READY")
+        epsilon === nothing && error("Add epsilon=FUNCTION IN X")
+        epsilon0 === nothing && error("Add epsilon0=CONSTANT SCALAR")
+        ((size(epsilon0, 1) != 1) || (size(epsilon0, 2) != 1)) && error("epsilon0 has to be a scalar value!")
+        !(size(epsilon(p), 1) == size(epsilon(p), 2)) && error("Format error")
+        
+        s = size(epsilon(p), 1)
+        !((s==1)||(s==3)) && error("epsilon must return skalar 1×1 or tensor 3×3")
+
+        s==1 && (I = Float64(1.0)) 
+        s==3 && (I = SMatrix{3,3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]))
+
+        tau = x -> epsilon(x) # kläre jω ?
+
+
+    elseif problemtype == :general # epsilon0 must not be ε0! it should be 0.0 (recommended)
+
+        error("NOT READY")
+
+        kappa === nothing && error("")
+        epsilon === nothing && error("")
+
+        ((epsilon0 === nothing) && (kappa0 === nothing)) && error("Define either kappa0 or epsilon0")
+        epsilon0 === nothing && (epsilon0 = 0.0)
+        kappa0 === nothing && (kappa0 = 0.0)
+
+        omega === nothing && error("Add omega=VALUE to gen_tau_chi in the general case!")
+
+        sk = size(kappa(p), 1)
+        se = size(epsilon(p), 1)
+
+        sk >= se && (s = sk)
+        se >= sk && (s = se)
+
+        !((s==1)||(s==3)) && error("epsilon and kappa must return skalar 1×1 or tensor 3×3")
+
+        s==1 && (I = Float64(1.0))
+        s==3 && (I = SMatrix{3,3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]))
+
+        sk > se && (tau = x -> kappa(x) + im*I*omega*epsilon(x))
+        se > sk && (tau = x -> I*kappa(x) + im*omega*epsilon(x))
+        se == sk && (tau = x -> kappa(x) + im*omega*epsilon(x))
+
+        tau0 = kappa0 + im*ω*epsilon0
+        
+    else
+        error("Specify problem! problemtype=:current or :dielectic or :general")
+    end
+
+    function init_chi(tau0, tau, I)     #SO IST ES SCHNELL!!!!!!!!! WIESO?????? FOLGLICH ALLE EINZELN...
+        function chi(x)
+            taux = tau(x)
+            taurx = taux/tau0
+            return (taurx + (-1.0)*I) * inv(taux)
+        end
+        return chi
+    end
+    chi = init_chi(tau0, tau, I)
+
+    function init_invtau(tau)     #SO IST ES SCHNELL!!!!!!!!! WIESO?????? FOLGLICH ALLE EINZELN...
+        function invtau(x)
+            taux = tau(x)
+            return inv(taux)
+        end
+        return invtau
+    end
+    invtau = init_invtau(tau)
+
+
+    return tau, invtau, tau0, chi
+
+end
+
+
 
 
 #chart(mesh::Mesh, cell) ist simplex, davon kann man center machen
