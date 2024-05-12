@@ -17,36 +17,38 @@ abstract type BoundaryOperatorΩΓ <: BEAST.BoundaryOperator end
 abstract type BoundaryOperatorΓΩ <: BEAST.BoundaryOperator end
 abstract type VolumeOperatorΩΩ <: BEAST.VolumeOperator end
 
-# struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
-#     gamma::U
-#     vect::P
-#     dist::T
-#     dyadgreen::Q
-#     tau::K
-# end
+###### Dyadic Green Kernel ####################################################
 
-# function kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
-#     # Achtung! Speziell auf gamma=0 zugeschnitten, gamme für typ wichtig
-#     # = viop.gamma  ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
-#     r = cartesian(p)-cartesian(q)
-#     R = norm(r)
-#     Rsq = R^2
+struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
+    gamma::U
+    vect::P
+    dist::T
+    dyadgreen::Q
+    tau::K
+end
 
-#     p_ = cartesian(p)
-#     q_ = cartesian(q)
-#     xd = p_[1]-q_[1]
-#     yd = p_[2]-q_[2]
-#     zd = p_[3]-q_[3]
+function BEAST.kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
+    # Achtung! Speziell auf gamma=0 zugeschnitten, gamme für typ wichtig
+    Y = viop.gamma  #ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
+    r = cartesian(p)-cartesian(q)
+    R = norm(r)
+    Rsq = R^2
 
-#     dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
-#     yd*xd 3*yd^2-Rsq yd*zd;
-#     zd*xd zd*yd 3*zd^2-Rsq;
-#     ]
+    p_ = cartesian(p)
+    q_ = cartesian(q)
+    xd = p_[1]-q_[1]
+    yd = p_[2]-q_[2]
+    zd = p_[3]-q_[3]
 
-#     tau = viop.tau(cartesian(q))
+    dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
+    yd*xd 3*yd^2-Rsq yd*zd;
+    zd*xd zd*yd 3*zd^2-Rsq;
+    ]
 
-#     KernelValsVIEdyad(Y,r,R, dyadgreen, tau)
-# end
+    tau = viop.tau(cartesian(q))
+
+    KernelValsVIEdyad(Y,r,R, dyadgreen, tau)
+end
 
 
 ###### MaterialSL ##############################################################

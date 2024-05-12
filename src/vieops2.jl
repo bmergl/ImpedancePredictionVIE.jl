@@ -50,18 +50,18 @@ struct n_dyadG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
 end
 function BEAST.integrand(viop::n_dyadG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
-    gx = @SVector[tvals[i].value for i in 1:1] #ntrace => nur ein Beitrag: 1 PWC  
+    gx = @SVector[tvals[i].value for i in 1:1] #1 PWC  
     fy = @SVector[bvals[i].value for i in 1:4] 
 
-    G = kerneldata.green
-    gradG = -kerneldata.gradgreen # "-" to get nabla'G(r,r')
     dyadG = -kerneldata.dyadgreen # is ∇'∇'G
 
     Ty = kerneldata.tau
 
     α = viop.α
 
-    return @SMatrix[α * gx[i] * dot(gradG, Ty*fy[j]) for i in 1:1, j in 1:4]
+    nx = tgeo.patch.normals[1]
+    
+    return @SMatrix[α * gx[i] * dot(nx, dyadG * (Ty*fy[j])) for i in 1:1, j in 1:4]
 end
 
 

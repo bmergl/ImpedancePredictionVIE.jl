@@ -44,7 +44,7 @@ w = lagrangecxd0(Γ_c)# w=ntrc(X) geht nicht!
 swgfaces = SWGfaces(Ω, Γ_nc) # Quadratische Komplexität ist extrem langsam!!!! ----> Octree???
 X = nedelecd3d(Ω, Mesh(Ω.vertices, swgfaces))#X = nedelecd3d(Ω)
 @assert length(X.pos) == length(swgfaces)
-#ntrc = X -> BEAST.ntrace(X, Γ)
+ntrc = X -> BEAST.ntrace(X, Γ)
 #Visu.fnspos(X, Visu.mesh(Γ))
 
 
@@ -56,7 +56,7 @@ X = nedelecd3d(Ω, Mesh(Ω.vertices, swgfaces))#X = nedelecd3d(Ω)
 
 
 κ = x -> 1.0
-κ0 = 10000.0
+κ0 = 102012.0
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -86,38 +86,38 @@ B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
 assemble(B11_ΓΓ, y, y)
 B12_ΓΓ = IPVIE2.B12_ΓΓ(alpha = -1.0, gammatype = Float64)
 assemble(B12_ΓΓ, y, w)
-B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64)
+B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ)
 assemble(B13_ΓΓ, y, y)
 B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 assemble(B13_ΓΩ, y, X)
 
 B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)
 assemble(B21_ΓΓ, w, y)
-B22_Γ = IPVIE2.B22_Γ(alpha = 1.0, gammatype = Float64)
+B22_Γ = IPVIE2.B22_Γ()
 assemble(B22_Γ, w, w)
 B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64)
 assemble(B22_ΓΓ, w, w)
-B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64)
+B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ)
 assemble(B23_ΓΓ, w, X)
-B23_ΩΓ = IPVIE2.B23_ΩΓ(alpha = 1.0, gammatype = Float64)
-assemble(B23_ΩΓ, w, X)
+B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ)
+assemble(B23_ΓΩ, w, X)
 
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
-assemble(B31_ΓΓ, y, X)
+assemble(B31_ΓΓ, ntrc(X), y)
 B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = 1.0, gammatype = Float64)
-assemble(B31_ΩΓ, y, X)
+assemble(B31_ΩΓ, X, y)
 B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64)
-assemble(B32_ΓΓ, X, w)
+assemble(B32_ΓΓ, ntrc(X), w)
 B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = 1.0, gammatype = Float64)
 assemble(B32_ΩΓ, X, w)
-B33_Ω = IPVIE2.B33_Ω(alpha = 1.0, gammatype = Float64, chi = χ)
+B33_Ω = IPVIE2.B33_Ω(alpha = 1.0, invtau = inv_τ)
 assemble(B33_Ω, X, X)
 B33_ΓΓ = IPVIE2.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B33_ΓΓ, X, X)
+assemble(B33_ΓΓ, ntrc(X), ntrc(X))
 B33_ΓΩ = IPVIE2.B33_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B33_ΓΩ, X, X)
+assemble(B33_ΓΩ, ntrc(X), X)
 B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B33_ΩΓ, X, X)
+assemble(B33_ΩΓ, X, ntrc(X))
 B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 assemble(B33_ΩΩ, X, X)
 

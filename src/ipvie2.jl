@@ -61,13 +61,15 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     # B23 Block
     function B23_ΓΓ(; gammatype = ComplexF64, alpha = -1.0) # 4D
         gamma = gammatype(0.0)
+        # 
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!! + oder - Identity oder gar nichts???:
-        return # MaterialDL...Problem: Brauchen trace des Tensors... + seltsame Identity
+        return Mod.MaterialDL#
     end
-    function B23_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 5D
+    function B23_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
         gamma = gammatype(0.0)
+        chi === nothing && error("")
 
-        return Mod.n_dyadG_ΓΩ(gamma, alpha, tau) # + Zusatzterm??????
+        return Mod.n_dyadG_ΓΩ(gamma, alpha, chi) # + Zusatzterm??????
     end
 
     # B31 Block
@@ -106,13 +108,13 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return Mod.MaterialSL(gamma,alpha,tau)
+        return Mod.MaterialSL(gamma,alpha,chi)
     end
     function B33_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) #
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return Mod.n_gradG_ΓΩ(gamma, alpha, chi)#...
+        return Mod.n_gradG_ΓΩ(gamma, alpha, chi)#... FALSCH!!!
     end
     function B33_ΩΓ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) #
         gamma = gammatype(0.0)
