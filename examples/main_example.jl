@@ -8,10 +8,10 @@ using StaticArrays
 
 
 geoname = "cube.geo"
-geopath = "$(pkgdir(ImpedancePredictionVIE))/examples/$geoname"
+geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 
 meshname = "cube.msh"
-meshpath = "$(pkgdir(ImpedancePredictionVIE))/examples/$meshname"
+meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
 h = 2.0 # kleiner 0.2 sonst std
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
@@ -36,18 +36,16 @@ y_d = lagrangec0d1(Γ, dirichletnodes, Val{3})
 y = lagrangec0d1(Γ_nc, dirichlet = true) 
 #Visu.fnspos(y, Visu.mesh(Γ))
 
+# PWC auf Γ
+w = lagrangecxd0(Γ_c)# w=ntrc(X) geht nicht!
+#Visu.fnspos(w, Visu.mesh(Γ))
 
 # SWG auf Ω (ohne Γ_nc Flächen)
 swgfaces = SWGfaces(Ω, Γ_nc) # Quadratische Komplexität ist extrem langsam!!!! ----> Octree???
 X = nedelecd3d(Ω, Mesh(Ω.vertices, swgfaces))#X = nedelecd3d(Ω)
-
-ntrc = X -> BEAST.ntrace(X, Γ)
-w = ntrc(X)
-@show length(swgfaces)
 @assert length(X.pos) == length(swgfaces)
-#ntrc(X).fns
+#ntrc = X -> BEAST.ntrace(X, Γ)
 #Visu.fnspos(X, Visu.mesh(Γ))
-#Visu.fnspos(ntrc(X), Visu.mesh(Γ_c))
 
 
 @show numfunctions(y)
@@ -58,7 +56,7 @@ w = ntrc(X)
 
 
 κ = x -> 1.0
-κ0 = 1.0
+κ0 = 10000.0
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -66,6 +64,10 @@ p = SVector(0.0,0.0,0.0)
 inv_τ(p)
 τ0
 χ(p)
+(τ(p) - τ0)* inv_τ(p)
+# homogenes Medium in Ω => τ0 kann χ zu Null machen => Volterm verschwindet
+# was erklärbar wäre, aber wie kompensiert man τ0->0.0 => χ->inf ?
+
 #χ0
 #χ_min_χ0I(p)
 #χ(p) - χ0
@@ -76,28 +78,48 @@ u_bottom = ones(length(bottomnodes)) * (-0.5)
 ex = append!(deepcopy(u_top), u_bottom)
 
 
+
 # Definiton der Operatoren
-B11_Γ = IPVIE2.B11_Γ(a = 1.0, gammatype = Float64)
-B11_ΓΓ = IPVIE2.B11_Γ(a = 1.0, gammatype = Float64)
-B12_ΓΓ = IPVIE2.B12_Γ(a = 1.0, gammatype = Float64)
-B13_ΓΓ = IPVIE2.B13_ΓΓ(a = 1.0, gammatype = Float64)
-B13_ΓΩ = IPVIE2.B13_ΓΩ(a = 1.0, gammatype = Float64)
+B11_Γ = IPVIE2.B11_Γ()
+assemble(B11_Γ, y, y)
+B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
+assemble(B11_ΓΓ, y, y)
+B12_ΓΓ = IPVIE2.B12_ΓΓ(alpha = -1.0, gammatype = Float64)
+assemble(B12_ΓΓ, y, w)
+B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64)
+assemble(B13_ΓΓ, y, y)
+B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
+assemble(B13_ΓΩ, y, X)
 
-B21_ΓΓ = IPVIE2.B21_ΓΓ(a = 1.0, gammatype = Float64)
-B22_Γ = IPVIE2.B22_Γ(a = 1.0, gammatype = Float64)
-B22_ΓΓ = IPVIE2.B22_ΓΓ(a = 1.0, gammatype = Float64)
-B23_ΓΓ = IPVIE2.B23_ΓΓ(a = 1.0, gammatype = Float64)
-B23_ΩΩ = IPVIE2.B23_ΩΩ(a = 1.0, gammatype = Float64)
+B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)
+assemble(B21_ΓΓ, w, y)
+B22_Γ = IPVIE2.B22_Γ(alpha = 1.0, gammatype = Float64)
+assemble(B22_Γ, w, w)
+B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64)
+assemble(B22_ΓΓ, w, w)
+B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64)
+assemble(B23_ΓΓ, w, X)
+B23_ΩΓ = IPVIE2.B23_ΩΓ(alpha = 1.0, gammatype = Float64)
+assemble(B23_ΩΓ, w, X)
 
-B31_ΓΓ = IPVIE2.B31_ΓΓ(a = 1.0, gammatype = Float64)
-B31_ΩΓ = IPVIE2.B31_ΩΓ(a = 1.0, gammatype = Float64)
-B32_ΓΓ = IPVIE2.B32_ΓΓ(a = 1.0, gammatype = Float64)
-B32_ΩΓ = IPVIE2.B32_ΩΓ(a = 1.0, gammatype = Float64)
-B33_Ω = IPVIE2.B33_Ω(a = 1.0, gammatype = Float64)
-B33_ΓΓ = IPVIE2.B33_ΓΓ(a = 1.0, gammatype = Float64)
-B33_ΓΩ = IPVIE2.B33_ΓΩ(a = 1.0, gammatype = Float64)
-B33_ΩΓ = IPVIE2.B33_ΩΓ(a = 1.0, gammatype = Float64)
-B33_ΩΩ = IPVIE2.B33_ΩΩ(a = 1.0, gammatype = Float64)
+B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
+assemble(B31_ΓΓ, y, X)
+B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = 1.0, gammatype = Float64)
+assemble(B31_ΩΓ, y, X)
+B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64)
+assemble(B32_ΓΓ, X, w)
+B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = 1.0, gammatype = Float64)
+assemble(B32_ΩΓ, X, w)
+B33_Ω = IPVIE2.B33_Ω(alpha = 1.0, gammatype = Float64, chi = χ)
+assemble(B33_Ω, X, X)
+B33_ΓΓ = IPVIE2.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
+assemble(B33_ΓΓ, X, X)
+B33_ΓΩ = IPVIE2.B33_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
+assemble(B33_ΓΩ, X, X)
+B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = 1.0, gammatype = Float64, chi = χ)
+assemble(B33_ΩΓ, X, X)
+B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
+assemble(B33_ΩΩ, X, X)
 
 
 BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
@@ -106,6 +128,8 @@ BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
 assemble(B11_Γ,y,y)
 assemble(B11_ΓΓ,y,y)
 assemble(B11_ΓΓ,y,y)
+assem
+
 
 # LHS
 @hilbertspace i j k # Zeilen

@@ -245,7 +245,7 @@ function gen_tau_chi(; problemtype = :current, omega = nothing, kappa = nothing,
     
     if problemtype == :current
         kappa === nothing && error("Add kappa=FUNCTION IN X")
-        epsilon0 === nothing && error("Add epsilon0=CONSTANT SCALAR")
+        kappa0 === nothing && error("Add kappa0=CONSTANT SCALAR")
         ((size(kappa0, 1) != 1) || (size(kappa0, 2) != 1)) && error("kappa0 has to be a scalar value!")
         !(size(kappa(p), 1) == size(kappa(p), 2)) && error("Format error")
 

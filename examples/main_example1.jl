@@ -16,12 +16,12 @@ meshpath = "$(pkgdir(ImpedancePredictionVIE))/examples/$meshname"
 h = 2.0 # kleiner 0.2 sonst std
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
-# Visu.mesh(Ω)
-# Visu.mesh(Γ_c)
-# Visu.mesh(Γ_c_t)
-# Visu.mesh(Γ_c_b)
-# Visu.mesh(Γ_nc)
-# Visu.mesh(Γ)
+Visu.mesh(Ω)
+Visu.mesh(Γ_c)
+Visu.mesh(Γ_c_t)
+Visu.mesh(Γ_c_b)
+Visu.mesh(Γ_nc)
+Visu.mesh(Γ)
 
 
 # linearlag (dirichlet) auf Γ_c

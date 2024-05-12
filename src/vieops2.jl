@@ -23,7 +23,7 @@ function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
     return @SMatrix[α * dot(gx[i] * gradG, Ty*fy[j]) for i in 1:3, j in 1:4]
 end
-struct n_gradG_ΓΩ{T,U,P} <: BEAST.BoundaryOperatorΓΩ
+struct n_gradG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
     gamma::T
     α::U
     tau::P
@@ -43,7 +43,7 @@ function BEAST.integrand(viop::n_gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bge
     return @SMatrix[α * gx[i] * dot(gradG, Ty*fy[j]) for i in 1:1, j in 1:4]
 end
 
-struct n_dyadG_ΓΩ{T,U,P} <: BEAST.BoundaryOperatorΓΩ
+struct n_dyadG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
     gamma::T
     α::U 
     tau::P
@@ -142,7 +142,7 @@ struct MatIdΩ{T,U} <: MaterialIdentity
     tau::U
 end
 
-function BEAST.integrand(localop::MatIDΩ, kerneldata, x, g, f) # ist ja für beide gleich...
+function BEAST.integrand(localop::MatIdΩ, kerneldata, x, g, f) # ist ja für beide gleich...
 
     gx = g.value
     fx = f.value

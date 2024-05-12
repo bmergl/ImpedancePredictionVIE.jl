@@ -14,40 +14,127 @@
 
 
 abstract type BoundaryOperatorΩΓ <: BEAST.BoundaryOperator end
+abstract type BoundaryOperatorΓΩ <: BEAST.BoundaryOperator end
+abstract type VolumeOperatorΩΩ <: BEAST.VolumeOperator end
 
-struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
-    gamma::U
-    vect::P
-    dist::T
-    dyadgreen::Q
-    tau::K
+# struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
+#     gamma::U
+#     vect::P
+#     dist::T
+#     dyadgreen::Q
+#     tau::K
+# end
+
+# function kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
+#     # Achtung! Speziell auf gamma=0 zugeschnitten, gamme für typ wichtig
+#     # = viop.gamma  ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
+#     r = cartesian(p)-cartesian(q)
+#     R = norm(r)
+#     Rsq = R^2
+
+#     p_ = cartesian(p)
+#     q_ = cartesian(q)
+#     xd = p_[1]-q_[1]
+#     yd = p_[2]-q_[2]
+#     zd = p_[3]-q_[3]
+
+#     dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
+#     yd*xd 3*yd^2-Rsq yd*zd;
+#     zd*xd zd*yd 3*zd^2-Rsq;
+#     ]
+
+#     tau = viop.tau(cartesian(q))
+
+#     KernelValsVIEdyad(Y,r,R, dyadgreen, tau)
+# end
+
+
+###### MaterialSL ##############################################################
+
+struct MaterialSL{T,K,Q} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+    tau::Q
 end
 
-function kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
-    # Achtung! Speziell auf gamma=0 zugeschnitten, gamme für typ wichtig
-    # = viop.gamma  ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
-    r = cartesian(p)-cartesian(q)
+function (igd::BEAST.Integrand{<:MaterialSL})(x,y,f,g)
+    α = igd.operator.alpha
+    γ = BEAST.gamma(igd.operator)
+
+    Ty = igd.operator.tau(y) #!!!
+
+    r = cartesian(x) - cartesian(y)
     R = norm(r)
-    Rsq = R^2
+    iR = 1 / R
+    green = exp(-γ*R)*(BEAST.i4pi*iR)
 
-    p_ = cartesian(p)
-    q_ = cartesian(q)
-    xd = p_[1]-q_[1]
-    yd = p_[2]-q_[2]
-    zd = p_[3]-q_[3]
+    αG = α * green
 
-    dyadgreen = @SMatrix (1/(4*pi*R^5))*[3*xd^2-Rsq xd*yd xd*zd;
-    yd*xd 3*yd^2-Rsq yd*zd;
-    zd*xd zd*yd 3*zd^2-Rsq;
-    ]
+    BEAST._integrands(f,g) do fi, gi
+        dot(gi.value, αG*Ty*fi.value)
+    end
+end
 
-    tau = viop.tau(cartesian(q))
+###### MaterialDL ##############################################################
+struct MaterialDL{T,K,Q} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+    tau::Q
+end
 
-    KernelValsVIEdyad(Y,r,R, dyadgreen, tau)
+function (igd::BEAST.Integrand{<:MaterialDL})(x,y,f,g)
+    γ = BEAST.gamma(igd.operator)
+    α = igd.operator.alpha
+
+    Ty = igd.operator.tau(y) #!!!
+
+    r = cartesian(x) - cartesian(y)
+    R = norm(r)
+    iR = 1/R
+    green = exp(-γ*R)*(iR*BEAST.i4pi)
+    gradgreen = -(γ + iR) * green * (iR * r)
+    αgradgreen = α * gradgreen
+    n = normal(y)
+    fvalue = BEAST.getvalue(f)
+    gvalue = BEAST.getvalue(g)
+
+    return BEAST._krondot(fvalue,gvalue) * dot(n, -αgradgreen*Ty) # "-" siehe ∇' ... 
+end
+
+###### MaterialADL ##############################################################
+struct MaterialADL{T,K,Q} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+    tau::Q
+end
+
+function (igd::BEAST.Integrand{<:MaterialADL})(x,y,f,g)
+    γ = BEAST.gamma(igd.operator)
+    α = igd.operator.alpha
+
+    Ty = igd.operator.tau(y) #!!!
+
+    r = cartesian(x) - cartesian(y)
+    R = norm(r)
+    iR = 1/R
+    green = exp(-γ*R)*(iR*BEAST.i4pi)
+    gradgreen = -(γ + iR) * green * (iR * r)
+    αgradgreen = α * gradgreen
+    n = normal(x)           # Unterschied zu DL ist 1. normal(x) statt y 
+    fvalue = BEAST.getvalue(f)
+    gvalue = BEAST.getvalue(g)
+
+    return BEAST._krondot(fvalue,gvalue) * dot(n, αgradgreen) # 2. + statt -
 end
 
 
+####################################################################
 
+
+
+##### momintegrals!  ######################################################################
+
+# 5D: ∫∫∫_Ω ∫∫_Γ
 struct VIEIntegrandΩΓ{S,T,O,K,L}
     test_tetrahedron_element::S
     trial_tetrahedron_element::T
@@ -86,14 +173,9 @@ function (igd::VIEIntegrandΩΓ)(u,v)     # wird nur für den SS3D-Fall verwende
     integrand(igd.op, kerneldata,tval,tgeo,bval,bgeo) * j
 end
 
-
-
-
-##### momintegrals!  ######################################################################
-
-# 5D: ∫∫∫_Ω ∫∫_Γ
 # function qr_boundary(op::BoundaryOperatorΩΓ, g::RefSpace, f::RefSpace, i, τ, j,  σ, qd,
 #    qs::SauterSchwab3DQStrat) no changes => take existing op::BoundaryOperator version
+
 function BEAST.momintegrals!(op::BoundaryOperatorΩΓ,
     test_local_space::RefSpace, trial_local_space::RefSpace,
     test_tetrahedron_element, trial_tetrahedron_element, out, strat::SauterSchwab3DStrategy)
@@ -143,7 +225,7 @@ end
 
 # 5D: ∫∫_Γ ∫∫∫_Ω 
 function qr_boundary(op::BoundaryOperatorΓΩ, g::RefSpace, f::RefSpace, i, τ, j,  σ, qd,
-    qs::SauterSchwab3DQStrat)  # T <-> S
+    qs::BEAST.SauterSchwab3DQStrat)  # T <-> S
 
     dtol = 1.0e3 * eps(eltype(eltype(τ.vertices)))
 
@@ -180,7 +262,8 @@ function qr_boundary(op::BoundaryOperatorΓΩ, g::RefSpace, f::RefSpace, i, τ, 
         qd[2][1,j])
 
 end
-function BEAST.momintegrals!(op::VolumeOperatorΓΩ,
+
+function BEAST.momintegrals!(op::BoundaryOperatorΓΩ,
     test_local_space::RefSpace, trial_local_space::RefSpace,
     test_tetrahedron_element, trial_tetrahedron_element, out, strat::SauterSchwab3DStrategy)
 
@@ -262,8 +345,7 @@ end
 
 
 
-
-##############################################################
+#########################################################################
 
 abstract type MaterialIdentity <: BEAST.LocalOperator end
 

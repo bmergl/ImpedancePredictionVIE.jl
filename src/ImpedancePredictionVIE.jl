@@ -11,17 +11,19 @@ using SauterSchwab3D
 
 
 include("visu.jl")
+include("integrals.jl")
+
 include("ipvie1.jl")
 include("vieops1.jl")
 include("ipvie2.jl")
 include("vieops2.jl")
-include("integrals.jl")
 include("geometry.jl")
 
 
 
 export Visu
 export IPVIE1
+export IPVIE2
 export geo2mesh
 #export draw_arrow!
 export hello1
@@ -34,8 +36,11 @@ export pointlist2xyzlist
 export SWGfaces
 export gen_tau_invtau
 #export dirichlet_n2f
-
-
+export BoundaryOperatorΩΓ
+export BoundaryOperatorΓΩ
+export MaterialIdentity
+export gen_tau_chi
+export MatIdΩ
 
 
 # struct sample

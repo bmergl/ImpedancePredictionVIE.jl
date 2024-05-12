@@ -27,12 +27,17 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     end
 
     # B13 Block
-    # MaterialSL nötig!!! ############
+    function B13_ΓΓ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) # 5D
+        gamma = gammatype(0.0)
+        chi === nothing && error("")
+
+        return Mod.MaterialSL(gamma, alpha, chi)
+    end
     function B13_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) # 5D
         gamma = gammatype(0.0)
         chi === nothing && error("")
 
-        return Mod.gradG_ΓΩ(alpha, gamma, chi)
+        return Mod.gradG_ΓΩ(gamma, alpha, chi)
     end
 
     # B21 Block
@@ -101,7 +106,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return # ???
+        return Mod.MaterialSL(gamma,alpha,tau)
     end
     function B33_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) #
         gamma = gammatype(0.0)
@@ -113,16 +118,29 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return Mod.div_G_ΩΓ(alpha, gamma, chi)#...
+        return Mod.div_G_ΩΓ(gamma, alpha, chi)#...
     end
     function B33_ΩΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) #
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return Mod.div_gradG_ΩΩ(alpha, gamma, tau)#...
+        return Mod.div_gradG_ΩΩ(gamma, alpha, chi)#...
     end
+    
 
-
+    # Testops
+    function genMatSL(;gamma,alpha = 1.0,tau = nothing)
+        tau === nothing && error()
+        return Mod.MaterialSL(gamma,alpha,tau)
+    end
+    function genMatDL(;gamma,alpha = 1.0,tau = nothing)
+        tau === nothing && error()
+        return Mod.MaterialDL(gamma,alpha,tau)
+    end
+    function genMatADL(;gamma,alpha = 1.0,tau = nothing)
+        tau === nothing && error()
+        return Mod.MaterialADL(gamma,alpha,tau)
+    end
 
 
 end
