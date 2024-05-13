@@ -43,8 +43,8 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     # B21 Block
     function B21_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!! + oder - Identity oder gar nichts???:
-        return Helmholtz3D.hypersingular(gamma = gamma, alpha = alpha)#Helmholtz3D. Hypersingular????? oder was anderes?
+ 
+        return Mod.HyperSingularDyadic(gamma, alpha) #Helmholtz3D.hypersingular(gamma = gamma, alpha = alpha) 
     end
 
     # B22 Block

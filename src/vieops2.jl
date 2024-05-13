@@ -79,11 +79,49 @@ function (igd::BEAST.Integrand{<:MaterialADL})(x,y,f,g)
     return BEAST._krondot(fvalue,gvalue) * dot(n, αgradgreen*Ty) # 2. + statt -
 end
 
+###### Hypersingular Dyadic ##############################################################
 
+struct HyperSingularDyadic{T,K} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+end
 
+function (igd::BEAST.Integrand{<:HyperSingularDyadic})(x,y,f,g)
+    α = igd.operator.alpha
+    γ = BEAST.gamma(igd.operator)
 
+    r = cartesian(x) - cartesian(y)
+    R = norm(r)
 
+    Rsq = R^2
 
+    p_ = cartesian(x)
+    q_ = cartesian(y)
+    xd = p_[1]-q_[1]
+    yd = p_[2]-q_[2]
+    zd = p_[3]-q_[3]
+
+    dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
+    yd*xd 3*yd^2-Rsq yd*zd;
+    zd*xd zd*yd 3*zd^2-Rsq;
+    ]
+
+   # rand() < 0.00001 && display(dyadgreen)
+    @assert norm(dyadgreen-transpose(dyadgreen))<1e-13
+
+    αdaydG = α * dyadgreen
+
+    nx = x.patch.normals[1]
+    ny = y.patch.normals[1] 
+
+    # retunrn BEAST._integrands(f,g) do fi, gi
+    #     dot(gi.value*nx, αdaydG*(fi.value*ny))
+    # end
+
+    fvalue = BEAST.getvalue(f)
+    gvalue = BEAST.getvalue(g)
+    return BEAST._krondot(fvalue,gvalue) * dot(nx, αdaydG*ny) 
+end
 
 
 
@@ -158,7 +196,7 @@ struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
     tau::K
 end
 function BEAST.kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
-    # Achtung! Speziell auf gamma=0 zugeschnitten, gamme für typ wichtig
+    # Achtung! Speziell auf gamma=0 zugeschnitten, gamma für typ wichtig
     Y = viop.gamma  #ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
     r = cartesian(p)-cartesian(q)
     R = norm(r)

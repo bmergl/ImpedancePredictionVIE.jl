@@ -91,9 +91,18 @@ B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ)
 B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
 #assemble(B13_ΓΩ, y, X)
 
-#0.0*Identity()#
-B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)   # Große Probleme in Sicht mit dem Hypersing... falls der das ist....
-assemble(B21_ΓΓ, w, y)
+B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = -1.0, gammatype = Float64)   # Große Probleme in Sicht mit dem Hypersing... falls der das ist....
+#assemble(B21_ΓΓ, w, y)
+
+
+
+Test1 = Helmholtz3D.hypersingular(alpha =-1.0, gamma =0.0)
+#BEAST.defaultquadstrat(op::ImpedancePredictionVIE.HyperSingularDyadic, tfs::BEAST.LagrangeRefSpace, bfs::BEAST.LagrangeRefSpace) = BEAST.DoubleNumSauterQstrat(2,2,2,2,2,2)
+
+M1=assemble(Test1, y, y)
+M2=assemble(B21_ΓΓ,y, y) # nicht realistisch
+norm(M1-M2)
+
 
 B22_Γ = IPVIE2.B22_Γ(alpha = 1.0)
 #assemble(B22_Γ, w, w)
@@ -136,7 +145,7 @@ lhs = @varform(
     B13_ΓΓ[i,ntrc(n)] + B13_ΓΩ[i,n] + 
 
     B21_ΓΓ[j,l] + 
-    B22_Γ[j,m] +B22_ΓΓ[j,m] +
+    B22_Γ[j,m] + B22_ΓΓ[j,m] +
     B23_ΓΓ[j,ntrc(n)] + B23_ΓΩ[j,n] +
 
     B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
