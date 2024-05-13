@@ -9,9 +9,9 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
 
 
     # B11 Block
-    function B11_Γ() # 3D
+    function B11_Γ(;alpha = 1.0) # 3D
 
-        return Identity() # Später hier - 1/2....
+        return alpha*Identity() # Später hier - 1/2....
     end
     function B11_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
@@ -44,26 +44,26 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     function B21_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!! + oder - Identity oder gar nichts???:
-        return #Helmholtz3D. Hypersingular????? oder was anderes?
+        return Helmholtz3D.hypersingular(gamma = gamma, alpha = alpha)#Helmholtz3D. Hypersingular????? oder was anderes?
     end
 
     # B22 Block
-    function B22_Γ() # 3D
+    function B22_Γ(; alpha = 1.0) # 3D
 
-        return Identity()
+        return alpha*Identity()
     end
     function B22_ΓΓ(; gammatype = ComplexF64, alpha = -1.0) # 4D
         gamma = gammatype(0.0)
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!! + oder - Identity oder gar nichts???:
-        return Helmholtz3D.doublelayer_transposed(gamma = gamma, alpha = alpha) + alpha*(1/2)*Identity()
+
+        return Helmholtz3D.doublelayer_transposed(gamma = gamma, alpha = alpha) + alpha*(1/2)*Identity()#!!!! + oder - Identity oder gar nichts???:
     end
 
     # B23 Block
-    function B23_ΓΓ(; gammatype = ComplexF64, alpha = -1.0) # 4D
+    function B23_ΓΓ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) # 4D
         gamma = gammatype(0.0)
-        # 
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!! + oder - Identity oder gar nichts???:
-        return Mod.MaterialDL#
+        chi === nothing && error("")
+        # Testintegral ∫_dS ist skalar! n̂ kommt vom Operator => Identity besteht aus skalarer Testfunktion und skalarer Basis (ntrace) 
+        return Mod.MaterialADL(gamma, alpha, chi) + alpha*(1/2)*Identity() #!!!!! + oder - Identity oder gar nichts???
     end
     function B23_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
         gamma = gammatype(0.0)
@@ -82,7 +82,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         tau = x -> 1.0  # VIE-kernelvals needs tau
 
-        return Mod.div_ngradG_ΩΓ(gamma, alpha, tau) # DEF THIS OF GENERAL... does not ex in BEAST ... mainMod.bl_ΩΓ(gamma, alpha, tau)
+        return Mod.div_ngradG_ΩΓ(gamma, alpha, tau) 
     end
 
     # B32 Block
@@ -95,7 +95,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         tau = x -> 1.0  # VIE-kernelvals needs tau
 
-        return Mod.div_G_ΩΓ(gamma, alpha, tau) # DEF THIS OF GENERAL... does not ex in BEAST ... mainMod.bl_ΩΓ(gamma, alpha, tau)
+        return Mod.div_G_ΩΓ(gamma, alpha, tau)
     end
 
     # B33 Block
@@ -114,7 +114,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         chi === nothing && error("chi missing")
 
-        return Mod.n_gradG_ΓΩ(gamma, alpha, chi)#... FALSCH!!!
+        return Mod.n_gradG_ΓΩ(gamma, alpha, chi)#... FALSCH!!!??
     end
     function B33_ΩΓ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) #
         gamma = gammatype(0.0)
@@ -129,6 +129,10 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         return Mod.div_gradG_ΩΩ(gamma, alpha, chi)#...
     end
     
+
+
+
+
 
     # Testops
     function genMatSL(;gamma,alpha = 1.0,tau = nothing)

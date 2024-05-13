@@ -2,6 +2,93 @@
 
 
 
+###### MaterialSL ##############################################################
+struct MaterialSL{T,K,Q} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+    tau::Q
+end
+
+function (igd::BEAST.Integrand{<:MaterialSL})(x,y,f,g)
+    α = igd.operator.alpha
+    γ = BEAST.gamma(igd.operator)
+
+    Ty = igd.operator.tau(y) #!!!
+
+    r = cartesian(x) - cartesian(y)
+    R = norm(r)
+    iR = 1 / R
+    green = exp(-γ*R)*(BEAST.i4pi*iR)
+
+    αG = α * green
+
+    BEAST._integrands(f,g) do fi, gi
+        dot(gi.value, αG*Ty*fi.value)
+    end
+end
+
+###### MaterialDL ##############################################################
+struct MaterialDL{T,K,Q} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+    tau::Q
+end
+
+function (igd::BEAST.Integrand{<:MaterialDL})(x,y,f,g)
+    γ = BEAST.gamma(igd.operator)
+    α = igd.operator.alpha
+
+    Ty = igd.operator.tau(y) #!!!
+
+    r = cartesian(x) - cartesian(y)
+    R = norm(r)
+    iR = 1/R
+    green = exp(-γ*R)*(iR*BEAST.i4pi)
+    gradgreen = -(γ + iR) * green * (iR * r)
+    αgradgreen = α * gradgreen
+    n = normal(y)
+    fvalue = BEAST.getvalue(f)
+    gvalue = BEAST.getvalue(g)
+
+    return BEAST._krondot(fvalue,gvalue) * dot(n, -αgradgreen*Ty) # "-" siehe ∇' ... 
+end
+
+###### MaterialADL ##############################################################
+struct MaterialADL{T,K,Q} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+    tau::Q
+end
+
+function (igd::BEAST.Integrand{<:MaterialADL})(x,y,f,g)
+    γ = BEAST.gamma(igd.operator)
+    α = igd.operator.alpha
+
+    Ty = igd.operator.tau(y) #!!!
+
+    r = cartesian(x) - cartesian(y)
+    R = norm(r)
+    iR = 1/R
+    green = exp(-γ*R)*(iR*BEAST.i4pi)
+    gradgreen = -(γ + iR) * green * (iR * r)
+    αgradgreen = α * gradgreen
+    n = normal(x)           # Unterschied zu DL ist 1. normal(x) statt y 
+    fvalue = BEAST.getvalue(f)
+    gvalue = BEAST.getvalue(g)
+
+    return BEAST._krondot(fvalue,gvalue) * dot(n, αgradgreen*Ty) # 2. + statt -
+end
+
+
+
+
+
+
+
+
+
+
+
 ##### SauterSchwab3D 5D/6D ######################################################################
 
 struct gradG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
@@ -63,6 +150,40 @@ function BEAST.integrand(viop::n_dyadG_ΓΩ, kerneldata, tvals, tgeo, bvals, bge
     
     return @SMatrix[α * gx[i] * dot(nx, dyadG * (Ty*fy[j])) for i in 1:1, j in 1:4]
 end
+struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
+    gamma::U
+    vect::P
+    dist::T
+    dyadgreen::Q
+    tau::K
+end
+function BEAST.kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
+    # Achtung! Speziell auf gamma=0 zugeschnitten, gamme für typ wichtig
+    Y = viop.gamma  #ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
+    r = cartesian(p)-cartesian(q)
+    R = norm(r)
+    Rsq = R^2
+
+    p_ = cartesian(p)
+    q_ = cartesian(q)
+    xd = p_[1]-q_[1]
+    yd = p_[2]-q_[2]
+    zd = p_[3]-q_[3]
+
+    dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
+    yd*xd 3*yd^2-Rsq yd*zd;
+    zd*xd zd*yd 3*zd^2-Rsq;
+    ]
+
+    tau = viop.tau(cartesian(q))
+
+    KernelValsVIEdyad(Y,r,R, dyadgreen, tau)
+end
+
+
+
+
+
 
 
 struct div_ngradG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ # 5D

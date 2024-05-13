@@ -56,7 +56,7 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 
 
 κ = x -> 1.0
-κ0 = 102012.0
+κ0 = 1.0
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -80,55 +80,50 @@ ex = append!(deepcopy(u_top), u_bottom)
 
 
 # Definiton der Operatoren
-B11_Γ = IPVIE2.B11_Γ()
-assemble(B11_Γ, y, y)
+B11_Γ = IPVIE2.B11_Γ(alpha = 1.0)
+#assemble(B11_Γ, y, y)
 B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
-assemble(B11_ΓΓ, y, y)
+#assemble(B11_ΓΓ, y, y)
 B12_ΓΓ = IPVIE2.B12_ΓΓ(alpha = -1.0, gammatype = Float64)
-assemble(B12_ΓΓ, y, w)
+#assemble(B12_ΓΓ, y, w)
 B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ)
-assemble(B13_ΓΓ, y, y)
-B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B13_ΓΩ, y, X)
+#assemble(B13_ΓΓ, y, y)
+B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
+#assemble(B13_ΓΩ, y, X)
 
-B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)
+#0.0*Identity()#
+B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)   # Große Probleme in Sicht mit dem Hypersing... falls der das ist....
 assemble(B21_ΓΓ, w, y)
-B22_Γ = IPVIE2.B22_Γ()
-assemble(B22_Γ, w, w)
-B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64)
-assemble(B22_ΓΓ, w, w)
-B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ)
-assemble(B23_ΓΓ, w, X)
+
+B22_Γ = IPVIE2.B22_Γ(alpha = 1.0)
+#assemble(B22_Γ, w, w)
+B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = -1.0, gammatype = Float64)
+#assemble(B22_ΓΓ, w, w)
+B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ) #VZ??????????????
+#assemble(B23_ΓΓ, w, ntrc(X))
 B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ)
-assemble(B23_ΓΩ, w, X)
+#assemble(B23_ΓΩ, w, X)
 
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
-assemble(B31_ΓΓ, ntrc(X), y)
-B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = 1.0, gammatype = Float64)
-assemble(B31_ΩΓ, X, y)
-B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64)
-assemble(B32_ΓΓ, ntrc(X), w)
+#assemble(B31_ΓΓ, ntrc(X), y)
+B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
+#assemble(B31_ΩΓ, X, y)
+B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = -1.0, gammatype = Float64)
+#assemble(B32_ΓΓ, ntrc(X), w)
 B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = 1.0, gammatype = Float64)
-assemble(B32_ΩΓ, X, w)
-B33_Ω = IPVIE2.B33_Ω(alpha = 1.0, invtau = inv_τ)
-assemble(B33_Ω, X, X)
+#assemble(B32_ΩΓ, X, w)
+B33_Ω = IPVIE2.B33_Ω(alpha = -1.0, invtau = inv_τ)
+#assemble(B33_Ω, X, X)
 B33_ΓΓ = IPVIE2.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B33_ΓΓ, ntrc(X), ntrc(X))
-B33_ΓΩ = IPVIE2.B33_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B33_ΓΩ, ntrc(X), X)
-B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B33_ΩΓ, X, ntrc(X))
+#assemble(B33_ΓΓ, ntrc(X), ntrc(X))
+B33_ΓΩ = IPVIE2.B33_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
+#assemble(B33_ΓΩ, ntrc(X), X)
+B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
+#assemble(B33_ΩΓ, X, ntrc(X))
 B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
-assemble(B33_ΩΩ, X, X)
+#assemble(B33_ΩΩ, X, X)
 
-
-BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
-
-# Manuelle assemble zum testen 
-assemble(B11_Γ,y,y)
-assemble(B11_ΓΓ,y,y)
-assemble(B11_ΓΓ,y,y)
-assem
+# VORZEICHEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 # LHS
@@ -136,12 +131,22 @@ assem
 @hilbertspace l m n # Spalten
 
 lhs = @varform(
-    
+    B11_Γ[i,l] + B11_ΓΓ[i,l] +
+    B12_ΓΓ[i,m] +
+    B13_ΓΓ[i,ntrc(n)] + B13_ΓΩ[i,n] + 
 
-    TL_Γ[k,j] + TL_ΓΓ[k,j] +
-    TR_ΓΩ[k,m] + TR_ΓΓ[k,ntrc(m)] +
-    BL_ΓΓ[ntrc(l),j] + BL_ΩΓ[l,j] +
-    BR_Ω[l,m] + BR_ΩΩ[l,m] + BR_ΓΩ[ntrc(l),m] + BR_ΓΓ[ntrc(l),ntrc(m)] + BR_ΩΓ[l,ntrc(m)]
+    B21_ΓΓ[j,l] + 
+    B22_Γ[j,m] +B22_ΓΓ[j,m] +
+    B23_ΓΓ[j,ntrc(n)] + B23_ΓΩ[j,n] +
+
+    B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
+    B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +
+    B33_Ω[k,n] + B33_ΓΓ[ntrc(k),ntrc(n)] + B33_ΓΩ[ntrc(k),n] + B33_ΩΓ[k,ntrc(n)] + B33_ΩΩ[k,n]
+
+    # TL_Γ[k,j] + TL_ΓΓ[k,j] +
+    # TR_ΓΩ[k,m] + TR_ΓΓ[k,ntrc(m)] +
+    # BL_ΓΓ[ntrc(l),j] + BL_ΩΓ[l,j] +
+    # BR_Ω[l,m] + BR_ΩΩ[l,m] + BR_ΓΩ[ntrc(l),m] + BR_ΓΓ[ntrc(l),ntrc(m)] + BR_ΩΓ[l,ntrc(m)]
 )
 
 
@@ -159,8 +164,13 @@ S = Matrix(M)
 @hilbertspace o # Spalten, !!! Nur eine Blockspalte
 
 rhs = @varform( # Vorlage für nicht-quadratische Matrix ...
-    -TL_Γ[k,n] -TL_ΓΓ[k,n] +
-    -BL_ΓΓ[ntrc(l),n] -BL_ΩΓ[l,n]
+    -B11_Γ[i,o] -B11_ΓΓ[i,o] +
+
+    -B21_ΓΓ[j,o] + 
+
+    -B31_ΓΓ[ntrc(k),o] -B31_ΩΓ[k,o]
+    # -TL_Γ[k,n] -TL_ΓΓ[k,n] +
+    # -BL_ΓΓ[ntrc(l),n] -BL_ΩΓ[l,n]
 )
 
 rhsd = @discretise rhs i∈y j∈w k∈X o∈y_d
@@ -175,40 +185,50 @@ R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
 b = R*ex
 u = S \ b
 @assert norm(S*u - b) < 1e-10
+u_Φ = u[1:length(y)]
+u_Jn = u[length(y)+1:length(y)+length(w)]
+u_J = u[length(y)+length(w)+1:end]
+@assert length(u_Φ) == length(y.fns)#ACHTUNG JETZT SIND ES 3 im Lösungsvektor
+@assert length(u_Jn) == length(w.fns)#ACHTUNG JETZT SIND ES 3 im Lösungsvektor
+@assert length(u_J) == length(X.fns)#ACHTUNG JETZT SIND ES 3 im Lösungsvektor
 
 
 
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
-J_MoM = BEAST.grideval(points, u[length(y)+1:end], X)#, type=Float64)
-@assert length(u[length(y)+1:end]) == length(X.fns)
+J_MoM = BEAST.grideval(points, u_J, X)#, type=Float64)
+
+
+
 
 display(Visu.fieldplot(points, J_MoM, 1.0, Visu.mesh(Γ_c)))
 
 
 # Stromdichte in Ebene z0
-range_xy = range(-0.49,stop=0.49,length=9)
+range_xy = range(-0.49,stop=0.49,length=14)
 z0 = 0.0
 points2 = [point(x,y,z0) for x in range_xy for y in range_xy]
-J_MoM2 = BEAST.grideval(points2, u[length(y)+1:end], X)
+J_MoM2 = BEAST.grideval(points2, u_J, X)
 @show sum(norm.(J_MoM2))/length(J_MoM2)
 #PRÜFE WERTE VON u[1:length(y)] denn diese müssen den Spannung auf Γ_nc
 # als ZWISCHEN den ELEKTRODENSPANNUNGEN!
-@show maximum(u[1:length(y)])
-@show minimum(u[1:length(y)])
+@show maximum(u_Φ)
+@show minimum(u_Φ)
+
+@show maximum(u_Jn)
+@show minimum(u_Jn)
 
 Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM2)
 #[Jallz[i] >= 0.0 && error("") for i in 1:1:length(Jallz)]
-@show sum(Jallz)/length(Jallz)
-""
-##
+@show sum(abs.(Jallz))/length(Jallz)
 @show sum(abs.(Jallx))/length(Jallx) # Ist Liniendurchschnitt 
 @show sum(abs.(Jally))/length(Jally) # Ist Liniendurchschnitt
-@show sum(Jallx)/length(Jallx) # Ist Liniendurchschnitt
-@show sum(Jally)/length(Jally) # Ist Liniendurchschnitt
 
+@show sum(abs.(u_Jn))/length(u_Jn)
 
+""
+##
 # ERGEBNISSE:
 # J_z - Komponente ist in der Nähe der Kontaktflächen unphysikalisch! 
 #      d.h. +/- Sprünge benachbarter Zellen...
