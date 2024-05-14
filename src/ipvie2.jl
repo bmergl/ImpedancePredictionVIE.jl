@@ -44,7 +44,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     function B21_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
  
-        return Mod.HyperSingularDyadic(gamma, alpha) #Helmholtz3D.hypersingular(gamma = gamma, alpha = alpha) 
+        return Helmholtz3D.hypersingular(gamma = gamma, alpha = alpha) 
     end
 
     # B22 Block

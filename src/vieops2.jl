@@ -79,7 +79,7 @@ function (igd::BEAST.Integrand{<:MaterialADL})(x,y,f,g)
     return BEAST._krondot(fvalue,gvalue) * dot(n, αgradgreen*Ty) # 2. + statt -
 end
 
-###### Hypersingular Dyadic ##############################################################
+###### Hypersingular Dyadic: KONVERGIERT  NICHT!!!! ##############################################################
 
 struct HyperSingularDyadic{T,K} <: BEAST.Helmholtz3DOp{T,K}
     gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
@@ -123,7 +123,28 @@ function (igd::BEAST.Integrand{<:HyperSingularDyadic})(x,y,f,g)
     return BEAST._krondot(fvalue,gvalue) * dot(nx, αdaydG*ny) 
 end
 
+###### Hypersingular curl=0 because of pwc ... problems??? #############################################
+struct HyperSingular0curl{T,K} <: BEAST.Helmholtz3DOp{T,K}
+    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+    alpha::T
+end
 
+function (igd::BEAST.Integrand{<:HyperSingular0curl})(x,y,f,g)
+    α = igd.operator.alpha
+    #β = igd.operator.beta
+    γ = BEAST.gamma(igd.operator)
+
+    r = cartesian(x) - cartesian(y)
+    R = norm(r)
+    iR = 1 / R
+    green = exp(-γ*R)*(BEAST.i4pi*iR)
+    nx = normal(x)
+    ny = normal(y)
+
+    BEAST._integrands(f,g) do fi, gi
+        α*dot(nx,ny)*gi.value*fi.value*green #+ β*dot(gi.curl,fi.curl)*green  # <- zero for pwc
+    end
+end
 
 
 
@@ -136,7 +157,7 @@ struct gradG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
 end
 function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo) # 5D
 
-    gx = @SVector[tvals[i].value for i in 1:3]
+    gx = @SVector[tvals[i].value for i in 1:1]
     fy = @SVector[bvals[i].value for i in 1:4]
 
     G = kerneldata.green
@@ -146,7 +167,7 @@ function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
     α = viop.α
 
-    return @SMatrix[α * dot(gx[i] * gradG, Ty*fy[j]) for i in 1:3, j in 1:4]
+    return @SMatrix[α * dot(gx[i] * gradG, Ty*fy[j]) for i in 1:1, j in 1:4]
 end
 struct n_gradG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
     gamma::T
@@ -175,7 +196,7 @@ struct n_dyadG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
 end
 function BEAST.integrand(viop::n_dyadG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
-    gx = @SVector[tvals[i].value for i in 1:1] #1 PWC  
+    gx = @SVector[tvals[i].value for i in 1:3]
     fy = @SVector[bvals[i].value for i in 1:4] 
 
     dyadG = -kerneldata.dyadgreen # is ∇'∇'G
@@ -186,7 +207,7 @@ function BEAST.integrand(viop::n_dyadG_ΓΩ, kerneldata, tvals, tgeo, bvals, bge
 
     nx = tgeo.patch.normals[1]
     
-    return @SMatrix[α * gx[i] * dot(nx, dyadG * (Ty*fy[j])) for i in 1:1, j in 1:4]
+    return @SMatrix[α * gx[i] * dot(nx, dyadG * (Ty*fy[j])) for i in 1:3, j in 1:4]
 end
 struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
     gamma::U

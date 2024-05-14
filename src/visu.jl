@@ -19,7 +19,7 @@ using Distributed
 
 
 
-function iplot(; size=(800,600))
+function iplot(; size=(1000,800))
     plotly()
     #plotlyjs()
     plt = plot(size = size, xlabel = "x", ylabel = "y", zlabel = "z")

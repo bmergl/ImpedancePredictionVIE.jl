@@ -13,7 +13,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 2.0 # kleiner 0.2 sonst std
+h = 0.1 # kleiner 0.2 sonst std
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -55,8 +55,8 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 ## #########################################################
 
 
-κ = x -> 1.0
-κ0 = 1.0
+κ = x -> 2.0
+κ0 = -1212.0
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -81,37 +81,28 @@ ex = append!(deepcopy(u_top), u_bottom)
 
 # Definiton der Operatoren
 B11_Γ = IPVIE2.B11_Γ(alpha = 1.0)
-#assemble(B11_Γ, y, y)
+#assemble(B11_Γ, w, y)
 B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
-#assemble(B11_ΓΓ, y, y)
+#assemble(B11_ΓΓ, w, y)
 B12_ΓΓ = IPVIE2.B12_ΓΓ(alpha = -1.0, gammatype = Float64)
-#assemble(B12_ΓΓ, y, w)
+#assemble(B12_ΓΓ, w, w)
 B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ)
-#assemble(B13_ΓΓ, y, y)
+#assemble(B13_ΓΓ, w, ntrc(X))
 B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
-#assemble(B13_ΓΩ, y, X)
-
-B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = -1.0, gammatype = Float64)   # Große Probleme in Sicht mit dem Hypersing... falls der das ist....
-#assemble(B21_ΓΓ, w, y)
+#assemble(B13_ΓΩ, w, X)
 
 
-
-Test1 = Helmholtz3D.hypersingular(alpha =-1.0, gamma =0.0)
-#BEAST.defaultquadstrat(op::ImpedancePredictionVIE.HyperSingularDyadic, tfs::BEAST.LagrangeRefSpace, bfs::BEAST.LagrangeRefSpace) = BEAST.DoubleNumSauterQstrat(2,2,2,2,2,2)
-
-M1=assemble(Test1, y, y)
-M2=assemble(B21_ΓΓ,y, y) # nicht realistisch
-norm(M1-M2)
-
-
+B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)   # UNVOLLSTÄNDIG!!!
+#assemble(B21_ΓΓ, y, y)
 B22_Γ = IPVIE2.B22_Γ(alpha = 1.0)
-#assemble(B22_Γ, w, w)
+#assemble(B22_Γ, y, w)
 B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = -1.0, gammatype = Float64)
 #assemble(B22_ΓΓ, w, w)
-B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ) #VZ??????????????
+B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ) #VZ? sollte passen
 #assemble(B23_ΓΓ, w, ntrc(X))
 B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ)
 #assemble(B23_ΓΩ, w, X)
+
 
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
 #assemble(B31_ΓΓ, ntrc(X), y)
@@ -136,8 +127,8 @@ B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 
 
 # LHS
-@hilbertspace i j k # Zeilen
-@hilbertspace l m n # Spalten
+@hilbertspace i j k # Zeilen    ->Test
+@hilbertspace l m n # Spalten   ->Basis
 
 lhs = @varform(
     B11_Γ[i,l] + B11_ΓΓ[i,l] +
@@ -159,7 +150,7 @@ lhs = @varform(
 )
 
 
-lhsd = @discretise lhs i∈y j∈w k∈X l∈y m∈w n∈X
+lhsd = @discretise lhs i∈w j∈y k∈X l∈y m∈w n∈X #! w und y Tausch!
 lhsd_test = lhsd.test_space_dict
 lhsd_trial = lhsd.trial_space_dict
 testSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_test)
@@ -182,7 +173,7 @@ rhs = @varform( # Vorlage für nicht-quadratische Matrix ...
     # -BL_ΓΓ[ntrc(l),n] -BL_ΩΓ[l,n]
 )
 
-rhsd = @discretise rhs i∈y j∈w k∈X o∈y_d
+rhsd = @discretise rhs i∈w j∈y k∈X o∈y_d
 rhsd_test = rhsd.test_space_dict
 rhsd_trial = rhsd.trial_space_dict
 testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)
