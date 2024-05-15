@@ -20,7 +20,7 @@ abstract type VolumeOperatorΩΩ <: BEAST.VolumeOperator end
 
 ##### momintegrals!  ######################################################################
 
-# 5D: ∫∫∫_Ω ∫∫_Γ
+# 5D: ∫∫∫_Ω ∫∫_Γ      -> Achtung, hier haben wir keinen Unit test!!!
 struct VIEIntegrandΩΓ{S,T,O,K,L}
     test_tetrahedron_element::S
     trial_tetrahedron_element::T
@@ -37,7 +37,7 @@ function (igd::VIEIntegrandΩΓ)(u,v)     # wird nur für den SS3D-Fall verwende
     @assert length(v) == 2
 
     #@show u, v
-    #error("")
+    error("")
 
     #mesh points
     tgeo = neighborhood(igd.test_tetrahedron_element,u) #!!!
@@ -189,6 +189,42 @@ end
 
 
 # 6D: ∫∫∫_Ω ∫∫∫_Ω
+struct VIEIntegrandΩΩ{S,T,O,K,L}
+    test_tetrahedron_element::S
+    trial_tetrahedron_element::T
+    op::O
+    test_local_space::K
+    trial_local_space::L
+end
+function (igd::VIEIntegrandΩΩ)(u,v)     # wird nur für den SS3D-Fall verwendet, d.h. Kontakt zw. test/trial simplex
+
+    @assert length(igd.test_tetrahedron_element.vertices) == 4
+    @assert length(igd.trial_tetrahedron_element.vertices) == 4
+    @assert length(u) == 3
+    @assert length(v) == 3
+
+    #@show u, v
+    error("")
+
+    #mesh points
+    tgeo = neighborhood(igd.test_tetrahedron_element,u) #!!! auch mal für vol teil hier tauschen...
+    bgeo = neighborhood(igd.trial_tetrahedron_element,v) #!!!
+
+    @assert length(tgeo.patch.vertices) == 4
+    @assert length(bgeo.patch.vertices) == 4
+
+    #kernel values
+    kerneldata = kernelvals(igd.op,tgeo,bgeo)
+
+    #values & grad/div/curl of local shape functions
+    tval = igd.test_local_space(tgeo) 
+    bval = igd.trial_local_space(bgeo)
+
+    #jacobian
+    j = jacobian(tgeo) * jacobian(bgeo)
+    
+    integrand(igd.op, kerneldata,tval,tgeo,bval,bgeo) * j
+end
 function BEAST.momintegrals!(op::VolumeOperatorΩΩ,
     test_local_space::RefSpace, trial_local_space::RefSpace,
     test_tetrahedron_element, trial_tetrahedron_element, out, strat::SauterSchwab3DStrategy)
@@ -213,7 +249,7 @@ function BEAST.momintegrals!(op::VolumeOperatorΩΩ,
             trial_tetrahedron_element.vertices[J[4]])
 
     #Define integral (returns a function that only needs barycentric coordinates)
-    igd = BEAST.VIEIntegrand(test_tetrahedron_element, trial_tetrahedron_element,
+    igd = VIEIntegrandΩΩ(test_tetrahedron_element, trial_tetrahedron_element,
         op, test_local_space, trial_local_space) # should work...
 
     #Evaluate integral

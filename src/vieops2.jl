@@ -286,7 +286,7 @@ function BEAST.integrand(viop::div_G_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
 end
 
 
-struct div_gradG_ΩΩ{T,U,P} <: BEAST.VolumeOperator
+struct div_gradG_ΩΩ{T,U,P} <: VolumeOperatorΩΩ
     gamma::T
     α::U
     tau::P

@@ -7,26 +7,7 @@ using StaticArrays
 
 using Test
 
-@testset "ImpedancePredictionVIE.jl" begin
-    # Write your tests here.
-
-    geoname = "cube.geo"
-    geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
-
-    meshname = "cube.msh"
-    meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
-
-    h = 2.0 # kleiner 0.2 sonst std
-    Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
-
-
-    function make_T4(;gamma,alpha = 1.0,tau = nothing)# umbenennen!
-        tau === nothing && error()
-        return MaterialDL(gamma,alpha,tau)
-    end
-
-
-end
+include("test_SS3D.jl")
 
 
 
