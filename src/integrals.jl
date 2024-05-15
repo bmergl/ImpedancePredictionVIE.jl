@@ -37,7 +37,7 @@ function (igd::VIEIntegrandΩΓ)(u,v)     # wird nur für den SS3D-Fall verwende
     @assert length(v) == 2
 
     #@show u, v
-    error("")
+    #error("Ja, das ist VIEIntegrandΩΓ")
 
     #mesh points
     tgeo = neighborhood(igd.test_tetrahedron_element,u) #!!!
@@ -110,9 +110,9 @@ end
 
 
 # 5D: ∫∫_Γ ∫∫∫_Ω 
-function qr_boundary(op::BoundaryOperatorΓΩ, g::RefSpace, f::RefSpace, i, τ, j,  σ, qd,
+function BEAST.qr_boundary(op::BoundaryOperatorΓΩ, g::RefSpace, f::RefSpace, i, τ, j,  σ, qd,
     qs::BEAST.SauterSchwab3DQStrat)  # T <-> S
-
+    #error("Ja das richtige qr boundary")
     dtol = 1.0e3 * eps(eltype(eltype(τ.vertices)))
 
     hits = 0
@@ -143,7 +143,7 @@ function qr_boundary(op::BoundaryOperatorΓΩ, g::RefSpace, f::RefSpace, i, τ, 
     hits == 1 && return SauterSchwab3D.CommonVertex5D_S(SauterSchwab3D.Singularity5DPoint(idx_s,idx_t),(qd.sing_qp[3],qd.sing_qp[2]))
 
 
-    return DoubleQuadRule(
+    return BEAST.DoubleQuadRule(
         qd[1][1,i],
         qd[2][1,j])
 
@@ -152,6 +152,8 @@ end
 function BEAST.momintegrals!(op::BoundaryOperatorΓΩ,
     test_local_space::RefSpace, trial_local_space::RefSpace,
     test_tetrahedron_element, trial_tetrahedron_element, out, strat::SauterSchwab3DStrategy)
+    
+    #error("Ja, das ist momintegrals für BoundaryOperatorΓΩ")
 
     #Find permutation of vertices to match location of singularity to SauterSchwab
     J, I = SauterSchwab3D.reorder(strat.sing) #Singularity...(idx_s,idx_t)
@@ -204,7 +206,7 @@ function (igd::VIEIntegrandΩΩ)(u,v)     # wird nur für den SS3D-Fall verwende
     @assert length(v) == 3
 
     #@show u, v
-    error("")
+    #error("JA, das ist 6D: ∫∫∫_Ω ∫∫∫_Ω")
 
     #mesh points
     tgeo = neighborhood(igd.test_tetrahedron_element,u) #!!! auch mal für vol teil hier tauschen...

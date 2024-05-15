@@ -9,41 +9,95 @@ using ImpedancePredictionVIE
 #@testset "SauterSchwab 5D/6D integrals" begin
 
 
-    # Neudefinition
-    struct VIEhhVolume{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ#BEAST.VolumeOperator
+    # Neudefinition ... unklar wie es anders gehen würde...
+    struct VIEhhVolume2{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ#BEAST.VolumeOperator
         gamma::T
         α::U
         tau::P
     end
+    struct VIEhhBoundary2{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΓΩ
+        gamma::T
+        α::U
+        tau::P
+    end
+    struct VIEhhVolumegradG2{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ #BEAST.VolumeOperator
+        gamma::T
+        α::U
+        tau::P
+    end
+
+    # Konstruktoren
+    function hhvolume2(; tau=nothing)
+
+        return VIEhhVolume2(0.0, -1.0, tau)
+    end
+
+    function hhboundary2(; tau=nothing)
+
+        return VIEhhBoundary2(0.0, 1.0, tau)
+    end
+
+    function hhvolumegradG2(; tau=nothing)
+
+        return VIEhhVolumegradG2(0.0, -1.0, tau)
+    end
+
     
-    struct VIEhhBoundary{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΓΩ
-        gamma::T
-        α::U
-        tau::P
-    end
-    
-    struct VIEhhVolumegradG{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ #BEAST.VolumeOperator
-        gamma::T
-        α::U
-        tau::P
-    end
+    function BEAST.integrand(viop::VIEhhVolume2, kerneldata, tvals, tgeo, bvals, bgeo)
 
+        gx = @SVector[tvals[i].value for i in 1:4]
+        fy = @SVector[bvals[i].value for i in 1:4]
 
-    # Überschreiben der alten Konstruktoren
-    function hhvolume(; tau=nothing)
+        dgx = @SVector[tvals[i].gradient for i in 1:4]
+        dfy = @SVector[bvals[i].gradient for i in 1:4]
 
-        return BEAST.VIEhhVolume(0.0, 1.0, tau)
-    end
+        G = kerneldata.green
+        gradG = kerneldata.gradgreen
 
-    function hhboundary(; tau=nothing)
+        Ty = kerneldata.tau
 
-        return BEAST.VIEhhBoundary(0.0, 1.0, tau)
+        α = viop.α
+
+        return @SMatrix[α * dot(dgx[i], G*Ty*dfy[j]) for i in 1:4, j in 1:4]
     end
 
-    function hhvolumegradG(; tau=nothing)
+    function BEAST.integrand(viop::VIEhhBoundary2, kerneldata, tvals, tgeo, bvals, bgeo)
 
-        return BEAST.VIEhhVolumegradG(0.0, 1.0, tau)
+        gx = @SVector[tvals[i].value for i in 1:3]
+        dfy = @SVector[bvals[i].gradient for i in 1:4]
+
+        G = kerneldata.green
+        gradG = kerneldata.gradgreen
+
+        Ty = kerneldata.tau
+
+        α = viop.α
+
+        return @SMatrix[α * dot( tgeo.patch.normals[1]*gx[i],G*Ty*dfy[j]) for i in 1:3, j in 1:4]
     end
+
+    function BEAST.integrand(viop::VIEhhVolumegradG2, kerneldata, tvals, tgeo, bvals, bgeo)
+
+        gx = @SVector[tvals[i].value for i in 1:4]
+        fy = @SVector[bvals[i].value for i in 1:4]
+
+        dgx = @SVector[tvals[i].gradient for i in 1:4]
+        dfy = @SVector[bvals[i].gradient for i in 1:4]
+
+        G = kerneldata.green
+        gradG = -kerneldata.gradgreen # "-" to get nabla'G(r,r')
+
+        Ty = kerneldata.tau
+
+        α = viop.α
+
+        return @SMatrix[α * gx[i] * dot(gradG, Ty*dfy[j]) for i in 1:4, j in 1:4]
+    end
+
+
+
+
+
 
 
 
@@ -79,9 +133,13 @@ using ImpedancePredictionVIE
     τ = generate_tau(ε2, ε1)
 
     I = Identity()
-    V = hhvolume(tau = τ)
-    B = hhboundary(tau = τ)
-    Y = hhvolumegradG(tau = τ)
+    V = hhvolume2(tau = τ)
+    B = hhboundary2(tau = τ)
+    Y = hhvolumegradG2(tau = τ)
+
+    # I, V, B =  Identity(), VIE.hhvolume(tau = τ, wavenumber = 0.0), VIE.hhboundary(tau = τ, wavenumber = 0.0)
+    # Y = VIE.hhvolumegradG(tau = τ, wavenumber = 0.0)
+
 
     #Overwrite:
     #V = VIE.hhvolume(tau = τ, wavenumber = 0.0)
@@ -116,7 +174,7 @@ using ImpedancePredictionVIE
     u_version2 = Z_version2 \ Vector(b)
 
     # Observation points
-    range_ = range(-1.0*r,stop=1.0*r,length=14)
+    range_ = range(-1.0*r,stop=1.0*r,length=20)
     points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
     points_sp=[]
     for p in points
@@ -141,7 +199,106 @@ using ImpedancePredictionVIE
     @test err_Φ_version1 < 0.02
     @test err_Φ_version2 < 0.01
 
-    # Also ist neue ΓΩ int richtig implementiert worden
+
+    #Symmetrie test BoundaryOperatorΓΩ vs. BoundaryOperatorΩΓ #########################
+    struct TestOpBoundaryΓΩ{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΓΩ
+        gamma::T
+        α::U
+        tau::P
+    end    
+    struct TestOpBoundaryΩΓ{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΩΓ
+        gamma::T
+        α::U
+        tau::P
+    end
+
+    function testOpBoundaryΓΩ(; tau=nothing)
+
+        return TestOpBoundaryΓΩ(0.0, 1.0, tau)
+    end
+
+    function testOpBoundaryΩΓ(; tau=nothing)
+
+        return TestOpBoundaryΩΓ(0.0, 1.0, tau)
+    end
+
+    function BEAST.integrand(viop::TestOpBoundaryΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
+
+        gx = @SVector[tvals[i].value for i in 1:3]
+        fy = @SVector[bvals[i].value for i in 1:4]
+
+        G = kerneldata.green
+
+        Ty = kerneldata.tau
+
+        α = viop.α
+
+        return @SMatrix[α * gx[i] * G * fy[j] for i in 1:3, j in 1:4]
+    end
+
+    function BEAST.integrand(viop::TestOpBoundaryΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
+
+        gx = @SVector[tvals[i].value for i in 1:4]
+        fy = @SVector[bvals[i].value for i in 1:3]
+
+        G = kerneldata.green
+
+        Ty = kerneldata.tau
+
+        α = viop.α
+
+        return @SMatrix[α * gx[i] * G * fy[j] for i in 1:4, j in 1:3]
+    end
+
+    T_ΓΩ = testOpBoundaryΓΩ(tau = τ)
+    T_ΩΓ = testOpBoundaryΩΓ(tau = τ)
+
+    #BEAST.defaultquadstrat(op::TestOpBoundaryΓΩ, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
+    #BEAST.defaultquadstrat(op::TestOpBoundaryΩΓ, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
+
+    M_ΓΩ = assemble(T_ΓΩ, strc(X), X)
+    M_ΩΓ = assemble(T_ΩΓ, X, strc(X))
+    #@show M_ΓΩ-transpose(M_ΩΓ)
+
+    @test norm(M_ΓΩ - transpose(M_ΩΓ)) < 1e-14
+
+
+
+
+    ####### BoundaryOperatorΓΩ vs. BoundaryOperator (oben minimal genauer - warum?) ###################################
+
+    B_std = VIE.hhboundary(wavenumber = 0.0, tau = τ)
+    B_ΓΩ = hhboundary2(tau = τ)
+
+    #BEAST.defaultquadstrat(op::BEAST.VIEhhBoundary, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,6,6,6,6)
+    #BEAST.defaultquadstrat(op::VIEhhBoundary2, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,6,6,6,6)
+
+    Z_B_std = assemble(B_std, strc(X), X)
+    Z_B_ΓΩ = assemble(B_ΓΩ, strc(X), X)
+
+    @test norm(Z_B_std - Z_B_ΓΩ) < 9.0e-4           # Warum ist das eigentlich nicht exakt?
+    norm(Z_B_std)
+    norm(Z_B_ΓΩ)
+    @test abs(maximum(Z_B_std - Z_B_ΓΩ)) < 3.0e-4
+    @test abs(minimum(Z_B_std - Z_B_ΓΩ)) < 3.0e-4
+    #displax(Z_B_std - Z_B_ΓΩ)
+
+
+
+    ####### VolumeOperatorΩΩ vs. VolumeOperator (oben minimal genauer - warum?) ###################################
+
+    V_std = VIE.hhvolume(wavenumber = 0.0, tau = τ)
+    V_ΩΩ = hhvolume2(tau = τ)
+
+    Z_V_std = assemble(V_std, X, X)
+    Z_V_ΩΩ = assemble(V_ΩΩ, X, X)
+    
+    @test norm(Z_V_std - Z_V_ΩΩ) < 6.0e-3
+    norm(Z_V_std)
+    norm(Z_V_ΩΩ)
+    @test abs(maximum(Z_V_std - Z_V_ΩΩ)) < 1.0e-3
+    @test abs(minimum(Z_V_std - Z_V_ΩΩ)) < 1.0e-3
+    #display(Z_V_std - Z_V_ΩΩ)
 
 
 #end
