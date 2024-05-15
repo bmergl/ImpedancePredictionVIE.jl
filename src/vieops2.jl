@@ -20,10 +20,10 @@ function (igd::BEAST.Integrand{<:MaterialSL})(x,y,f,g)
     iR = 1 / R
     green = exp(-γ*R)*(BEAST.i4pi*iR)
 
-    αG = α * green
+    αGTy = α * green * Ty
 
     BEAST._integrands(f,g) do fi, gi
-        dot(gi.value, αG*Ty*fi.value)
+        dot(gi.value, αGTy*fi.value)
     end
 end
 
@@ -81,70 +81,70 @@ end
 
 ###### Hypersingular Dyadic: KONVERGIERT  NICHT!!!! ##############################################################
 
-struct HyperSingularDyadic{T,K} <: BEAST.Helmholtz3DOp{T,K}
-    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
-    alpha::T
-end
+# struct HyperSingularDyadic{T,K} <: BEAST.Helmholtz3DOp{T,K}
+#     gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+#     alpha::T
+# end
 
-function (igd::BEAST.Integrand{<:HyperSingularDyadic})(x,y,f,g)
-    α = igd.operator.alpha
-    γ = BEAST.gamma(igd.operator)
+# function (igd::BEAST.Integrand{<:HyperSingularDyadic})(x,y,f,g)
+#     α = igd.operator.alpha
+#     γ = BEAST.gamma(igd.operator)
 
-    r = cartesian(x) - cartesian(y)
-    R = norm(r)
+#     r = cartesian(x) - cartesian(y)
+#     R = norm(r)
 
-    Rsq = R^2
+#     Rsq = R^2
 
-    p_ = cartesian(x)
-    q_ = cartesian(y)
-    xd = p_[1]-q_[1]
-    yd = p_[2]-q_[2]
-    zd = p_[3]-q_[3]
+#     p_ = cartesian(x)
+#     q_ = cartesian(y)
+#     xd = p_[1]-q_[1]
+#     yd = p_[2]-q_[2]
+#     zd = p_[3]-q_[3]
 
-    dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
-    yd*xd 3*yd^2-Rsq yd*zd;
-    zd*xd zd*yd 3*zd^2-Rsq;
-    ]
+#     dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
+#     yd*xd 3*yd^2-Rsq yd*zd;
+#     zd*xd zd*yd 3*zd^2-Rsq;
+#     ]
 
-   # rand() < 0.00001 && display(dyadgreen)
-    @assert norm(dyadgreen-transpose(dyadgreen))<1e-13
+#    # rand() < 0.00001 && display(dyadgreen)
+#     @assert norm(dyadgreen-transpose(dyadgreen))<1e-13
 
-    αdaydG = α * dyadgreen
+#     αdaydG = α * dyadgreen
 
-    nx = x.patch.normals[1]
-    ny = y.patch.normals[1] 
+#     nx = x.patch.normals[1]
+#     ny = y.patch.normals[1] 
 
-    # retunrn BEAST._integrands(f,g) do fi, gi
-    #     dot(gi.value*nx, αdaydG*(fi.value*ny))
-    # end
+#     # retunrn BEAST._integrands(f,g) do fi, gi
+#     #     dot(gi.value*nx, αdaydG*(fi.value*ny))
+#     # end
 
-    fvalue = BEAST.getvalue(f)
-    gvalue = BEAST.getvalue(g)
-    return BEAST._krondot(fvalue,gvalue) * dot(nx, αdaydG*ny) 
-end
+#     fvalue = BEAST.getvalue(f)
+#     gvalue = BEAST.getvalue(g)
+#     return BEAST._krondot(fvalue,gvalue) * dot(nx, αdaydG*ny) 
+# end
 
 ###### Hypersingular curl=0 because of pwc ... problems??? #############################################
-struct HyperSingular0curl{T,K} <: BEAST.Helmholtz3DOp{T,K}
-    gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
-    alpha::T
-end
+# struct HyperSingular0curl{T,K} <: BEAST.Helmholtz3DOp{T,K}
+#     gamma::K # Reihenfolge im VIE Teil ist gamma,alpha -> im HH3D Teil alpha,gamma
+#     alpha::T
+# end
 
-function (igd::BEAST.Integrand{<:HyperSingular0curl})(x,y,f,g)
-    α = igd.operator.alpha
-    #β = igd.operator.beta
-    γ = BEAST.gamma(igd.operator)
+# function (igd::BEAST.Integrand{<:HyperSingular0curl})(x,y,f,g)
+#     α = igd.operator.alpha
+#     #β = igd.operator.beta
+#     γ = BEAST.gamma(igd.operator)
 
-    r = cartesian(x) - cartesian(y)
-    R = norm(r)
-    iR = 1 / R
-    green = exp(-γ*R)*(BEAST.i4pi*iR)
-    nx = normal(x)
-    ny = normal(y)
+#     r = cartesian(x) - cartesian(y)
+#     R = norm(r)
+#     iR = 1 / R
+#     green = exp(-γ*R)*(BEAST.i4pi*iR)
+#     nx = normal(x)
+#     ny = normal(y)
 
-    BEAST._integrands(f,g) do fi, gi
-        α*dot(nx,ny)*gi.value*fi.value*green #+ β*dot(gi.curl,fi.curl)*green  # <- zero for pwc
-    end
-end
+#     BEAST._integrands(f,g) do fi, gi
+#         α*dot(nx,ny)*gi.value*fi.value*green #+ β*dot(gi.curl,fi.curl)*green  # <- zero for pwc
+#     end
+# end
 
 
 
@@ -317,18 +317,17 @@ end
 
 
 
-struct MatIdΩ{T,U} <: MaterialIdentity 
+struct MatId{T,U} <: MaterialIdentity 
     α::T
     tau::U
 end
 
-function BEAST.integrand(localop::MatIdΩ, kerneldata, x, g, f) # ist ja für beide gleich...
+function BEAST.integrand(localop::MatId, kerneldata, x, g, f)
 
     gx = g.value
     fx = f.value
 
     Tx = kerneldata.tau
-
 
     α = localop.α
 

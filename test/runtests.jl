@@ -8,7 +8,7 @@ using StaticArrays
 using Test
 
 include("test_SS3D.jl")
-
+include("test_MaterialOPs.jl")
 
 
 # Hier muss ein .geo oder ein .msh file im test Ordner liegen

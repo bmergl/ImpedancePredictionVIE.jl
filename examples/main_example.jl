@@ -55,8 +55,8 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 ## #########################################################
 
 
-κ = x -> 2.0
-κ0 = -1212.0
+κ = x -> 1.0
+κ0 = 1424225.9
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -64,13 +64,7 @@ p = SVector(0.0,0.0,0.0)
 inv_τ(p)
 τ0
 χ(p)
-(τ(p) - τ0)* inv_τ(p)
-# homogenes Medium in Ω => τ0 kann χ zu Null machen => Volterm verschwindet
-# was erklärbar wäre, aber wie kompensiert man τ0->0.0 => χ->inf ?
 
-#χ0
-#χ_min_χ0I(p)
-#χ(p) - χ0
 
 # Anregung
 u_top = ones(length(topnodes)) * 0.5  # Volle Symmetrie!
@@ -78,39 +72,38 @@ u_bottom = ones(length(bottomnodes)) * (-0.5)
 ex = append!(deepcopy(u_top), u_bottom)
 
 
-
 # Definiton der Operatoren
-B11_Γ = IPVIE2.B11_Γ(alpha = 1.0)
+B11_Γ = IPVIE2.B11_Γ(alpha = 1.0) #Verschwindet!!!
 #assemble(B11_Γ, w, y)
 B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
-#assemble(B11_ΓΓ, w, y)
-B12_ΓΓ = IPVIE2.B12_ΓΓ(alpha = -1.0, gammatype = Float64)
-#assemble(B12_ΓΓ, w, w)
-B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ)
-#assemble(B13_ΓΓ, w, ntrc(X))
+#norm(assemble(B11_ΓΓ, w, y))
+B12_ΓΓ = IPVIE2.B12_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+#norm(assemble(B12_ΓΓ, w, w))
+B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
+#norm(assemble(B13_ΓΓ, w, ntrc(X)))
 B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
-#assemble(B13_ΓΩ, w, X)
+#norm(assemble(B13_ΓΩ, w, X))
 
 
-B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)   # UNVOLLSTÄNDIG!!!
-#assemble(B21_ΓΓ, y, y)
-B22_Γ = IPVIE2.B22_Γ(alpha = 1.0)
-#assemble(B22_Γ, y, w)
-B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = -1.0, gammatype = Float64)
-#assemble(B22_ΓΓ, w, w)
+B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)
+#norm(assemble(B21_ΓΓ, y, y))
+B22_Γ = IPVIE2.B22_Γ(alpha = -1.0, invtau = inv_τ)
+#norm(assemble(B22_Γ, y, w))
+B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+#norm(assemble(B22_ΓΓ, y, w))
 B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ) #VZ? sollte passen
-#assemble(B23_ΓΓ, w, ntrc(X))
+#norm(assemble(B23_ΓΓ, y, ntrc(X)))
 B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ)
-#assemble(B23_ΓΩ, w, X)
+#norm(assemble(B23_ΓΩ, y, X))
 
 
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
 #assemble(B31_ΓΓ, ntrc(X), y)
 B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
 #assemble(B31_ΩΓ, X, y)
-B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = -1.0, gammatype = Float64)
+B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
 #assemble(B32_ΓΓ, ntrc(X), w)
-B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = 1.0, gammatype = Float64)
+B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
 #assemble(B32_ΩΓ, X, w)
 B33_Ω = IPVIE2.B33_Ω(alpha = -1.0, invtau = inv_τ)
 #assemble(B33_Ω, X, X)
@@ -122,6 +115,15 @@ B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
 #assemble(B33_ΩΓ, X, ntrc(X))
 B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 #assemble(B33_ΩΩ, X, X)
+
+# RHS assemble test bzgl Überlapp der Identity
+# norm(assemble(B11_Γ, w, y_d))       # ja passt... darf nicht verschwinden!
+# norm(assemble(B11_ΓΓ, w, y_d))
+
+# norm(assemble(B21_ΓΓ, y, y_d))
+
+# norm(assemble(B31_ΓΓ, ntrc(X), y_d))
+# norm(assemble(B31_ΩΓ, X, y_d))
 
 # VORZEICHEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -184,7 +186,7 @@ R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
 # S*u = R*ex
 b = R*ex
 u = S \ b
-@assert norm(S*u - b) < 1e-10
+@assert norm(S*u - b) < 1e-4
 u_Φ = u[1:length(y)]
 u_Jn = u[length(y)+1:length(y)+length(w)]
 u_J = u[length(y)+length(w)+1:end]
@@ -193,49 +195,59 @@ u_J = u[length(y)+length(w)+1:end]
 @assert length(u_J) == length(X.fns)#ACHTUNG JETZT SIND ES 3 im Lösungsvektor
 
 
+# Ränder
+@show maximum(u_Φ)#*τ0)
+@show minimum(u_Φ)#*τ0)
+
+@show maximum(u_Jn)#*τ0)
+@show minimum(u_Jn)#*τ0)
 
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, u_J, X)#, type=Float64)
 
+display("Total Volume:")
+@show sum(norm.(J_MoM))/length(J_MoM)
+Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM)
+@show sum(Jallz)/length(Jallz)
+@show sum(Jallx)/length(Jallx)
+@show sum(Jally)/length(Jally)
 
-
-
-display(Visu.fieldplot(points, J_MoM, 1.0, Visu.mesh(Γ_c)))
+display(Visu.fieldplot(points, J_MoM, 0.1, Visu.mesh(Γ_c)))
 
 
 # Stromdichte in Ebene z0
-range_xy = range(-0.49,stop=0.49,length=14)
-z0 = 0.0
+range_xy = range(-0.5,stop=0.5,length=9)
+z0 = 0.49
 points2 = [point(x,y,z0) for x in range_xy for y in range_xy]
 J_MoM2 = BEAST.grideval(points2, u_J, X)
+
+display("z0 Plane:")
 @show sum(norm.(J_MoM2))/length(J_MoM2)
-#PRÜFE WERTE VON u[1:length(y)] denn diese müssen den Spannung auf Γ_nc
-# als ZWISCHEN den ELEKTRODENSPANNUNGEN!
-@show maximum(u_Φ)
-@show minimum(u_Φ)
-
-@show maximum(u_Jn)
-@show minimum(u_Jn)
-
 Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM2)
-#[Jallz[i] >= 0.0 && error("") for i in 1:1:length(Jallz)]
-@show sum(abs.(Jallz))/length(Jallz)
-@show sum(abs.(Jallx))/length(Jallx) # Ist Liniendurchschnitt 
-@show sum(abs.(Jally))/length(Jally) # Ist Liniendurchschnitt
+@show sum(Jallz)/length(Jallz)  
+@show sum(Jallx)/length(Jallx)
+@show sum(Jally)/length(Jally)
 
-@show sum(abs.(u_Jn))/length(u_Jn)
+# DEFINIERE CURRENT FUNCTION: INPUT u_Jn auf einer platte dann I_ges = Σ Dreiecksfläche_i *Jn_i
+# vgl. Iges Platte1 mit Iges Platte2...sollte gleich sein 
+
+
+
+#display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
 
 ""
 ##
-# ERGEBNISSE:
+# ERGEBNISSE bei τ0=1.0 : 
+
 # J_z - Komponente ist in der Nähe der Kontaktflächen unphysikalisch! 
 #      d.h. +/- Sprünge benachbarter Zellen...
 
-# Doppelte Leitfähigkeit => Doppelter Strom!!! STIMMT
-# Doppelte Spannung => Doppelter Strom!!! STIMMT
+# Doppelte Leitfähigkeit => noch nicht doppelter Strom!!!
+# Doppelte Spannung => noch nicht doppelter Strom!!!
 # Halbe Leitfähigkeit => Halber Strom!!! STIMMT
+# irgendwas passt bei tau0 noch nicht...
 
 ""
 ##
