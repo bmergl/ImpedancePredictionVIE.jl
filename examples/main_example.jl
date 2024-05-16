@@ -4,6 +4,7 @@ using Plots
 using BEAST
 using LinearAlgebra
 using StaticArrays
+using Plotly
 
 
 
@@ -55,8 +56,8 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 ## #########################################################
 
 
-κ = x -> 1.0
-κ0 = 1424225.9
+κ = x -> 1000.0
+κ0 = -10000.0
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -93,7 +94,7 @@ B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
 #norm(assemble(B22_ΓΓ, y, w))
 B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ) #VZ? sollte passen
 #norm(assemble(B23_ΓΓ, y, ntrc(X)))
-B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ)
+B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) #+extra Term?
 #norm(assemble(B23_ΓΩ, y, X))
 
 
@@ -214,7 +215,7 @@ Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM)
 @show sum(Jallx)/length(Jallx)
 @show sum(Jally)/length(Jally)
 
-display(Visu.fieldplot(points, J_MoM, 0.1, Visu.mesh(Γ_c)))
+display(Visu.fieldplot(points, J_MoM, 0.25, Visu.mesh(Γ_c)))
 
 
 # Stromdichte in Ebene z0
@@ -233,7 +234,26 @@ Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM2)
 # DEFINIERE CURRENT FUNCTION: INPUT u_Jn auf einer platte dann I_ges = Σ Dreiecksfläche_i *Jn_i
 # vgl. Iges Platte1 mit Iges Platte2...sollte gleich sein 
 
+# J_n auf Γ_c
+fcr0, geo0 = facecurrents(u_Jn, w)
+Plotly.plot(patch(geo0, fcr0))      # MOMENT: FALSCH ORIENTIERT!!!
 
+
+# Φ auf Γ_nc     -> Achtung an Plattengrenzen Fehlt Dirichlet Beitrag!
+fcr1, geo1 = facecurrents(u_Φ, y)
+Plotly.plot(patch(geo1, fcr1))      # MOMENT: FALSCH ORIENTIERT!!!
+
+# Φ auf Γ_c    
+fcr2, geo2 = facecurrents(ex, y_d)
+Plotly.plot(patch(geo2, fcr2))          
+# npos=0
+# nneg=0
+# for el in u_Jn
+#     sign(el) < 0.0 && (nneg += 1)
+#     sign(el) > 0.0 && (npos += 1) 
+# end
+# npos
+# nneg
 
 #display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
 
