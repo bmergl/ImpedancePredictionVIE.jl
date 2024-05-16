@@ -14,7 +14,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 2.0 # kleiner 0.2 sonst std
+h = 0.08 # kleiner 0.2 sonst std
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -56,8 +56,8 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 ## #########################################################
 
 
-κ = x -> 1000.0
-κ0 = -10000.0
+κ = x -> 1.0          # 1.0  Katastrophe
+κ0 = 1.0              # -1.0 ...
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -65,6 +65,8 @@ p = SVector(0.0,0.0,0.0)
 inv_τ(p)
 τ0
 χ(p)
+@assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
+
 
 
 # Anregung
@@ -72,8 +74,8 @@ u_top = ones(length(topnodes)) * 0.5  # Volle Symmetrie!
 u_bottom = ones(length(bottomnodes)) * (-0.5)
 ex = append!(deepcopy(u_top), u_bottom)
 
-
 # Definiton der Operatoren
+
 B11_Γ = IPVIE2.B11_Γ(alpha = 1.0) #Verschwindet!!!
 #assemble(B11_Γ, w, y)
 B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
@@ -86,7 +88,7 @@ B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
 #norm(assemble(B13_ΓΩ, w, X))
 
 
-B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64)
+B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64) # <---------------- MÖGLICHERWEISE -1
 #norm(assemble(B21_ΓΓ, y, y))
 B22_Γ = IPVIE2.B22_Γ(alpha = -1.0, invtau = inv_τ)
 #norm(assemble(B22_Γ, y, w))
@@ -103,9 +105,9 @@ B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
 B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
 #assemble(B31_ΩΓ, X, y)
 B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
-#assemble(B32_ΓΓ, ntrc(X), w)
+#norm(assemble(B32_ΓΓ, ntrc(X), w))
 B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
-#assemble(B32_ΩΓ, X, w)
+#norm(assemble(B32_ΩΓ, X, w))
 B33_Ω = IPVIE2.B33_Ω(alpha = -1.0, invtau = inv_τ)
 #assemble(B33_Ω, X, X)
 B33_ΓΓ = IPVIE2.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
@@ -117,16 +119,22 @@ B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
 B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 #assemble(B33_ΩΩ, X, X)
 
+
 # RHS assemble test bzgl Überlapp der Identity
-# norm(assemble(B11_Γ, w, y_d))       # ja passt... darf nicht verschwinden!
+# norm(assemble(B11_Γ, w, y))  
+# norm(assemble(B11_Γ, w, y_d))
+
+# norm(assemble(B11_ΓΓ, w, y))
 # norm(assemble(B11_ΓΓ, w, y_d))
 
+# norm(assemble(B21_ΓΓ, y, y))
 # norm(assemble(B21_ΓΓ, y, y_d))
 
+# norm(assemble(B31_ΓΓ, ntrc(X), y))
 # norm(assemble(B31_ΓΓ, ntrc(X), y_d))
-# norm(assemble(B31_ΩΓ, X, y_d))
 
-# VORZEICHEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# norm(assemble(B31_ΩΓ, X, y))
+# norm(assemble(B31_ΩΓ, X, y_d))
 
 
 # LHS
@@ -145,14 +153,7 @@ lhs = @varform(
     B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
     B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +
     B33_Ω[k,n] + B33_ΓΓ[ntrc(k),ntrc(n)] + B33_ΓΩ[ntrc(k),n] + B33_ΩΓ[k,ntrc(n)] + B33_ΩΩ[k,n]
-
-    # TL_Γ[k,j] + TL_ΓΓ[k,j] +
-    # TR_ΓΩ[k,m] + TR_ΓΓ[k,ntrc(m)] +
-    # BL_ΓΓ[ntrc(l),j] + BL_ΩΓ[l,j] +
-    # BR_Ω[l,m] + BR_ΩΩ[l,m] + BR_ΓΩ[ntrc(l),m] + BR_ΓΓ[ntrc(l),ntrc(m)] + BR_ΩΓ[l,ntrc(m)]
 )
-
-
 lhsd = @discretise lhs i∈w j∈y k∈X l∈y m∈w n∈X #! w und y Tausch!
 lhsd_test = lhsd.test_space_dict
 lhsd_trial = lhsd.trial_space_dict
@@ -172,10 +173,7 @@ rhs = @varform( # Vorlage für nicht-quadratische Matrix ...
     -B21_ΓΓ[j,o] + 
 
     -B31_ΓΓ[ntrc(k),o] -B31_ΩΓ[k,o]
-    # -TL_Γ[k,n] -TL_ΓΓ[k,n] +
-    # -BL_ΓΓ[ntrc(l),n] -BL_ΩΓ[l,n]
 )
-
 rhsd = @discretise rhs i∈w j∈y k∈X o∈y_d
 rhsd_test = rhsd.test_space_dict
 rhsd_trial = rhsd.trial_space_dict
@@ -187,29 +185,28 @@ R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
 # S*u = R*ex
 b = R*ex
 u = S \ b
-@assert norm(S*u - b) < 1e-4
+#@assert norm(S*u - b) < 1e-8
 u_Φ = u[1:length(y)]
 u_Jn = u[length(y)+1:length(y)+length(w)]
 u_J = u[length(y)+length(w)+1:end]
-@assert length(u_Φ) == length(y.fns)#ACHTUNG JETZT SIND ES 3 im Lösungsvektor
-@assert length(u_Jn) == length(w.fns)#ACHTUNG JETZT SIND ES 3 im Lösungsvektor
-@assert length(u_J) == length(X.fns)#ACHTUNG JETZT SIND ES 3 im Lösungsvektor
+@assert length(u_Φ) == length(y.fns)
+@assert length(u_Jn) == length(w.fns)
+@assert length(u_J) == length(X.fns)
 
 
 # Ränder
-@show maximum(u_Φ)#*τ0)
-@show minimum(u_Φ)#*τ0)
+@show maximum(u_Φ)
+@show minimum(u_Φ)
 
-@show maximum(u_Jn)#*τ0)
-@show minimum(u_Jn)#*τ0)
+@show maximum(u_Jn)
+@show minimum(u_Jn)
 
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, u_J, X)#, type=Float64)
 
-display("Total Volume:")
-@show sum(norm.(J_MoM))/length(J_MoM)
+display("Volume Current Density - Total Volume:")
 Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM)
 @show sum(Jallz)/length(Jallz)
 @show sum(Jallx)/length(Jallx)
@@ -220,45 +217,88 @@ display(Visu.fieldplot(points, J_MoM, 0.25, Visu.mesh(Γ_c)))
 
 # Stromdichte in Ebene z0
 range_xy = range(-0.5,stop=0.5,length=9)
-z0 = 0.49
+z0 = -0.4999999
 points2 = [point(x,y,z0) for x in range_xy for y in range_xy]
 J_MoM2 = BEAST.grideval(points2, u_J, X)
 
-display("z0 Plane:")
-@show sum(norm.(J_MoM2))/length(J_MoM2)
+display("Volume Current Density - z=0 Plane:")
 Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM2)
 @show sum(Jallz)/length(Jallz)  
 @show sum(Jallx)/length(Jallx)
 @show sum(Jally)/length(Jally)
+display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
+display("")
 
-# DEFINIERE CURRENT FUNCTION: INPUT u_Jn auf einer platte dann I_ges = Σ Dreiecksfläche_i *Jn_i
-# vgl. Iges Platte1 mit Iges Platte2...sollte gleich sein 
+I_top, I_bottom = getcurrent(u_Jn, w, Γ_c_t, Γ_c_b)
+
+@show I_top
+@show I_bottom
+
+@show I_top*τ0
+@show I_bottom*τ0
+
+
+# Potential: Randknoten vs. Analytisch
+
+function CapacitorPot(x, u_top, u_bottom; scale = 1.0) # vereinfacht!!!
+    lz = 1.0
+    m = scale * (u_top[1]-u_bottom[1]) / lz
+
+    z = x[3]
+    return m * z 
+end
+u_Φana = Vector{Float64}(undef,length(u_Φ))
+for (i,pos) in enumerate(y.pos)
+    u_Φana[i] = CapacitorPot(pos, u_top, u_bottom, scale = 1.0)
+end
+@show norm(u_Φ-u_Φana)/norm(u_Φana) #nicht punktweise
+
+
+## facecurrents Tests
 
 # J_n auf Γ_c
 fcr0, geo0 = facecurrents(u_Jn, w)
-Plotly.plot(patch(geo0, fcr0))      # MOMENT: FALSCH ORIENTIERT!!!
+Plotly.plot(patch(geo0, fcr0))      # FALSCH ORIENTIERT!!!
 
 
-# Φ auf Γ_nc     -> Achtung an Plattengrenzen Fehlt Dirichlet Beitrag!
+# Φ auf Γ_nc -> Achtung an Plattengrenzen fehlt noch Dirichlet Beitrag!
 fcr1, geo1 = facecurrents(u_Φ, y)
-Plotly.plot(patch(geo1, fcr1))      # MOMENT: FALSCH ORIENTIERT!!!
+Plotly.plot(patch(geo1, fcr1))      #MANCHMAL FALSCH ORIENTIERT!!! je nach tau0+-   => vmtl doch irgendwie * τ0
 
 # Φ auf Γ_c    
 fcr2, geo2 = facecurrents(ex, y_d)
 Plotly.plot(patch(geo2, fcr2))          
-# npos=0
-# nneg=0
-# for el in u_Jn
-#     sign(el) < 0.0 && (nneg += 1)
-#     sign(el) > 0.0 && (npos += 1) 
-# end
-# npos
-# nneg
 
-#display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
+
+
+
+
 
 ""
 ##
+t
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ERGEBNISSE bei τ0=1.0 : 
 
 # J_z - Komponente ist in der Nähe der Kontaktflächen unphysikalisch! 
@@ -291,9 +331,42 @@ for face in swgfaces
     end
 end
 
-""
+
 ##
-t
+
+# ZUSAMMENHANG charts - DOF
+charts, ad, ag = assemblydata(y)
+length(charts)
+r=1
+chart_tree = BEAST.octree(charts)
+i1 = CompScienceMeshes.findchart(charts, chart_tree, p)
+i1
+
+
+
+for (m,we) in ad[37, r]
+    @show m, we
+    @show w.pos[m]
+    #values[j] += we * coeffs[m] * vals[r][1]
+end
+cartesian(CompScienceMeshes.center(charts[37]))
+
+
+## 
+
+
+    
+       
+
+# npos=0
+# nneg=0
+# for el in u_Jn
+#     sign(el) < 0.0 && (nneg += 1)
+#     sign(el) > 0.0 && (npos += 1) 
+# end
+# npos
+# nneg
+
 
 
 

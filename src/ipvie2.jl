@@ -58,7 +58,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         invtau === nothing && error("")
 
-        return Mod.MaterialADL(gamma, alpha, invtau) + (1/2)*Mod.MatId(alpha, invtau) # hinterer 0
+        return Mod.MaterialADL(gamma, alpha, invtau) + (1/2)*Mod.MatId(alpha, invtau) # hinterer 0 immer
     end
 
     # B23 Block
@@ -66,7 +66,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         chi === nothing && error("")
 
-        return Mod.MaterialADL(gamma, alpha, chi) + (1/2)*Mod.MatId(alpha, chi) # hinterer 0
+        return Mod.MaterialADL(gamma, alpha, chi) + (1/2)*Mod.MatId(alpha, chi) # hinterer 0 immer
     end
     function B23_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
         gamma = gammatype(0.0)

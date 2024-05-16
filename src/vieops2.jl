@@ -157,7 +157,7 @@ struct gradG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
 end
 function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo) # 5D
 
-    gx = @SVector[tvals[i].value for i in 1:1]
+    gx = @SVector[tvals[i].value for i in 1:1] #!!!!!!!!!!!!!!!!!!!!!!!!
     fy = @SVector[bvals[i].value for i in 1:4]
 
     G = kerneldata.green

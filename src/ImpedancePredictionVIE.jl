@@ -44,7 +44,7 @@ export BoundaryOperatorΩΓ
 export BoundaryOperatorΓΩ
 export MaterialIdentity
 export gen_tau_chi
-export MatIdΩ
+export getcurrent
 
 
 # struct sample

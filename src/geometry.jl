@@ -105,7 +105,92 @@ function SWGfaces(volmesh::Mesh, ncbndmesh::Mesh)           #<--------SPEED? Dis
     return faces
 end
 
-#function gen_tau_chi(; problemtype = :current, omega::Float64 = nothing, kappa::Function = nothing, epsilon::Function = nothing)
+
+
+function getcurrent(u_Jn, w::BEAST.LagrangeBasis{0,-1}, Γ_c_t::Mesh, Γ_c_b::Mesh)
+    @assert length(u_Jn) == length(w.fns)
+
+    numtopcharts = length(Γ_c_t.faces)
+    top_ccs = Vector{SVector{3, Float64}}(undef, numtopcharts)
+    top_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
+    for i in 1:length(top_ccs)
+        chart = CompScienceMeshes.chart(Γ_c_t, i)
+        center = CompScienceMeshes.center(chart)
+        top_ccs[i] = cartesian(center)
+        top_charts[i] = chart
+    end
+
+    numbottomcharts = length(Γ_c_b.faces)
+    bottom_ccs = Vector{SVector{3, Float64}}(undef, numbottomcharts)
+    bottom_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
+    for i in 1:length(bottom_ccs)
+        chart = CompScienceMeshes.chart(Γ_c_b, i)
+        center = CompScienceMeshes.center(chart)
+        bottom_ccs[i] = cartesian(center)
+        bottom_charts[i] = chart
+    end
+
+    chart_tree_top = BEAST.octree(top_charts)
+    chart_tree_bottom = BEAST.octree(bottom_charts)
+
+    I_top = 0.0
+    I_bottom = 0.0
+
+    cnt_top = 0
+    cnt_bottom = 0
+
+    for (j, pos) in enumerate(w.pos)
+
+        i = CompScienceMeshes.findchart(top_charts, chart_tree_top, pos)      # ja...hier wäre das nicht nötig
+        k = CompScienceMeshes.findchart(bottom_charts, chart_tree_bottom, pos)
+
+
+        if i !== nothing
+            A = top_charts[i].volume 
+            I_top += A * u_Jn[j]
+            cnt_top += 1
+        elseif k !== nothing
+            A = bottom_charts[k].volume 
+            I_bottom += A * u_Jn[j]
+            cnt_bottom += 1
+        else
+            error("Neither top nor bottom")
+        end
+
+    end
+
+
+    @assert cnt_top == numtopcharts
+    @assert cnt_bottom == numbottomcharts
+
+    return abs(I_top), abs(I_bottom)
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function gen_tau_invtau(; problemtype = :current, omega = nothing, kappa = nothing, epsilon = nothing, arbitrary_meshpoint = SVector(0.0,0.0,0.0) )
     @warn "kappa(x), epsilon(x) must refer to the mesh, x must be a 3 dimensional vector!"
 
