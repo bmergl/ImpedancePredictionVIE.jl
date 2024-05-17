@@ -240,11 +240,6 @@ function BEAST.kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
 end
 
 
-
-
-
-
-
 struct div_ngradG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ # 5D
     gamma::T
     α::U
@@ -259,13 +254,16 @@ function BEAST.integrand(viop::div_ngradG_ΩΓ, kerneldata, tvals, tgeo, bvals, 
     G = kerneldata.green
     gradG = -kerneldata.gradgreen # "-" to get nabla'G(r,r')
 
+    Ty = kerneldata.tau
+
     α = viop.α
+    
 
     # pnt = cartesian(bgeo) #Ortsvektor zu einem Punkt der Dreiecksfläche ausgegen vom Zentrum des Würfels => n * Ortsvektor > 0 IMMER
     # n = bgeo.patch.normals[1]
     # dot(pnt,n) < 0.0 && error("n̂ points in wrong direction!")
 
-    return @SMatrix[α * dgx[i] * dot(bgeo.patch.normals[1], gradG * fy[j]) for i in 1:4, j in 1:3]
+    return @SMatrix[α * dgx[i] * dot(bgeo.patch.normals[1], gradG * Ty * fy[j]) for i in 1:4, j in 1:3]
 end
 
 struct div_G_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
@@ -280,9 +278,11 @@ function BEAST.integrand(viop::div_G_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
     fy = @SVector[bvals[i].value for i in 1:1]  #ntrace => nur ein Beitrag: 1 PWC  
     G = kerneldata.green
 
+    Ty = kerneldata.tau # KEIN TENSOR ERLAUBT!
+
     α = viop.α
 
-    return @SMatrix[α * dgx[i] * G * fy[j] for i in 1:4, j in 1:1]
+    return @SMatrix[α * dgx[i] * G * Ty * fy[j] for i in 1:4, j in 1:1]
 end
 
 

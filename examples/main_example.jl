@@ -14,7 +14,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 0.08 # kleiner 0.2 sonst std
+h = 2.0 # kleiner 0.2 sonst std
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -57,7 +57,7 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 
 
 κ = x -> 1.0          # 1.0  Katastrophe
-κ0 = 1.0              # -1.0 ...
+κ0 = 1.0           # -1.0 ...
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -88,7 +88,7 @@ B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
 #norm(assemble(B13_ΓΩ, w, X))
 
 
-B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = Float64) # <---------------- MÖGLICHERWEISE -1
+B21_ΓΓ = IPVIE2.B21_ΓΓ(beta = -1.0, gammatype = Float64) # <----- noch konkret Begründen -1...
 #norm(assemble(B21_ΓΓ, y, y))
 B22_Γ = IPVIE2.B22_Γ(alpha = -1.0, invtau = inv_τ)
 #norm(assemble(B22_Γ, y, w))
@@ -101,13 +101,13 @@ B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) #+extra Ter
 
 
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
-#assemble(B31_ΓΓ, ntrc(X), y)
+norm(assemble(B31_ΓΓ, ntrc(X), y))
 B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
-#assemble(B31_ΩΓ, X, y)
+norm(assemble(B31_ΩΓ, X, y))
 B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
-#norm(assemble(B32_ΓΓ, ntrc(X), w))
+norm(assemble(B32_ΓΓ, ntrc(X), w))
 B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
-#norm(assemble(B32_ΩΓ, X, w))
+norm(assemble(B32_ΩΓ, X, w))
 B33_Ω = IPVIE2.B33_Ω(alpha = -1.0, invtau = inv_τ)
 #assemble(B33_Ω, X, X)
 B33_ΓΓ = IPVIE2.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
@@ -221,12 +221,12 @@ z0 = -0.4999999
 points2 = [point(x,y,z0) for x in range_xy for y in range_xy]
 J_MoM2 = BEAST.grideval(points2, u_J, X)
 
-display("Volume Current Density - z=0 Plane:")
+display("Volume Current Density - z0 Plane:")
 Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM2)
 @show sum(Jallz)/length(Jallz)  
 @show sum(Jallx)/length(Jallx)
 @show sum(Jally)/length(Jally)
-display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
+#display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
 display("")
 
 I_top, I_bottom = getcurrent(u_Jn, w, Γ_c_t, Γ_c_b)
@@ -253,13 +253,11 @@ for (i,pos) in enumerate(y.pos)
 end
 @show norm(u_Φ-u_Φana)/norm(u_Φana) #nicht punktweise
 
-
 ## facecurrents Tests
 
 # J_n auf Γ_c
 fcr0, geo0 = facecurrents(u_Jn, w)
 Plotly.plot(patch(geo0, fcr0))      # FALSCH ORIENTIERT!!!
-
 
 # Φ auf Γ_nc -> Achtung an Plattengrenzen fehlt noch Dirichlet Beitrag!
 fcr1, geo1 = facecurrents(u_Φ, y)

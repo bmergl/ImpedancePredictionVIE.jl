@@ -42,10 +42,10 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     end
 
     # B21 Block
-    function B21_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
+    function B21_ΓΓ(; gammatype = ComplexF64, beta = 1.0) # 4D
         gamma = gammatype(0.0)
  
-        return Helmholtz3D.hypersingular(gamma = gamma, alpha = alpha) 
+        return Helmholtz3D.hypersingular(gamma = gamma, beta=beta) # das versteckt alpha std. Null
     end
 
     # B22 Block
