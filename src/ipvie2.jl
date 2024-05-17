@@ -45,7 +45,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     function B21_ΓΓ(; gammatype = ComplexF64, beta = 1.0) # 4D
         gamma = gammatype(0.0)
  
-        return Helmholtz3D.hypersingular(gamma = gamma, beta=beta) # das versteckt alpha std. Null
+        return Helmholtz3D.hypersingular(gamma = gamma, beta=beta) # das versteckt alpha std. Null für gamma =0.0!!!
     end
 
     # B22 Block
@@ -93,12 +93,14 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         invtau === nothing && error("")
 
+        #return 0.0*Identity()
         return Mod.MaterialSL(gamma, alpha, invtau)
     end
     function B32_ΩΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 5D
         gamma = gammatype(0.0)
         invtau === nothing && error("")
-
+        
+        #return -1.0*Mod.gradG_ΩΓ(gamma, alpha, invtau)
         return Mod.div_G_ΩΓ(gamma, alpha, invtau)
     end
 

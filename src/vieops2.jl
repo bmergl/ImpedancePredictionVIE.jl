@@ -259,11 +259,13 @@ function BEAST.integrand(viop::div_ngradG_ΩΓ, kerneldata, tvals, tgeo, bvals, 
     α = viop.α
     
 
-    # pnt = cartesian(bgeo) #Ortsvektor zu einem Punkt der Dreiecksfläche ausgegen vom Zentrum des Würfels => n * Ortsvektor > 0 IMMER
-    # n = bgeo.patch.normals[1]
-    # dot(pnt,n) < 0.0 && error("n̂ points in wrong direction!")
+    pnt = cartesian(bgeo) #Ortsvektor zu einem Punkt der Dreiecksfläche ausgegen vom Zentrum des Würfels => n * Ortsvektor > 0 IMMER
+    n = bgeo.patch.normals[1]
+    dot(pnt,n) < 0.0 && error("n̂ points in wrong direction!")
 
-    return @SMatrix[α * dgx[i] * dot(bgeo.patch.normals[1], gradG * Ty * fy[j]) for i in 1:4, j in 1:3]
+    gradGTy = gradG * Ty
+
+    return @SMatrix[α * dgx[i] * dot(bgeo.patch.normals[1], gradGTy * fy[j]) for i in 1:4, j in 1:3]
 end
 
 struct div_G_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
@@ -275,10 +277,10 @@ function BEAST.integrand(viop::div_G_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
     @assert length(bgeo.patch.vertices) == 3
 
     dgx = @SVector[tvals[i].divergence for i in 1:4]  
-    fy = @SVector[bvals[i].value for i in 1:1]  #ntrace => nur ein Beitrag: 1 PWC  
+    fy = @SVector[bvals[i].value for i in 1:1] 
     G = kerneldata.green
 
-    Ty = kerneldata.tau # KEIN TENSOR ERLAUBT!
+    Ty = kerneldata.tau
 
     α = viop.α
 
@@ -306,6 +308,26 @@ function BEAST.integrand(viop::div_gradG_ΩΩ, kerneldata, tvals, tgeo, bvals, b
     return @SMatrix[α * dgx[i] * dot(gradG, Ty * fy[j]) for i in 1:4, j in 1:4]
 end
 
+
+struct gradG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
+    gamma::T
+    α::U
+    tau::P
+end
+function BEAST.integrand(viop::gradG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
+    @assert length(bgeo.patch.vertices) == 3
+
+    gx = @SVector[tvals[i].value for i in 1:4]  
+    fy = @SVector[bvals[i].value for i in 1:1] 
+
+    gradG = kerneldata.gradgreen # "+" to get nablaG(r,r')
+
+    Ty = kerneldata.tau
+
+    α = viop.α
+
+    return @SMatrix[α * dot(gx[i], gradG * Ty * fy[j]) for i in 1:4, j in 1:1]
+end
 
 
 # DYADE...

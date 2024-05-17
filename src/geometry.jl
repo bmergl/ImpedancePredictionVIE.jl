@@ -75,35 +75,87 @@ end
 #     return n2f # Vektor
 # end
 
-function SWGfaces(volmesh::Mesh, ncbndmesh::Mesh)           #<--------SPEED? Distanz Octree...
+function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<--------SPEED? Distanz Octree...
     
-    all_faces = skeleton(volmesh,2).faces
-    excluded_faces = ncbndmesh.faces
+    if fast == false
 
-    @assert length(all_faces[1]) == 3
-    @assert volmesh.vertices == ncbndmesh.vertices
-    @assert length(all_faces) > length(excluded_faces)
+        all_faces = skeleton(volmesh,2).faces
+        excluded_faces = ncbndmesh.faces
+    
+        @assert length(all_faces[1]) == 3
+        @assert length(excluded_faces[1]) == 3
+        @assert volmesh.vertices == ncbndmesh.vertices
+        @assert length(all_faces) > length(excluded_faces)
 
-    faces = Vector{SVector{3, Int64}}()
-    for f1 in all_faces
-        addf1 = true 
+        faces = Vector{SVector{3, Int64}}()
+        for f1 in all_faces
+            addf1 = true 
 
-        for f2 in excluded_faces
-            ap = collect(BEAST.permutations(f2)) # circshift is not enough!!!
+            for f2 in excluded_faces
+                ap = collect(BEAST.permutations(f2)) # circshift is not enough!!!
 
-            if (f1 == ap[1])||(f1 == ap[2])||(f1 == ap[3])||(f1 == ap[4])||(f1 == ap[5])||(f1 == ap[6])
-                addf1 = false
-                break
+                if (f1 == ap[1])||(f1 == ap[2])||(f1 == ap[3])||(f1 == ap[4])||(f1 == ap[5])||(f1 == ap[6])
+                    addf1 = false
+                    break
+                end
             end
+
+            addf1 && push!(faces, f1)
         end
 
-        addf1 && push!(faces, f1)
+
+        @assert length(all_faces) == length(excluded_faces) + length(faces)
+        return faces
     end
 
 
-    @assert length(all_faces) == length(excluded_faces) + length(faces)
-    return faces
+    all_faces_mesh = skeleton(volmesh,2)
+    l = length(all_faces_mesh.faces)
+    #all_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, l)
+    all_charts_centers = Vector{SVector{3, Float64}}(undef, l)
+    for i in 1:l
+        chart = CompScienceMeshes.chart(all_faces_mesh, i)
+        #all_charts[i] = chart
+
+        center = CompScienceMeshes.center(chart)
+        all_charts_centers[i] = cartesian(center)
+    end
+
+    l_ = length(ncbndmesh.faces)
+    excluded_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, l_)
+    #excluded_charts_centers = Vector{SVector{3, Float64}}(undef, l_)
+    for i in 1:l_
+        chart = CompScienceMeshes.chart(ncbndmesh, i)
+        excluded_charts[i] = chart 
+
+        #center = CompScienceMeshes.center(chart)
+        #excluded_charts_centers[i] = cartesian(center)
+    end
+
+    swg_faces = Vector{SVector{3, Int64}}()
+    excluded_charts_tree = BEAST.octree(excluded_charts)
+
+    @assert length(all_charts_centers) >  length(excluded_charts)
+    @assert length(all_charts_centers) ==  length(all_faces_mesh.faces)
+
+    for (j,pos) in enumerate(all_charts_centers)
+
+        i = CompScienceMeshes.findchart(excluded_charts, excluded_charts_tree, pos)
+
+        if i === nothing    # nicht gefunden => face hinzufügen
+            push!(swg_faces, all_faces_mesh.faces[j])
+        else
+            # gefunden! => face liegt auf Γ_nc und muss ausgeschlossen werden!
+        end
+    end
+
+    @assert length(all_charts_centers) == length(excluded_charts) + length(swg_faces)
+    
+    return swg_faces
 end
+
+
+
 
 
 

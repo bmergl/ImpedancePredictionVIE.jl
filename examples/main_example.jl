@@ -14,12 +14,12 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 2.0 # kleiner 0.2 sonst std
+h = 0.18 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
 # Visu.mesh(Γ_c)
-# Visu.mesh(Γ_c_t)
+#Visu.mesh(Γ_c_t)
 # Visu.mesh(Γ_c_b)
 # Visu.mesh(Γ_nc)
 # Visu.mesh(Γ)
@@ -42,11 +42,13 @@ w = lagrangecxd0(Γ_c)# w=ntrc(X) geht nicht!
 #Visu.fnspos(w, Visu.mesh(Γ))
 
 # SWG auf Ω (ohne Γ_nc Flächen)
-swgfaces = SWGfaces(Ω, Γ_nc) # Quadratische Komplexität ist extrem langsam!!!! ----> Octree???
-X = nedelecd3d(Ω, Mesh(Ω.vertices, swgfaces))#X = nedelecd3d(Ω)
-@assert length(X.pos) == length(swgfaces)
-ntrc = X -> BEAST.ntrace(X, Γ)
+swg_faces = swgfaces(Ω, Γ_nc, fast = true)
+X = nedelecd3d(Ω, Mesh(Ω.vertices, swg_faces))
+@assert length(X.pos) == length(swg_faces)
 #Visu.fnspos(X, Visu.mesh(Γ))
+
+ntrc = X -> BEAST.ntrace(X, Γ)
+#Visu.fnspos(ntrc(X), Visu.mesh(Γ))
 
 
 @show numfunctions(y)
@@ -56,7 +58,7 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 ## #########################################################
 
 
-κ = x -> 1.0          # 1.0  Katastrophe
+κ = x -> 1.0         # 1.0  Katastrophe
 κ0 = 1.0           # -1.0 ...
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
@@ -88,7 +90,7 @@ B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
 #norm(assemble(B13_ΓΩ, w, X))
 
 
-B21_ΓΓ = IPVIE2.B21_ΓΓ(beta = -1.0, gammatype = Float64) # <----- noch konkret Begründen -1...
+B21_ΓΓ = IPVIE2.B21_ΓΓ(beta = -1.0, gammatype = Float64) # -1.0 siehe BEAST & Steinbach 6.5
 #norm(assemble(B21_ΓΓ, y, y))
 B22_Γ = IPVIE2.B22_Γ(alpha = -1.0, invtau = inv_τ)
 #norm(assemble(B22_Γ, y, w))
@@ -101,7 +103,7 @@ B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) #+extra Ter
 
 
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
-norm(assemble(B31_ΓΓ, ntrc(X), y))
+#norm(assemble(B31_ΓΓ, ntrc(X), y))
 B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
 norm(assemble(B31_ΩΓ, X, y))
 B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
@@ -140,7 +142,6 @@ B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 # LHS
 @hilbertspace i j k # Zeilen    ->Test
 @hilbertspace l m n # Spalten   ->Basis
-
 lhs = @varform(
     B11_Γ[i,l] + B11_ΓΓ[i,l] +
     B12_ΓΓ[i,m] +
@@ -164,9 +165,7 @@ S = Matrix(M)
 
 
 # RHS
-#@hilbertspace i j k # Zeilen
 @hilbertspace o # Spalten, !!! Nur eine Blockspalte
-
 rhs = @varform( # Vorlage für nicht-quadratische Matrix ...
     -B11_Γ[i,o] -B11_ΓΓ[i,o] +
 
@@ -201,33 +200,43 @@ u_J = u[length(y)+length(w)+1:end]
 @show maximum(u_Jn)
 @show minimum(u_Jn)
 
+
+
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, u_J, X)#, type=Float64)
 
 display("Volume Current Density - Total Volume:")
-Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM)
-@show sum(Jallz)/length(Jallz)
-@show sum(Jallx)/length(Jallx)
-@show sum(Jally)/length(Jally)
+Jx, Jy, Jz = pointlist2xyzlist(J_MoM)
+@show sum(Jz)/length(Jz)
+@show sum(Jx)/length(Jx)
+@show sum(Jy)/length(Jy)
+Jana = -ones(length(Jz))*κ(p)
+@show norm(Jz - Jana)/norm(Jana)
 
-display(Visu.fieldplot(points, J_MoM, 0.25, Visu.mesh(Γ_c)))
+display(Visu.fieldplot(points, J_MoM, 0.5, Visu.mesh(Γ_c)))
 
 
-# Stromdichte in Ebene z0
+# Stromdichte in Ebene z0=0.0
 range_xy = range(-0.5,stop=0.5,length=9)
-z0 = -0.4999999
+z0 = 0.0
 points2 = [point(x,y,z0) for x in range_xy for y in range_xy]
 J_MoM2 = BEAST.grideval(points2, u_J, X)
 
 display("Volume Current Density - z0 Plane:")
-Jallx, Jally, Jallz = pointlist2xyzlist(J_MoM2)
-@show sum(Jallz)/length(Jallz)  
-@show sum(Jallx)/length(Jallx)
-@show sum(Jally)/length(Jally)
+Jx2, Jy2, Jz2 = pointlist2xyzlist(J_MoM2)
+@show sum(Jz2)/length(Jz2)
+@show sum(Jx2)/length(Jx2)
+@show sum(Jy2)/length(Jy2)
+Jana2 = -ones(length(Jz2))*κ(p)
+@show norm(Jz2 - Jana2)/norm(Jana2)
+
 #display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
+
 display("")
+
+# Strom durch Platten
 
 I_top, I_bottom = getcurrent(u_Jn, w, Γ_c_t, Γ_c_b)
 
@@ -237,6 +246,11 @@ I_top, I_bottom = getcurrent(u_Jn, w, Γ_c_t, Γ_c_b)
 @show I_top*τ0
 @show I_bottom*τ0
 
+Iana = 1.0 * κ(p)
+
+@show norm(I_top-Iana)/norm(Iana)
+@show norm(I_bottom-Iana)/norm(Iana)
+display("")
 
 # Potential: Randknoten vs. Analytisch
 
@@ -252,6 +266,8 @@ for (i,pos) in enumerate(y.pos)
     u_Φana[i] = CapacitorPot(pos, u_top, u_bottom, scale = 1.0)
 end
 @show norm(u_Φ-u_Φana)/norm(u_Φana) #nicht punktweise
+
+
 
 ## facecurrents Tests
 

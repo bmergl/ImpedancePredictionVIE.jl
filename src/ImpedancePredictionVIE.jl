@@ -37,7 +37,7 @@ export MaterialIdentity
 export realvertices
 export realnodes 
 export pointlist2xyzlist
-export SWGfaces
+export swgfaces
 export gen_tau_invtau
 #export dirichlet_n2f
 export BoundaryOperatorΩΓ
