@@ -14,7 +14,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 0.18 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 0.1 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -37,18 +37,38 @@ y_d = lagrangec0d1(Γ, dirichletnodes, Val{3})
 y = lagrangec0d1(Γ_nc, dirichlet = true) 
 #Visu.fnspos(y, Visu.mesh(Γ))
 
-# PWC auf Γ
-w = lagrangecxd0(Γ_c)# w=ntrc(X) geht nicht!
-#Visu.fnspos(w, Visu.mesh(Γ))
-
 # SWG auf Ω (ohne Γ_nc Flächen)
 swg_faces = swgfaces(Ω, Γ_nc, fast = true)
 X = nedelecd3d(Ω, Mesh(Ω.vertices, swg_faces))
 @assert length(X.pos) == length(swg_faces)
 #Visu.fnspos(X, Visu.mesh(Γ))
-
 ntrc = X -> BEAST.ntrace(X, Γ)
+ntrcX = ntrc(X)
 #Visu.fnspos(ntrc(X), Visu.mesh(Γ))
+
+# PWC auf Γ
+w_ = lagrangecxd0(Γ_c) # War doch alles egal... hat keinen Einfluss auf die Lösung  ;(
+# w_fns = Vector{Vector{BEAST.Shape{Float64}}}(undef, length(w_.fns))
+# w_pos = Vector{SVector{3, Float64}}(undef, length(w_.fns))
+# w_charts = assemblydata(w_)[1]
+# w_charts_tree = BEAST.octree(w_charts)
+# for (i,fns) in enumerate(ntrcX.fns)
+#     if fns != []
+#         pos = ntrcX.pos[i]
+
+#         j = CompScienceMeshes.findchart(w_charts, w_charts_tree, pos) # orientieren an w_
+#         #s = sign(fns[1].coeff)
+#         s = -sign(randn())
+
+#         w_fns[j] = [BEAST.Shape(j, fns[1].refid, s)]    # evtl. doch nur VZ weitergeben....
+#         w_pos[j] = pos
+#     end
+# end
+# w_.pos = w_pos
+# w_.fns = w_fns 
+w = w_
+#Visu.fnspos(w, Visu.mesh(Γ))
+
 
 
 @show numfunctions(y)
@@ -58,8 +78,22 @@ ntrc = X -> BEAST.ntrace(X, Γ)
 ## #########################################################
 
 
-κ = x -> 1.0         # 1.0  Katastrophe
-κ0 = 1.0           # -1.0 ...
+κ = x -> 500.0         # 1.0  Katastrophe
+κ0 = 10.0      # -1.0 ...
+# function genkappa()
+#     function kappa(x)
+#         # @show x
+#         # rand() <0.1  && error("STOP")
+#         # x[3] < 0.3 && return 1000.0 
+#         # return 10.0
+        
+#         #sqrt(x[1]^2+x[2]^2) < 0.2 && return 1000.0
+#         return 100.0
+#     end
+#     return kappa
+# end
+# κ = genkappa()
+
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -70,6 +104,14 @@ inv_τ(p)
 @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
 
 
+BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,7,6,3)
+# (-,-,2,7,6,-) sehr gut, aber 2 nicht allg etwas zu niedrig?
+#!Achtung Müssen mögliche Vertauschung von quadraturregeln bei ∫∫∫_Ω ∫∫_Γ AUSSCHIEßen können!!! Alles nochmal prüfen!
+
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,7,7,7,7,7,7)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(1,1,1,1,1,1,1,1)
 
 # Anregung
 u_top = ones(length(topnodes)) * 0.5  # Volle Symmetrie!
@@ -105,13 +147,13 @@ B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) #+extra Ter
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
 #norm(assemble(B31_ΓΓ, ntrc(X), y))
 B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
-norm(assemble(B31_ΩΓ, X, y))
+#norm(assemble(B31_ΩΓ, X, y))
 B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
-norm(assemble(B32_ΓΓ, ntrc(X), w))
+#norm(assemble(B32_ΓΓ, ntrc(X), w))
 B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
-norm(assemble(B32_ΩΓ, X, w))
+#norm(assemble(B32_ΩΓ, X, w))
 B33_Ω = IPVIE2.B33_Ω(alpha = -1.0, invtau = inv_τ)
-#assemble(B33_Ω, X, X)
+#norm(assemble(B33_Ω, X, X))
 B33_ΓΓ = IPVIE2.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
 #assemble(B33_ΓΓ, ntrc(X), ntrc(X))
 B33_ΓΩ = IPVIE2.B33_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
@@ -212,10 +254,10 @@ Jx, Jy, Jz = pointlist2xyzlist(J_MoM)
 @show sum(Jz)/length(Jz)
 @show sum(Jx)/length(Jx)
 @show sum(Jy)/length(Jy)
-Jana = -ones(length(Jz))*κ(p)
+Jana = -ones(length(Jz))*κ(p)*(u_top[1]-u_bottom[1])
 @show norm(Jz - Jana)/norm(Jana)
 
-display(Visu.fieldplot(points, J_MoM, 0.5, Visu.mesh(Γ_c)))
+display(Visu.fieldplot(points, J_MoM, 0.4, Visu.mesh(Γ_c)))
 
 
 # Stromdichte in Ebene z0=0.0
@@ -229,7 +271,7 @@ Jx2, Jy2, Jz2 = pointlist2xyzlist(J_MoM2)
 @show sum(Jz2)/length(Jz2)
 @show sum(Jx2)/length(Jx2)
 @show sum(Jy2)/length(Jy2)
-Jana2 = -ones(length(Jz2))*κ(p)
+Jana2 = -ones(length(Jz2))*κ(p)*(u_top[1]-u_bottom[1])
 @show norm(Jz2 - Jana2)/norm(Jana2)
 
 #display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
@@ -246,7 +288,7 @@ I_top, I_bottom = getcurrent(u_Jn, w, Γ_c_t, Γ_c_b)
 @show I_top*τ0
 @show I_bottom*τ0
 
-Iana = 1.0 * κ(p)
+Iana = 1.0 * κ(p) *(u_top[1]-u_bottom[1])
 
 @show norm(I_top-Iana)/norm(Iana)
 @show norm(I_bottom-Iana)/norm(Iana)

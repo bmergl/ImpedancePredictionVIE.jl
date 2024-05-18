@@ -13,7 +13,7 @@ function (igd::BEAST.Integrand{<:MaterialSL})(x,y,f,g)
     α = igd.operator.alpha
     γ = BEAST.gamma(igd.operator)
 
-    Ty = igd.operator.tau(y) #!!!
+    Ty = igd.operator.tau(cartesian(y)) #!!!
 
     r = cartesian(x) - cartesian(y)
     R = norm(r)
@@ -38,7 +38,7 @@ function (igd::BEAST.Integrand{<:MaterialDL})(x,y,f,g)
     γ = BEAST.gamma(igd.operator)
     α = igd.operator.alpha
 
-    Ty = igd.operator.tau(y) #!!!
+    Ty = igd.operator.tau(cartesian(y)) #!!!
 
     r = cartesian(x) - cartesian(y)
     R = norm(r)
@@ -64,7 +64,7 @@ function (igd::BEAST.Integrand{<:MaterialADL})(x,y,f,g)
     γ = BEAST.gamma(igd.operator)
     α = igd.operator.alpha
 
-    Ty = igd.operator.tau(y) #!!!
+    Ty = igd.operator.tau(cartesian(y)) #!!!
 
     r = cartesian(x) - cartesian(y)
     R = norm(r)

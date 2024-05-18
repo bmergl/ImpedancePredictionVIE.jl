@@ -114,7 +114,7 @@ function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<-----
     #all_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, l)
     all_charts_centers = Vector{SVector{3, Float64}}(undef, l)
     for i in 1:l
-        chart = CompScienceMeshes.chart(all_faces_mesh, i)
+        chart = CompScienceMeshes.chart(all_faces_mesh, i)      #ÜBER assemblydata!!!
         #all_charts[i] = chart
 
         center = CompScienceMeshes.center(chart)
@@ -125,7 +125,7 @@ function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<-----
     excluded_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, l_)
     #excluded_charts_centers = Vector{SVector{3, Float64}}(undef, l_)
     for i in 1:l_
-        chart = CompScienceMeshes.chart(ncbndmesh, i)
+        chart = CompScienceMeshes.chart(ncbndmesh, i)   #ÜBER assemblydata!!!
         excluded_charts[i] = chart 
 
         #center = CompScienceMeshes.center(chart)
@@ -199,11 +199,11 @@ function getcurrent(u_Jn, w::BEAST.LagrangeBasis{0,-1}, Γ_c_t::Mesh, Γ_c_b::Me
 
         if i !== nothing
             A = top_charts[i].volume 
-            I_top += A * u_Jn[j]
+            I_top += A * u_Jn[j] * w.fns[j][1].coeff
             cnt_top += 1
         elseif k !== nothing
             A = bottom_charts[k].volume 
-            I_bottom += A * u_Jn[j]
+            I_bottom += A * u_Jn[j] * w.fns[j][1].coeff
             cnt_bottom += 1
         else
             error("Neither top nor bottom")

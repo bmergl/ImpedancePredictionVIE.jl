@@ -6,7 +6,7 @@ using SphericalScattering
 using Test
 using ImpedancePredictionVIE
 
-@testset "SauterSchwab 5D/6D integrals" begin
+#@testset "SauterSchwab 5D/6D integrals" begin
 
 
     # Neudefinition ... unklar wie es anders gehen würde...
@@ -265,6 +265,72 @@ using ImpedancePredictionVIE
 
 
 
+
+    ######### Symmetrie test vektoriell BoundaryOperatorΓΩ vs. BoundaryOperatorΩΓ #########################
+
+    struct TestOpBoundary2ΓΩ{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΓΩ
+        gamma::T
+        α::U
+        tau::P
+    end    
+    struct TestOpBoundary2ΩΓ{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΩΓ
+        gamma::T
+        α::U
+        tau::P
+    end
+
+    function testOpBoundary2ΓΩ(; tau=nothing)
+
+        return TestOpBoundary2ΓΩ(0.0, 1.0, tau)
+    end
+
+    function testOpBoundary2ΩΓ(; tau=nothing)
+
+        return TestOpBoundary2ΩΓ(0.0, 1.0, tau)
+    end
+
+    function BEAST.integrand(viop::TestOpBoundary2ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
+
+        gx = @SVector[tvals[i].value for i in 1:1] #ntrace
+        fy = @SVector[bvals[i].value for i in 1:4]
+
+        G = kerneldata.green
+
+        Ty = kerneldata.tau
+
+        α = viop.α
+
+        return @SMatrix[α * gx[i] * G * fy[j] for i in 1:1, j in 1:4]
+    end
+
+    function BEAST.integrand(viop::TestOpBoundary2ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
+
+        gx = @SVector[tvals[i].value for i in 1:4]
+        fy = @SVector[bvals[i].value for i in 1:1] #ntrace
+
+        G = kerneldata.green
+
+        Ty = kerneldata.tau
+
+        α = viop.α
+
+        return @SMatrix[α *gx[i] * G * fy[j] for i in 1:4, j in 1:1]
+    end
+
+    X2 = nedelecd3d(mesh)
+    ntrc = X2 -> ntrace(X2,bnd)
+    
+    T2_ΓΩ = testOpBoundary2ΓΩ(tau = τ)
+    T2_ΩΓ = testOpBoundary2ΩΓ(tau = τ)
+
+    M2_ΓΩ = assemble(T2_ΓΩ, ntrc(X2), X)
+    M2_ΩΓ = assemble(T2_ΩΓ, X, ntrc(X2))
+
+    @test norm(M2_ΓΩ - transpose(M2_ΩΓ)) < 1e-14
+
+
+## STOPP
+
     ####### BoundaryOperatorΓΩ vs. BoundaryOperator (oben minimal genauer - warum?) ###################################
 
     B_std = VIE.hhboundary(wavenumber = 0.0, tau = τ)
@@ -301,4 +367,4 @@ using ImpedancePredictionVIE
     #display(Z_V_std - Z_V_ΩΩ)
 
 
-end
+#end
