@@ -46,6 +46,8 @@ export MaterialIdentity
 export gen_tau_chi
 export getcurrent
 
+export kernelvalsdyad
+
 
 # struct sample
 #     Ω

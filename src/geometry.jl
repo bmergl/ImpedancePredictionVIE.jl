@@ -393,7 +393,7 @@ function gen_tau_chi(; problemtype = :current, omega = nothing, kappa = nothing,
         s==3 && (I = SMatrix{3,3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]))  #DAS I KANN ALLES WEG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         tau = x -> kappa(x)
-        tau0 = 1/kappa0
+        tau0 = kappa0   #????
 
         size(kappa(p),1) == 3 && error("NOT READY...ntrace of Tensor*Vector problem...")
 

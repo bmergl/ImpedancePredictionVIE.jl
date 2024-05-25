@@ -44,7 +44,7 @@ function mesh(m::Mesh, plt = iplot() )# = nothing)
     scatter!(plt, Allx, Ally, Allz, markersize = 1, color = "blue", label="")
 
     all_edges = skeleton(m,1).faces
-    @show length(all_edges)
+    #@show length(all_edges)
 
     for edge in all_edges
         a = m.vertices[edge[1]]

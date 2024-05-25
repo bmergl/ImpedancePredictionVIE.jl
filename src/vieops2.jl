@@ -199,7 +199,7 @@ function BEAST.integrand(viop::n_dyadG_ΓΩ, kerneldata, tvals, tgeo, bvals, bge
     gx = @SVector[tvals[i].value for i in 1:3]
     fy = @SVector[bvals[i].value for i in 1:4] 
 
-    dyadG = -kerneldata.dyadgreen # is ∇'∇'G
+    dyadG = kerneldata.dyadgreen # is ∇'∇'G 
 
     Ty = kerneldata.tau
 
@@ -209,36 +209,7 @@ function BEAST.integrand(viop::n_dyadG_ΓΩ, kerneldata, tvals, tgeo, bvals, bge
     
     return @SMatrix[α * gx[i] * dot(nx, dyadG * (Ty*fy[j])) for i in 1:3, j in 1:4]
 end
-struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
-    gamma::U
-    vect::P
-    dist::T
-    dyadgreen::Q
-    tau::K
-end
-function BEAST.kernelvals(viop::n_dyadG_ΓΩ, p ,q) # p=r_vec, q=r'_vec
-    # Achtung! Speziell auf gamma=0 zugeschnitten, gamma für typ wichtig
-    Y = viop.gamma  #ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
-    r = cartesian(p)-cartesian(q)
-    R = norm(r)
-    Rsq = R^2
-
-    p_ = cartesian(p)
-    q_ = cartesian(q)
-    xd = p_[1]-q_[1]
-    yd = p_[2]-q_[2]
-    zd = p_[3]-q_[3]
-
-    dyadgreen = (1/(4*pi*R^5)) * @SMatrix [3*xd^2-Rsq xd*yd xd*zd;
-    yd*xd 3*yd^2-Rsq yd*zd;
-    zd*xd zd*yd 3*zd^2-Rsq;
-    ]
-
-    tau = viop.tau(cartesian(q))
-
-    KernelValsVIEdyad(Y,r,R, dyadgreen, tau)
-end
-
+BEAST.kernelvals(viop::n_dyadG_ΓΩ, p ,q) = kernelvalsdyad(viop, p, q)
 
 struct div_ngradG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ # 5D
     gamma::T
@@ -320,7 +291,7 @@ function BEAST.integrand(viop::gradG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
     gx = @SVector[tvals[i].value for i in 1:4]  
     fy = @SVector[bvals[i].value for i in 1:1] 
 
-    gradG = kerneldata.gradgreen # "+" to get nablaG(r,r')
+    gradG = kerneldata.gradgreen # "+" to get ∇G(r,r')
 
     Ty = kerneldata.tau
 
@@ -329,8 +300,41 @@ function BEAST.integrand(viop::gradG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
     return @SMatrix[α * dot(gx[i], gradG * Ty * fy[j]) for i in 1:4, j in 1:1]
 end
 
+struct ndyadG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
+    gamma::T
+    α::U 
+    tau::P
+end
+function BEAST.integrand(viop::ndyadG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
 
-# DYADE...
+    gx = @SVector[tvals[i].value for i in 1:4]
+    fy = @SVector[bvals[i].value for i in 1:3] 
+
+    dyadG = -kerneldata.dyadgreen # is ∇∇'G
+
+    Ty = kerneldata.tau     # ja hier ist tau eh 1.0 ....
+    Ty != 1.0 && error("Integrand ndyadG_ΩΓ not ready for tau different from 1.0")
+
+    α = viop.α
+
+    ny = bgeo.patch.normals[1]
+
+    dyadGny = dyadG * ny #GEHT NICHT!!!!!!!!!!!
+
+    # r1 = dyadG[1,1]*ny[1] + dyadG[1,2]*ny[2] + dyadG[1,3]*ny[3]
+    # r2 = dyadG[2,1]*ny[1] + dyadG[2,2]*ny[2] + dyadG[2,3]*ny[3]
+    # r3 = dyadG[3,1]*ny[1] + dyadG[3,2]*ny[2] + dyadG[3,3]*ny[3]
+    # dyadGny = @SVector [r1, r2, r3]
+
+    #error("STOP")
+    
+    return @SMatrix[α * dot(gx[i], dyadGny) * fy[j] for i in 1:4, j in 1:3]
+end
+BEAST.kernelvals(viop::ndyadG_ΩΓ, p ,q) = kernelvalsdyad(viop, p, q)
+
+
+
+
 
 
 

@@ -14,7 +14,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 0.1 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 2.0 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -78,8 +78,8 @@ w = w_
 ## #########################################################
 
 
-κ = x -> 500.0         # 1.0  Katastrophe
-κ0 = 10.0      # -1.0 ...
+κ = x -> 2.0
+κ0 = 1.0
 # function genkappa()
 #     function kappa(x)
 #         # @show x
@@ -95,6 +95,7 @@ w = w_
 # κ = genkappa()
 
 
+
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
 τ(p)
@@ -106,11 +107,11 @@ inv_τ(p)
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,7,6,3)
-# (-,-,2,7,6,-) sehr gut, aber 2 nicht allg etwas zu niedrig?
+# (-,-,2,7,6,-) sehr gut, aber 2 nicht allg etwas zu niedrig? (-,-,3,7,6,-) auch sehr gut
 #!Achtung Müssen mögliche Vertauschung von quadraturregeln bei ∫∫∫_Ω ∫∫_Γ AUSSCHIEßen können!!! Alles nochmal prüfen!
 
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,7,7,7,7,7,7)
-BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,7,7,7,7,7,7)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(1,1,1,1,1,1,1,1)
 
 # Anregung
@@ -144,13 +145,13 @@ B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) #+extra Ter
 #norm(assemble(B23_ΓΩ, y, X))
 
 
-B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
+B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64, dyad = false)
 #norm(assemble(B31_ΓΓ, ntrc(X), y))
-B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
+B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64, dyad = false)
 #norm(assemble(B31_ΩΓ, X, y))
-B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ, dyad = false)
 #norm(assemble(B32_ΓΓ, ntrc(X), w))
-B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ, dyad = false)
 #norm(assemble(B32_ΩΓ, X, w))
 B33_Ω = IPVIE2.B33_Ω(alpha = -1.0, invtau = inv_τ)
 #norm(assemble(B33_Ω, X, X))
@@ -162,23 +163,6 @@ B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
 #assemble(B33_ΩΓ, X, ntrc(X))
 B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 #assemble(B33_ΩΩ, X, X)
-
-
-# RHS assemble test bzgl Überlapp der Identity
-# norm(assemble(B11_Γ, w, y))  
-# norm(assemble(B11_Γ, w, y_d))
-
-# norm(assemble(B11_ΓΓ, w, y))
-# norm(assemble(B11_ΓΓ, w, y_d))
-
-# norm(assemble(B21_ΓΓ, y, y))
-# norm(assemble(B21_ΓΓ, y, y_d))
-
-# norm(assemble(B31_ΓΓ, ntrc(X), y))
-# norm(assemble(B31_ΓΓ, ntrc(X), y_d))
-
-# norm(assemble(B31_ΩΓ, X, y))
-# norm(assemble(B31_ΩΓ, X, y_d))
 
 
 # LHS
@@ -234,62 +218,45 @@ u_J = u[length(y)+length(w)+1:end]
 @assert length(u_Jn) == length(w.fns)
 @assert length(u_J) == length(X.fns)
 
-
-# Ränder
-@show maximum(u_Φ)
-@show minimum(u_Φ)
-
-@show maximum(u_Jn)
-@show minimum(u_Jn)
-
-
-
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, u_J, X)#, type=Float64)
-
-display("Volume Current Density - Total Volume:")
+display("Stomdichte Gesamtvolumen")
 Jx, Jy, Jz = pointlist2xyzlist(J_MoM)
-@show sum(Jz)/length(Jz)
-@show sum(Jx)/length(Jx)
-@show sum(Jy)/length(Jy)
 Jana = -ones(length(Jz))*κ(p)*(u_top[1]-u_bottom[1])
 @show norm(Jz - Jana)/norm(Jana)
 
-display(Visu.fieldplot(points, J_MoM, 0.4, Visu.mesh(Γ_c)))
+display(Visu.fieldplot(points, J_MoM, 0.1, Visu.mesh(Γ_c)))
 
 
-# Stromdichte in Ebene z0=0.0
+# Stromdichte Mitte: Ebene z=0.0
 range_xy = range(-0.5,stop=0.5,length=9)
-z0 = 0.0
-points2 = [point(x,y,z0) for x in range_xy for y in range_xy]
+points2 = [point(x,y,0.0) for x in range_xy for y in range_xy]
 J_MoM2 = BEAST.grideval(points2, u_J, X)
-
-display("Volume Current Density - z0 Plane:")
+display("Stromdichte Mitte: Ebene z=0.0")
 Jx2, Jy2, Jz2 = pointlist2xyzlist(J_MoM2)
-@show sum(Jz2)/length(Jz2)
-@show sum(Jx2)/length(Jx2)
-@show sum(Jy2)/length(Jy2)
 Jana2 = -ones(length(Jz2))*κ(p)*(u_top[1]-u_bottom[1])
 @show norm(Jz2 - Jana2)/norm(Jana2)
-
 #display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
 
-display("")
+# Stromdichte bei Platten: Ebene z=0.49
+points3 = [point(x,y,0.49) for x in range_xy for y in range_xy]
+J_MoM3 = BEAST.grideval(points3, u_J, X)
+display("Stromdichte bei Platten: Ebene z=0.49")
+Jx3, Jy3, Jz3 = pointlist2xyzlist(J_MoM3)
+Jana3 = -ones(length(Jz3))*κ(p)*(u_top[1]-u_bottom[1])
+@show norm(Jz3 - Jana3)/norm(Jana3)
+#display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
+
+
 
 # Strom durch Platten
-
+display("")
 I_top, I_bottom = getcurrent(u_Jn, w, Γ_c_t, Γ_c_b)
-
 @show I_top
 @show I_bottom
-
-@show I_top*τ0
-@show I_bottom*τ0
-
 Iana = 1.0 * κ(p) *(u_top[1]-u_bottom[1])
-
 @show norm(I_top-Iana)/norm(Iana)
 @show norm(I_bottom-Iana)/norm(Iana)
 display("")
@@ -315,7 +282,7 @@ end
 
 # J_n auf Γ_c
 fcr0, geo0 = facecurrents(u_Jn, w)
-Plotly.plot(patch(geo0, fcr0))      # FALSCH ORIENTIERT!!!
+Plotly.plot(patch(geo0, fcr0))
 
 # Φ auf Γ_nc -> Achtung an Plattengrenzen fehlt noch Dirichlet Beitrag!
 fcr1, geo1 = facecurrents(u_Φ, y)
