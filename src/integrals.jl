@@ -166,47 +166,47 @@ function BEAST.momintegrals!(op::BoundaryOperatorΩΓ,
     #display(test_tetrahedron_element.vertices)
     #display(trial_tetrahedron_element.vertices)
 
-    function tet_circ_LHS(s) # simplex als input
-        is_circ_lhs = false
-        #s = simplex(mesh.vertices[face])
-        t41=s.vertices[1]-s.vertices[4]
-        t42=s.vertices[2]-s.vertices[4]
-        t43=s.vertices[3]-s.vertices[4]
+    # function tet_circ_LHS(s) # simplex als input
+    #     is_circ_lhs = false
+    #     #s = simplex(mesh.vertices[face])
+    #     t41=s.vertices[1]-s.vertices[4]
+    #     t42=s.vertices[2]-s.vertices[4]
+    #     t43=s.vertices[3]-s.vertices[4]
     
-        @assert t41 == s.tangents[1]
-        @assert t42 == s.tangents[2]
-        @assert t43 == s.tangents[3]
+    #     @assert t41 == s.tangents[1]
+    #     @assert t42 == s.tangents[2]
+    #     @assert t43 == s.tangents[3]
     
-        c = cross(t41,t42)
-        dot(c,t43) > 0.0 && (is_circ_lhs = true)
-    
-    
-        # t12=s.vertices[1]-s.vertices[2]
-        # t13=s.vertices[1]-s.vertices[3]
-        # t14=s.vertices[4]-s.vertices[1]
-        # c2=cross(t12,t13)
-        # @assert dot(c2,t14)<0
+    #     c = cross(t41,t42)
+    #     dot(c,t43) > 0.0 && (is_circ_lhs = true)
     
     
-        """
-        Ergebnis:
+    #     # t12=s.vertices[1]-s.vertices[2]
+    #     # t13=s.vertices[1]-s.vertices[3]
+    #     # t14=s.vertices[4]-s.vertices[1]
+    #     # c2=cross(t12,t13)
+    #     # @assert dot(c2,t14)<0
     
-        1 2 3 CircRechteHand => n1
-        => 4 ist in -n1  Richtung
+    
+    #     """
+    #     Ergebnis:
+    
+    #     1 2 3 CircRechteHand => n1
+    #     => 4 ist in -n1  Richtung
         
-        Alternativ direkt Linke hand
-        """
+    #     Alternativ direkt Linke hand
+    #     """
     
-        return is_circ_lhs
-    end
+    #     return is_circ_lhs
+    # end
 
-    tet = test_tetrahedron_element
-    tri = trial_tetrahedron_element
-    @assert tet_circ_LHS(tet) == true
-    c_tri = cartesian(CompScienceMeshes.center(tri))
-    d = dot(tri.normals[1], tet.vertices[1] - c_tri) + dot(tri.normals[1], tet.vertices[2] - c_tri) + dot(tri.normals[1], tet.vertices[3] - c_tri) + dot(tri.normals[1], tet.vertices[4] - c_tri)
-    # drei sind immer null ... aber nur so bekommt man den nicht-tri knoten....
-    @assert d < 0.0
+    # tet = test_tetrahedron_element
+    # tri = trial_tetrahedron_element
+    # @assert tet_circ_LHS(tet) == true
+    # c_tri = cartesian(CompScienceMeshes.center(tri))
+    # d = dot(tri.normals[1], tet.vertices[1] - c_tri) + dot(tri.normals[1], tet.vertices[2] - c_tri) + dot(tri.normals[1], tet.vertices[3] - c_tri) + dot(tri.normals[1], tet.vertices[4] - c_tri)
+    # # drei sind immer null ... aber nur so bekommt man den nicht-tri knoten....
+    # @assert d < 0.0
 
 
 
@@ -223,37 +223,37 @@ function BEAST.momintegrals!(op::BoundaryOperatorΩΓ,
             trial_tetrahedron_element.vertices[J[2]],
             trial_tetrahedron_element.vertices[J[3]])
 
-    tet = test_tetrahedron_element
-    tri = trial_tetrahedron_element
-    @assert tet_circ_LHS(tet) == true
-    c_tri = cartesian(CompScienceMeshes.center(tri))
-    d = dot(tri.normals[1], tet.vertices[1] - c_tri) + dot(tri.normals[1], tet.vertices[2] - c_tri) + dot(tri.normals[1], tet.vertices[3] - c_tri) + dot(tri.normals[1], tet.vertices[4] - c_tri)
-    # drei sind immer null ... aber nur so bekommt man den nicht-tri knoten....
-    @assert d < 0.0
+    # tet = test_tetrahedron_element
+    # tri = trial_tetrahedron_element
+    # @assert tet_circ_LHS(tet) == true
+    # c_tri = cartesian(CompScienceMeshes.center(tri))
+    # d = dot(tri.normals[1], tet.vertices[1] - c_tri) + dot(tri.normals[1], tet.vertices[2] - c_tri) + dot(tri.normals[1], tet.vertices[3] - c_tri) + dot(tri.normals[1], tet.vertices[4] - c_tri)
+    # # drei sind immer null ... aber nur so bekommt man den nicht-tri knoten....
+    # @assert d < 0.0
 
 
-    if typeof(strat) <: SauterSchwab3D.CommonFace5D_S
-        @show typeof(strat)
-        tet = test_tetrahedron_element
-        tri = trial_tetrahedron_element # ja... eigentlich dreieck...
-        # Das ist die Darstellung die ANGEBLICH durch die reorder Funktion erreicht wird!
-        # @show norm(tet[1] - tri[1]) #< 1.0e-14
-        # @show norm(tet[2] - tri[2]) #< 1.0e-14
-        # @show norm(tet[4] - tri[3]) #< 1.0e-14
+    # if typeof(strat) <: SauterSchwab3D.CommonFace5D_S
+    #     @show typeof(strat)
+    #     tet = test_tetrahedron_element
+    #     tri = trial_tetrahedron_element # ja... eigentlich dreieck...
+    #     # Das ist die Darstellung die ANGEBLICH durch die reorder Funktion erreicht wird!
+    #     # @show norm(tet[1] - tri[1]) #< 1.0e-14
+    #     # @show norm(tet[2] - tri[2]) #< 1.0e-14
+    #     # @show norm(tet[4] - tri[3]) #< 1.0e-14
 
 
-        # Das ist die Darstellung die laut example_cf_2.5d.jl nötig ist
-        # const P = simplex(pI,pII,pIV,pIII)
-        # const Q = simplex(pI,pIII,pII)
-        @show norm(tet[1] - tri[1]) < 1.0e-14
-        @show norm(tet[2] - tri[3]) < 1.0e-14
-        @show norm(tet[4] - tri[2]) < 1.0e-14
+    #     # Das ist die Darstellung die laut example_cf_2.5d.jl nötig ist
+    #     # const P = simplex(pI,pII,pIV,pIII)
+    #     # const Q = simplex(pI,pIII,pII)
+    #     @show norm(tet[1] - tri[1]) < 1.0e-14
+    #     @show norm(tet[2] - tri[3]) < 1.0e-14
+    #     @show norm(tet[4] - tri[2]) < 1.0e-14
         
 
-        display(tet.vertices)
-        display(tri.vertices)
-        display("-------------------------------------")
-    end
+    #     display(tet.vertices)
+    #     display(tri.vertices)
+    #     display("-------------------------------------")
+    # end
     #@show strat.sing.T
     #@show strat.sing.S
     # function reorder(sing::Singularity5DFace)

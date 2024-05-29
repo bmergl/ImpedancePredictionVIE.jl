@@ -99,7 +99,7 @@ Op2 = IPVIE2.B32_ΩΓ(gammatype=Float64, alpha = 1.0, invtau = invtau)
 # IPVIE2.B33_ΩΩ(gammatype=Float64, alpha = 1.0, chi=chi) hier auf diag alles bestens!
 #Op3 = VIE.hhboundary(gamma=0.0, alpha =1.0, tau=chi)
 
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,6,6,6,6)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
 
 
 
@@ -135,9 +135,11 @@ Z2[i_Xb,i_wb]
 Z2[i_Xc,i_wc]
 Z2[i_Xd,i_wd]
 
-@show abs(abs(Z2[i_Xb,i_wb])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])
-@show abs(abs(Z2[i_Xc,i_wc])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])
-@show abs(abs(Z2[i_Xd,i_wd])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])
+@show abs(abs(Z2[i_Xb,i_wb])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])   # ACHTUNG DAS IST NICHT DER RELATIVE
+@show abs(abs(Z2[i_Xc,i_wc])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])   # Fehler sondern der relative
+@show abs(abs(Z2[i_Xd,i_wd])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])   # UNTERSCHIED!!!
+
+@show abs(abs(Z2[i_Xb,i_wb])-abs(st)) / abs(st)
 
 #Symmetrie: (SWG und PWC derselben Fläche) * 2 das sind die beiden besonderen FLächen
 s_a = SVector(1/3, 1/3, 1/3)

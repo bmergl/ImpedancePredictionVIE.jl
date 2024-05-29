@@ -14,7 +14,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 2.0 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 0.09 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -78,7 +78,7 @@ w = w_
 ## #########################################################
 
 
-κ = x -> 2.0
+κ = x -> 1.0
 κ0 = 1.0
 # function genkappa()
 #     function kappa(x)
@@ -105,13 +105,13 @@ inv_τ(p)
 @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
 
 
-BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
+BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(6)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
 # (-,-,2,7,6,-) sehr gut, aber 2 nicht allg etwas zu niedrig? (-,-,3,7,6,-) auch sehr gut
 #!Achtung Müssen mögliche Vertauschung von quadraturregeln bei ∫∫∫_Ω ∫∫_Γ AUSSCHIEßen können!!! Alles nochmal prüfen!
 
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,7,7,7,7,7,7)
-BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(1,1,1,1,1,1,1,1)
 
 # Anregung
@@ -217,6 +217,8 @@ u_J = u[length(y)+length(w)+1:end]
 @assert length(u_Φ) == length(y.fns)
 @assert length(u_Jn) == length(w.fns)
 @assert length(u_J) == length(X.fns)
+
+##
 
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)
