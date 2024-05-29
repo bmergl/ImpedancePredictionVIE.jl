@@ -6,6 +6,9 @@ using LinearAlgebra
 using StaticArrays
 using SauterSchwab3D
 
+
+
+
 function tet_circ_LHS(s) # simplex als input
     is_circ_lhs = false
     #s = simplex(mesh.vertices[face])
@@ -58,8 +61,14 @@ p2 = point(rand(),rand(),rand())
 p3 = point(rand(),rand(),rand())
 p4 = point(rand(),rand(),rand())
 
+p5 = point(rand(),rand(),rand())
+
+# tet = simplex(p1,p2,p3,p4) # darf nicht geändert werden sonst passt das mit p4 nicht mehr!!!
+# tri = simplex(p3,p4,p2) # beliebig...wird schon Fehler anzeigen wenn Punkte nicht passen
 tet = simplex(p1,p2,p3,p4) # darf nicht geändert werden sonst passt das mit p4 nicht mehr!!!
-tri = simplex(p3,p4,p2) # beliebig...wird schon Fehler anzeigen wenn Punkte nicht passen
+tri = simplex(p5,p1,p2) # beliebig...wird schon Fehler anzeigen wenn Punkte nicht passen
+
+
 
 tet_circ_LHS_var = tet_circ_LHS(tet) 
 c_tri = cartesian(CompScienceMeshes.center(tri))
@@ -67,6 +76,7 @@ d = dot(tri.normals[1],p1+p2+p3+p4-c_tri)
 
 @assert d < 0.0
 @assert tet_circ_LHS_var == true
+
 
 ##
 
@@ -84,28 +94,28 @@ qr = BEAST.qr_boundary(OP, refspace(w), refspace(w), nothing, tet, nothing,  tri
 
 
 #Common Face
-function reorder_TEST(sing::SauterSchwab3D.Singularity5DFace)
+function reorder_TEST(sing::SauterSchwab3D.Singularity5DPoint)
+
     # Find the permutation P of t and s that make
-    # Pt = [P1, P2, A1, P3]
-    # Ps = [P1, P2, P3]
-
-    #Tetrahedron
-    i = setdiff([1,2,3,4],sing.T)[1]-1
-    @show i
-
+    # Pt = [P, A1, A2, A3]
+    # Ps = [P, B1, B2]
+  
+    i = sing.T[1]-1
     I = circshift([1,2,3,4],-i)
     for k in 1:i
-     
-        reverse!(I,2,3) # <------------------------------
+        reverse!(I,2,4)
     end 
-    I = circshift(I,2)
     
-    #Triangle
-    J = SVector{3,Int64}([1,2,3])
-    
-    return SVector{4}(I), J
+    J = circshift([1,2,3],-sing.S[1]+1)
+
+    return SVector{4}(I), SVector{3}(J)
 end
 
+# I1 = circshift([1,2,3,4],2)
+# plist = tet.vertices[I1]
+# tet2 = simplex(plist[1],plist[2],plist[3],plist[4])
+# tet_circ_LHS(tet2) 
+# tet_circ_LHS(tet)
 
 
 qr.sing
@@ -131,7 +141,8 @@ new_tri = simplex(tet.vertices[J])
 @show norm(new_tet[1] - new_tri[1]) #< 1.0e-14
 @show norm(new_tet[2] - new_tri[3]) #< 1.0e-14
 @show norm(new_tet[4] - new_tri[2]) #< 1.0e-14
-        
+
+
 ##
 
 allp = collect(BEAST.permutations([1,2,3,4]))
@@ -144,8 +155,6 @@ for el in allp
 end
 # ! es gibt auch andere die den LHS tet erhalten würden, aber ist das überhaupt nötig wenn man eh zurücktauscht???
 
-##
-    # i == 1 && (I = circshift([1,2,3,4],2))
-    # i == 2 && (I = circshift([1,2,3,4],1))
-    # i == 3 && (I = [1,2,3,4])
-    # i == 4 && (I = circshift([1,2,3,4],-1))
+#  K = circshift([4,1,3,2],2) #circshift([1,2,3,4],1)
+#  P_new2 = simplex(P[K[1]],P[K[2]],P[K[3]],P[K[4]])
+#  @test is_CSM_tet(P_new2) == true

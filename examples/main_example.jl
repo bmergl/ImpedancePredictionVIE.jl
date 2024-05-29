@@ -106,12 +106,12 @@ inv_τ(p)
 
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,7,6,3)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 # (-,-,2,7,6,-) sehr gut, aber 2 nicht allg etwas zu niedrig? (-,-,3,7,6,-) auch sehr gut
 #!Achtung Müssen mögliche Vertauschung von quadraturregeln bei ∫∫∫_Ω ∫∫_Γ AUSSCHIEßen können!!! Alles nochmal prüfen!
 
-BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,7,7,7,7,7,7)
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,7,7,7,7,7,7)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(1,1,1,1,1,1,1,1)
 
 # Anregung

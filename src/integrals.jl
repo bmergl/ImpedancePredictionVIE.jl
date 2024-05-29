@@ -144,7 +144,7 @@ function BEAST.qr_boundary(op::BoundaryOperatorΩΓ, g::RefSpace, f::RefSpace, i
     hits == 1 && return SauterSchwab3D.CommonVertex5D_S(SauterSchwab3D.Singularity5DPoint(idx_t,idx_s),(qd.sing_qp[3],qd.sing_qp[2]))
 
 
-    return DoubleQuadRule(
+    return BEAST.DoubleQuadRule(
         qd[1][1,i],
         qd[2][1,j])
 
