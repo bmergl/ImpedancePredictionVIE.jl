@@ -331,6 +331,7 @@ using ImpedancePredictionVIE
 
 ## STOPP
 
+    error("Achtung! wir brauchen ein neues Allgemeines momintegrals! das alles kann")
     ####### BoundaryOperatorΓΩ vs. BoundaryOperator (oben minimal genauer - warum?) ###################################
 
     B_std = VIE.hhboundary(wavenumber = 0.0, tau = τ)

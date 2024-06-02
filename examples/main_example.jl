@@ -14,7 +14,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 0.09 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 0.1 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -75,7 +75,7 @@ w = w_
 @show numfunctions(y_d)
 @show numfunctions(w)
 @show numfunctions(X)
-## #########################################################
+## ########################################################
 
 
 κ = x -> 1.0
@@ -107,8 +107,7 @@ inv_τ(p)
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(6)
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
-# (-,-,2,7,6,-) sehr gut, aber 2 nicht allg etwas zu niedrig? (-,-,3,7,6,-) auch sehr gut
-#!Achtung Müssen mögliche Vertauschung von quadraturregeln bei ∫∫∫_Ω ∫∫_Γ AUSSCHIEßen können!!! Alles nochmal prüfen!
+#BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 
 BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
