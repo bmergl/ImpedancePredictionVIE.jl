@@ -19,7 +19,7 @@ h = 2.0 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 
 # Visu.mesh(Ω)
 # Visu.mesh(Γ_c)
-#Visu.mesh(Γ_c_t)
+# Visu.mesh(Γ_c_t)
 # Visu.mesh(Γ_c_b)
 # Visu.mesh(Γ_nc)
 # Visu.mesh(Γ)
@@ -78,7 +78,7 @@ w = w_
 ## ########################################################
 
 
-κ = x -> 100.0
+κ = x -> 1000.0
 κ0 = 1.0
 # function genkappa()
 #     function kappa(x)
@@ -106,6 +106,7 @@ inv_τ(p)
 
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(6)
+
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
 #BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 

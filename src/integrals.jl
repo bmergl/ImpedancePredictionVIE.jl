@@ -62,31 +62,20 @@ end
 ##### momintegrals!  ######################################################################
 
 ###### Sonderintegranden für den CommonFace6D Fall
-struct VIEIntegrandΩΩ_cf6d{S,T,O,K,L}
+struct VIEIntegrandΩΩ_cf6d{S,T,M,O,K,L}
     test_tetrahedron_element::S
     trial_tetrahedron_element::T
+    trial_tetrahedron_element_inv::M
     op::O
     test_local_space::K
     trial_local_space::L
 end
 function (igd::VIEIntegrandΩΩ_cf6d)(u,v) # spezielle reoder_dof????
-    # achtung der integrand wird sehr oft aufgerufen 
-    # => Berechnung von bgeo2 nach momintegrals! verschieben!
-    # VIEIntegrandΩΩ_cf6d mit 2 trials ausstatten...
 
     #mesh points
     tgeo = neighborhood(igd.test_tetrahedron_element,u)
     bgeo = neighborhood(igd.trial_tetrahedron_element,v)
-
-    @show volume(tgeo.patch)
-    @show volume(bgeo.patch)
-    error("")
-    
-    # cf6d    !!! Achtung nur weil es für lag:value/gradient passt heißt nicth dass vect auch passt volumen invertieren???
-    tet = igd.trial_tetrahedron_element
-    tangs = SVector{3,SVector{3,Float64}}(-tet.tangents[1],-tet.tangents[2],-tet.tangents[3])
-    tet2 = CompScienceMeshes.Simplex(tet.vertices,tangs,tet.normals,tet.volume) # <--- MINUS volumen???
-    bgeo2 = neighborhood(tet2,v)
+    bgeo_refspace = neighborhood(igd.trial_tetrahedron_element_inv,v)
 
     #kernel values
     kerneldata = kernelvals(igd.op,tgeo,bgeo)
@@ -94,8 +83,7 @@ function (igd::VIEIntegrandΩΩ_cf6d)(u,v) # spezielle reoder_dof????
     #values & grad/div/curl of local shape functions
     tval = igd.test_local_space(tgeo)
     #bval = igd.trial_local_space(bgeo) <---- geht nicht, denn bgeo ist MP mit non-CSM tet
-    bval = igd.trial_local_space(bgeo2)
-
+    bval = igd.trial_local_space(bgeo_refspace)
 
     #jacobian
     j = jacobian(tgeo) * jacobian(bgeo)
@@ -391,12 +379,18 @@ function BEAST.momintegrals!(op::VolumeOperatorΩΩ,
             trial_tetrahedron_element.vertices[J[4]])
 
     #Define integral (returns a function that only needs barycentric coordinates)
-    if strat.sing isa SauterSchwab3D.Singularity6DFace
-        igd = VIEIntegrandΩΩ_cf6d(test_tetrahedron_element, trial_tetrahedron_element,
+    if strat.sing isa SauterSchwab3D.Singularity6DFace  # cf6d    !!! Achtung nur weil es für lag:value/gradient passt heißt nicth dass vect auch passt volumen invertieren???
+        
+        tet = trial_tetrahedron_element
+        tangs = SVector{3,SVector{3,Float64}}(-tet.tangents[1],-tet.tangents[2],-tet.tangents[3])
+        vol = -tet.volume
+        trial_tetrahedron_element_inv = CompScienceMeshes.Simplex(tet.vertices,tangs,tet.normals,vol) # <--- MINUS volumen???
+
+        igd = VIEIntegrandΩΩ_cf6d(test_tetrahedron_element, trial_tetrahedron_element, trial_tetrahedron_element_inv,
         op, test_local_space, trial_local_space)
     else
-        igd = VIEIntegrandΩΩ(test_tetrahedron_element, trial_tetrahedron_element,
-        op, test_local_space, trial_local_space)
+       igd = VIEIntegrandΩΩ(test_tetrahedron_element, trial_tetrahedron_element,
+       op, test_local_space, trial_local_space)
     end
 
     #Evaluate integral
