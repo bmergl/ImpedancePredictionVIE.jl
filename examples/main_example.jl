@@ -14,7 +14,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 0.1 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 2.0 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -78,7 +78,7 @@ w = w_
 ## ########################################################
 
 
-κ = x -> 1.0
+κ = x -> 100.0
 κ0 = 1.0
 # function genkappa()
 #     function kappa(x)

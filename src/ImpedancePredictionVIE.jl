@@ -9,6 +9,7 @@ using Plots
 using Distributed
 using SauterSchwab3D
 
+include("ip.jl")
 
 include("visu.jl")
 
