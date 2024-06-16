@@ -72,7 +72,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         gamma = gammatype(0.0)
         chi === nothing && error("")
 
-        return Mod.n_dyadG_ΓΩ(gamma, alpha, chi) # + Zusatzterm??????
+        return Mod.n_dyadG_ΓΩ(gamma, alpha, chi)# + Zusatzterm??????
     end
 
     # B31 Block

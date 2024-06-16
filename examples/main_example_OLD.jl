@@ -8,10 +8,10 @@ using StaticArrays
 
 
 geoname = "cube.geo"
-geopath = "$(pkgdir(ImpedancePredictionVIE))/examples/$geoname"
+geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 
 meshname = "cube.msh"
-meshpath = "$(pkgdir(ImpedancePredictionVIE))/examples/$meshname"
+meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
 h = 2.0 # kleiner 0.2 sonst std
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
@@ -40,8 +40,8 @@ y = lagrangec0d1(Γ_nc, dirichlet = true)
 
 
 # SWG auf Ω (ohne Γ_nc Flächen)
-swgfaces = SWGfaces(Ω, Γ_nc) # Quadratische Komplexität ist extrem langsam!!!! ----> Octree???
-X = nedelecd3d(Ω, Mesh(Ω.vertices, swgfaces))#X = nedelecd3d(Ω)
+swg_faces = swgfaces(Ω, Γ_nc) # Quadratische Komplexität ist extrem langsam!!!! ----> Octree???
+X = nedelecd3d(Ω, Mesh(Ω.vertices, swg_faces))#X = nedelecd3d(Ω)
 
 for fsh in X.fns
     if length(fsh) == 2
@@ -52,7 +52,7 @@ for fsh in X.fns
 end
 
 ntrc = X -> BEAST.ntrace(X, Γ)
-@show length(swgfaces)
+@show length(swg_faces)
 #@assert length(X.pos) == length(swgfaces)
 #ntrc(X).fns
 #Visu.fnspos(X, Visu.mesh(Γ))
@@ -139,17 +139,17 @@ ex = append!(deepcopy(u_top), u_bottom)
 TL_Γ =  IPVIE1.tl_Γ()
 TL_ΓΓ = IPVIE1.tl_ΓΓ(alpha = 1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
 
-TR_ΓΩ = 1.0*IPVIE1.tr_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
-TR_ΓΓ = 0.0*IPVIE1.tr_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ_val) # SL GEHÖRT VMTL NICHT DAZU
+TR_ΓΩ = IPVIE1.tr_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+TR_ΓΓ = IPVIE1.tr_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ_val) # SL GEHÖRT VMTL NICHT DAZU
 
 BL_ΓΓ = IPVIE1.bl_ΓΓ(alpha = -1.0, gammatype = Float64) # !!! -(1/2)*Identity() SCHON EINGEFÜGT!!!!
 BL_ΩΓ = IPVIE1.bl_ΩΓ(alpha = 1.0, gammatype = Float64)   # n̂ richtung stimmt....
 
 BR_Ω =  IPVIE1.br_Ω(alpha = 1.0, invtau = inv_τ) #(1/2)* würde passendes J liefern...
-BR_ΓΩ = 1.0*IPVIE1.br_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
-BR_ΩΩ = -1.0*IPVIE1.br_ΩΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
-BR_ΓΓ = 0.0*IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
-BR_ΩΓ = 0.0*IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
+BR_ΓΩ = IPVIE1.br_ΓΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+BR_ΩΩ = IPVIE1.br_ΩΩ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+BR_ΓΓ = IPVIE1.br_ΓΓ(alpha = 2.0, gammatype = Float64, invtau = inv_τ_val)
+BR_ΩΓ = IPVIE1.br_ΩΓ(alpha = -2.0, gammatype = Float64, invtau = inv_τ)
 
 
 

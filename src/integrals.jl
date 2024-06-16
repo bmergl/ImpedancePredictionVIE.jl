@@ -355,6 +355,48 @@ function (igd::VIEIntegrandΩΩ)(u,v)     # wird nur für den SS3D-Fall verwende
     
     integrand(igd.op, kerneldata,tval,tgeo,bval,bgeo) * j
 end
+function BEAST.qr_volume(op::VolumeOperatorΩΩ, g::RefSpace, f::RefSpace, i, τ, j, σ, qd,
+    qs::BEAST.SauterSchwab3DQStrat)
+
+    dtol = 1.0e3 * eps(eltype(eltype(τ.vertices)))
+
+    hits = 0
+    idx_t = Int64[]
+    idx_s = Int64[]
+    sizehint!(idx_t,4)
+    sizehint!(idx_s,4)
+    dmin2 = floatmax(eltype(eltype(τ.vertices)))
+    D = dimension(τ)+dimension(σ)
+    for (i,t) in enumerate(τ.vertices)
+        for (j,s) in enumerate(σ.vertices)
+            d2 = LinearAlgebra.norm_sqr(t-s)
+            d = norm(t-s)
+            dmin2 = min(dmin2, d2)
+            # if d2 < dtol
+            if d < dtol
+                push!(idx_t,i)
+                push!(idx_s,j)
+                hits +=1
+                break
+            end
+        end
+    end
+
+    #singData = SauterSchwab3D.Singularity{D,hits}(idx_t, idx_s )
+    @assert hits <= 4
+    hits == 4 && return SauterSchwab3D.CommonVolume6D_S(SauterSchwab3D.Singularity6DVolume(idx_t,idx_s),(qd.sing_qp[1],qd.sing_qp[2],qd.sing_qp[4]))
+    hits == 3 && return SauterSchwab3D.CommonFace6D_S(SauterSchwab3D.Singularity6DFace(idx_t,idx_s),(qd.sing_qp[1],qd.sing_qp[2],qd.sing_qp[3]))
+    #hits == 2 && return SauterSchwab3D.CommonEdge6D_S(SauterSchwab3D.Singularity6DEdge(idx_t,idx_s),(qd.sing_qp[1],qd.sing_qp[2],qd.sing_qp[3],qd.sing_qp[4]))
+    #hits == 2 && return SauterSchwab3D.CommonEdge6D(SauterSchwab3D.Singularity6DEdge(idx_t,idx_s),(SauterSchwab3D._legendre(???,0.0,1.0)))
+    hits == 2 && return SauterSchwab3D.CommonEdge6D(SauterSchwab3D.Singularity6DEdge(idx_t,idx_s),(qd.sing_qp[1])) # KEIN _S !!!!!!
+    hits == 1 && return SauterSchwab3D.CommonVertex6D_S(SauterSchwab3D.Singularity6DPoint(idx_t,idx_s),qd.sing_qp[3])
+
+
+    return BEAST.DoubleQuadRule( # auch bei hits = 2 => wähle andere Quadraturordnung!!! nicht nötig in dem Fall
+        qd[1][1,i],
+        qd[2][1,j])
+
+end
 function BEAST.momintegrals!(op::VolumeOperatorΩΩ,
     test_local_space::RefSpace, trial_local_space::RefSpace,
     test_tetrahedron_element, trial_tetrahedron_element, out, strat::SauterSchwab3DStrategy)
@@ -393,6 +435,17 @@ function BEAST.momintegrals!(op::VolumeOperatorΩΩ,
        op, test_local_space, trial_local_space)
     end
 
+
+    # if strat.sing isa SauterSchwab3D.Singularity6DEdge
+    #     for j in 1 : length(L)
+    #         for i  in 1 : length(K)
+    #             out[i,j] += 0.0
+    #         end
+    #     end 
+    #     return nothing
+    # end
+
+
     #Evaluate integral
     Q = SauterSchwab3D.sauterschwab_parameterized(igd, strat) 
     
@@ -404,6 +457,14 @@ function BEAST.momintegrals!(op::VolumeOperatorΩΩ,
     end
     nothing
 end
+
+
+
+
+
+
+
+
 
 
 

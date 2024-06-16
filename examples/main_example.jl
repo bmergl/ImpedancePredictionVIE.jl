@@ -6,6 +6,8 @@ using LinearAlgebra
 using StaticArrays
 using Plotly
 
+using MKL
+
 
 
 geoname = "cube.geo"
@@ -39,6 +41,8 @@ y = lagrangec0d1(Γ_nc, dirichlet = true)
 
 # SWG auf Ω (ohne Γ_nc Flächen)
 swg_faces = swgfaces(Ω, Γ_nc, fast = true)
+#swg_faces2 = swgfaces(Ω, Γ_nc, fast = false)
+#norm(norm.(swg_faces)-norm.(swg_faces2))
 X = nedelecd3d(Ω, Mesh(Ω.vertices, swg_faces))
 @assert length(X.pos) == length(swg_faces)
 #Visu.fnspos(X, Visu.mesh(Γ))
@@ -78,7 +82,7 @@ w = w_
 ## ########################################################
 
 
-κ = x -> 1000.0
+κ = x -> 10.0
 κ0 = 1.0
 # function genkappa()
 #     function kappa(x)
@@ -105,13 +109,13 @@ inv_τ(p)
 @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
 
 
-BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(6)
+BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
 
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,6,6,6,6)
 #BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 
-BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(1,1,1,1,1,1,1,1)
 
 # Anregung
@@ -141,7 +145,7 @@ B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
 #norm(assemble(B22_ΓΓ, y, w))
 B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ) #VZ? sollte passen
 #norm(assemble(B23_ΓΓ, y, ntrc(X)))
-B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) #+extra Term?
+B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) # dyade aber sollte passen da 5D, +extra Term?
 #norm(assemble(B23_ΓΩ, y, X))
 
 
@@ -162,7 +166,7 @@ B33_ΓΩ = IPVIE2.B33_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
 B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
 #assemble(B33_ΩΓ, X, ntrc(X))
 B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
-#assemble(B33_ΩΩ, X, X)
+#norm(assemble(B33_ΩΩ, X, X))
 
 
 # LHS
@@ -188,7 +192,7 @@ testSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_test)
 trialSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_trial)
 M = assemble(lhs, testSpace_lhs, trialSpace_lhs)
 S = Matrix(M)
-
+#@show cond(S)
 
 # RHS
 @hilbertspace o # Spalten, !!! Nur eine Blockspalte
