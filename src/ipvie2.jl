@@ -75,6 +75,16 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         return Mod.n_dyadG_ΓΩ(gamma, alpha, chi)# + Zusatzterm??????
     end
 
+    function B23_alternativ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
+        @warn "χ const. needed for B23_alternativ"
+        gamma = gammatype(0.0)
+        chi === nothing && error("")
+        
+        return Mod.n_gradGdiv_ΓΩ(gamma, alpha, chi)
+    end
+
+
+
     # B31 Block
     function B31_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, dyad = false) # 4D
         gamma = gammatype(0.0)
@@ -106,7 +116,6 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
             return 0.0*Identity()
         end
 
-        #return 0.0*Identity()
         return Mod.MaterialSL(gamma, alpha, invtau)
     end
     function B32_ΩΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing, dyad = false) # 5D
@@ -118,7 +127,6 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
             return Mod.gradG_ΩΓ(gamma, alpha, invtau)
         end
 
-        #return -1.0*Mod.gradG_ΩΓ(gamma, alpha, invtau)
         return Mod.div_G_ΩΓ(gamma, alpha, invtau)
     end
 

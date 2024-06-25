@@ -94,10 +94,10 @@ strc = Y -> strace(Y,bnd)
 invtau = x -> 1.0
 chi = x -> 1.0
 
-#Op1 = IPVIE2.B31_ΩΓ(gammatype=Float64, alpha= 1.0)
+Op1 = IPVIE2.B31_ΩΓ(gammatype=Float64, alpha= 1.0)
 Op2 = IPVIE2.B32_ΩΓ(gammatype=Float64, alpha = 1.0, invtau = invtau)
 # IPVIE2.B33_ΩΩ(gammatype=Float64, alpha = 1.0, chi=chi) hier auf diag alles bestens!
-#Op3 = VIE.hhboundary(gamma=0.0, alpha =1.0, tau=chi)
+Op3 = VIE.hhboundary(gamma=0.0, alpha =1.0, tau=chi)
 
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
 
@@ -139,7 +139,7 @@ Z2[i_Xd,i_wd]
 @show abs(abs(Z2[i_Xc,i_wc])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])   # Fehler sondern der relative
 @show abs(abs(Z2[i_Xd,i_wd])-abs(Z2[i_Xa,i_wa])) / abs(Z2[i_Xa,i_wa])   # UNTERSCHIED!!!
 
-@show abs(abs(Z2[i_Xb,i_wb])-abs(st)) / abs(st)
+#@show abs(abs(Z2[i_Xb,i_wb])-abs(st)) / abs(st)
 
 #Symmetrie: (SWG und PWC derselben Fläche) * 2 das sind die beiden besonderen FLächen
 s_a = SVector(1/3, 1/3, 1/3)
@@ -163,29 +163,29 @@ Z2[j_Xb,j_wb]
 ""
 ##
 
-# für nicht vektorielle Basis auch Probleme bei 5D Integralen?
-# Z = assemble(Op3, strc(Y), Y)
+#für nicht vektorielle Basis auch Probleme bei 5D Integralen?
+Z = assemble(Op3, strc(Y), Y)
 
-# x_a = SVector(0,0,1.0)
-# x_b = SVector(0,0,-1.0)
+x_a = SVector(0,0,1.0)
+x_b = SVector(0,0,-1.0)
 
-# i_sYa = findpoint(strc(Y).pos, x_a)
-# i_Ya = findpoint(strc(Y).pos, x_a)
+i_sYa = findpoint(strc(Y).pos, x_a)
+i_Ya = findpoint(strc(Y).pos, x_a)
 
-# i_sYb = findpoint(strc(Y).pos, x_b)
-# i_Yb = findpoint(Y.pos, x_b)
+i_sYb = findpoint(strc(Y).pos, x_b)
+i_Yb = findpoint(Y.pos, x_b)
 
-# Z[i_sYa, i_Ya]
-# Z[i_sYb, i_Yb]
+Z[i_sYa, i_Ya]
+Z[i_sYb, i_Yb]
 
-# @show abs(abs(Z[i_sYb, i_Yb]) - abs(Z[i_sYa, i_Ya])) / abs(Z[i_sYa, i_Ya])
-# ""
+@show abs(abs(Z[i_sYb, i_Yb]) - abs(Z[i_sYa, i_Ya])) / abs(Z[i_sYa, i_Ya])
+""
 
-## 
-# Z1 = assemble(Op1, X, y)    # SWG(3D) und LinLag(2D)      für uns gar nicht sooo wichtig
-# #SymmPaar1: X.pos[5] y.pos[4] symmetrisch zu X.pos[7] y.pos[4]
-# @show X.pos[5]
-# @show X.pos[7]
-# @show y.pos[4]
-# Z1[5,4]
-# Z1[7,4]
+#
+Z1 = assemble(Op1, X, y)    # SWG(3D) und LinLag(2D)      für uns gar nicht sooo wichtig
+#SymmPaar1: X.pos[5] y.pos[4] symmetrisch zu X.pos[7] y.pos[4]
+@show X.pos[5]
+@show X.pos[7]
+@show y.pos[4]
+Z1[5,4]
+Z1[7,4]

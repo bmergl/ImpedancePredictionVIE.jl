@@ -219,6 +219,32 @@ function getcurrent(u_Jn, w::BEAST.LagrangeBasis{0,-1}, Γ_c_t::Mesh, Γ_c_b::Me
 end
 
 
+# function get_Dz_ref(zbottom, ztop, Φbottom, Φtop, ϵ_vec, d_vec) # ein skalarer Wert zurück, ϵ_vec and d_vec bottom to top!
+#     n = length(ϵ_vec)
+#     @assert n == length(d_vec)
+#     @assert ztop > zbottom
+
+#     d = abs(ztop - zbottom)
+
+#     @assert abs(sum(d_vec)-d) < 1e-12 
+
+#     z_vec = Vector{n, Float64}()
+
+#     for (i,d_i) in enumerate(d_vec)
+
+#     end
+
+#     z_vec[1] = zbottom + d[1]
+#     for i = 2:n-1
+#         d_i = d[i]
+        
+
+#     end
+
+# end
+
+
+
 
 
 

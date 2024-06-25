@@ -1,3 +1,5 @@
+using MKL
+
 using ImpedancePredictionVIE
 using CompScienceMeshes
 using Plots
@@ -6,7 +8,7 @@ using LinearAlgebra
 using StaticArrays
 using Plotly
 
-using MKL
+
 
 
 
@@ -16,7 +18,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 2.0 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 0.18 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -81,24 +83,21 @@ w = w_
 @show numfunctions(X)
 ## ########################################################
 
-
-κ = x -> 10.0
+κ = x -> 2.0
 κ0 = 1.0
 # function genkappa()
 #     function kappa(x)
 #         # @show x
 #         # rand() <0.1  && error("STOP")
-#         # x[3] < 0.3 && return 1000.0 
+#         x[3] < -0.2 && return 100.0 
 #         # return 10.0
         
 #         #sqrt(x[1]^2+x[2]^2) < 0.2 && return 1000.0
-#         return 100.0
+#         return 10.0
 #     end
 #     return kappa
 # end
 # κ = genkappa()
-
-
 
 τ, inv_τ, τ0, χ = gen_tau_chi(problemtype = :current, kappa = κ, kappa0 = κ0)
 p = SVector(0.0,0.0,0.0)
@@ -111,12 +110,12 @@ inv_τ(p)
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
 
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,6,6,6,6)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(7,7,7,1,1,1)
 #BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
 BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(1,1,1,1,1,1,1,1)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(7,7,7,7,7,7,7,7)
 
 # Anregung
 u_top = ones(length(topnodes)) * 0.5  # Volle Symmetrie!
@@ -143,10 +142,68 @@ B22_Γ = IPVIE2.B22_Γ(alpha = -1.0, invtau = inv_τ)
 #norm(assemble(B22_Γ, y, w))
 B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
 #norm(assemble(B22_ΓΓ, y, w))
-B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi=χ) #VZ? sollte passen
+B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ) #VZ? sollte passen
 #norm(assemble(B23_ΓΓ, y, ntrc(X)))
-B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi=χ) # dyade aber sollte passen da 5D, +extra Term?
+B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ) # dyade aber sollte passen da 5D, +extra Term?
 #norm(assemble(B23_ΓΩ, y, X))
+B23_alternativ = IPVIE2.B23_alternativ(alpha = 1.0, gammatype = Float64, chi = χ)
+
+S1 = assemble(B23_ΓΓ, y, ntrc(X))
+S2 = assemble(B23_ΓΩ, y, X)
+S0 = S1+S2
+
+S3 = assemble(B23_alternativ, y, X)
+
+norm(S0-S3)
+
+
+## 
+
+@show maximum(abs.(S0-S3)./abs.(S3))
+
+relErrM = abs.(S0-S3)./abs.(S3)
+
+ind2Mind = CartesianIndices(relErrM)
+pair_list = []
+cnt = 0
+for (index, element) in enumerate(relErrM) 
+    i = ind2Mind[index][1]
+    j = ind2Mind[index][2]
+    s0 = S0[i,j]
+    s3 = S3[i,j]
+    
+    lim = 10.0
+
+    if element > lim && abs(X.pos[j][3])< 0.45
+        if norm(y.pos[i]-X.pos[j]) < 0.2 && s0 > maximum(S3)/1000
+        println("relErr: $element, S0[$i,$j]=$s0, S3[$i,$j]=$s3")
+        push!(pair_list,[i,j])
+        cnt += 1
+        end
+    end
+
+end
+@show cnt/(size(S0,1)*size(S0,2))
+
+display(pair_list)
+
+##
+pair = pair_list[6]
+i1 = 135#pair[1]
+i2 = 82#pair[2]
+
+Visu.points([y.pos[i1],X.pos[i2]], Visu.mesh(Ω))
+
+##
+t
+#
+
+# ~,sv0,~ = svd(S0)
+# p1 = Plots.plot(sv0)
+# ~,sv3,~ = svd(S3)
+# plot!(p1,sv3)
+
+#
 
 
 B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64, dyad = false)
@@ -180,6 +237,7 @@ lhs = @varform(
     B21_ΓΓ[j,l] + 
     B22_Γ[j,m] + B22_ΓΓ[j,m] +
     B23_ΓΓ[j,ntrc(n)] + B23_ΓΩ[j,n] +
+    #B23_alternativ[j,n] +
 
     B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
     B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +
@@ -192,7 +250,6 @@ testSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_test)
 trialSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_trial)
 M = assemble(lhs, testSpace_lhs, trialSpace_lhs)
 S = Matrix(M)
-#@show cond(S)
 
 # RHS
 @hilbertspace o # Spalten, !!! Nur eine Blockspalte
@@ -210,7 +267,6 @@ testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)
 trialSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_trial)
 R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
 
-
 # S*u = R*ex
 b = R*ex
 u = S \ b
@@ -222,7 +278,9 @@ u_J = u[length(y)+length(w)+1:end]
 @assert length(u_Jn) == length(w.fns)
 @assert length(u_J) == length(X.fns)
 
-##
+@show cond(S)
+## selbst höchste genauigkeit bringt nichts 7% 7% 13% wird nicht unterschritten
+# ... suche also für χ ungleich null nach χ-Fehlerterm - ist es eine Dyade???
 
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)
@@ -232,9 +290,6 @@ display("Stomdichte Gesamtvolumen")
 Jx, Jy, Jz = pointlist2xyzlist(J_MoM)
 Jana = -ones(length(Jz))*κ(p)*(u_top[1]-u_bottom[1])
 @show norm(Jz - Jana)/norm(Jana)
-
-display(Visu.fieldplot(points, J_MoM, 0.1, Visu.mesh(Γ_c)))
-
 
 # Stromdichte Mitte: Ebene z=0.0
 range_xy = range(-0.5,stop=0.5,length=9)
@@ -255,6 +310,7 @@ Jana3 = -ones(length(Jz3))*κ(p)*(u_top[1]-u_bottom[1])
 @show norm(Jz3 - Jana3)/norm(Jana3)
 #display(Visu.fieldplot(points2, J_MoM2, 1.0, Visu.mesh(Γ_c)))
 
+display(Visu.fieldplot(points, J_MoM, 0.06, Visu.mesh(Γ_c)))
 
 
 # Strom durch Platten
@@ -269,16 +325,16 @@ display("")
 
 # Potential: Randknoten vs. Analytisch
 
-function CapacitorPot(x, u_top, u_bottom; scale = 1.0) # vereinfacht!!!
+function CapacitorPot(x, u_top, u_bottom; scale = 1.0) # vereinfacht für hom. medium
     lz = 1.0
     m = scale * (u_top[1]-u_bottom[1]) / lz
 
     z = x[3]
-    return m * z 
+    return m * (z + lz/2) + u_bottom[1]
 end
 u_Φana = Vector{Float64}(undef,length(u_Φ))
 for (i,pos) in enumerate(y.pos)
-    u_Φana[i] = CapacitorPot(pos, u_top, u_bottom, scale = 1.0)
+    u_Φana[i] = CapacitorPot(pos, u_top, u_bottom, scale = 1)
 end
 @show norm(u_Φ-u_Φana)/norm(u_Φana) #nicht punktweise
 

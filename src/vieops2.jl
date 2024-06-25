@@ -149,8 +149,32 @@ end
 
 
 ##### SauterSchwab3D 5D/6D ######################################################################
+struct n_gradGdiv_ΓΩ{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
+    gamma::T
+    α::U
+    tau::P
+end
+function BEAST.integrand(viop::n_gradGdiv_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo) # 5D
 
-struct gradG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
+    gx = @SVector[tvals[i].value for i in 1:3]
+    dfy = @SVector[bvals[i].divergence for i in 1:4]
+
+    #rand() < 0.001 && @show dfy 
+    #error("STOP")
+
+    G = kerneldata.green
+    gradG = kerneldata.gradgreen # "+" to get ∇G(r,r') (without ')
+
+    Ty = kerneldata.tau
+
+    α = viop.α
+
+    nx = tgeo.patch.normals[1]
+
+    return @SMatrix[α * dot(gx[i] * nx,  gradG * Ty * dfy[j]) for i in 1:3, j in 1:4]
+end
+
+struct gradG_ΓΩ{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
     gamma::T
     α::U
     tau::P
@@ -169,7 +193,7 @@ function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
     return @SMatrix[α * dot(gx[i] * gradG, Ty*fy[j]) for i in 1:1, j in 1:4]
 end
-struct n_gradG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
+struct n_gradG_ΓΩ{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
     gamma::T
     α::U
     tau::P
@@ -189,7 +213,7 @@ function BEAST.integrand(viop::n_gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bge
     return @SMatrix[α * gx[i] * dot(gradG, Ty*fy[j]) for i in 1:1, j in 1:4]
 end
 
-struct n_dyadG_ΓΩ{T,U,P} <: BoundaryOperatorΓΩ
+struct n_dyadG_ΓΩ{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
     gamma::T
     α::U 
     tau::P
@@ -211,7 +235,7 @@ function BEAST.integrand(viop::n_dyadG_ΓΩ, kerneldata, tvals, tgeo, bvals, bge
 end
 BEAST.kernelvals(viop::n_dyadG_ΓΩ, p ,q) = kernelvalsdyad(viop, p, q)
 
-struct div_ngradG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ # 5D
+struct div_ngradG_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ # 5D
     gamma::T
     α::U
     tau::P
@@ -239,7 +263,7 @@ function BEAST.integrand(viop::div_ngradG_ΩΓ, kerneldata, tvals, tgeo, bvals, 
     return @SMatrix[α * dgx[i] * dot(bgeo.patch.normals[1], gradGTy * fy[j]) for i in 1:4, j in 1:3]
 end
 
-struct div_G_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
+struct div_G_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
     gamma::T
     α::U
     tau::P
@@ -259,7 +283,7 @@ function BEAST.integrand(viop::div_G_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
 end
 
 
-struct div_gradG_ΩΩ{T,U,P} <: VolumeOperatorΩΩ
+struct div_gradG_ΩΩ{T,U,P} <: BEAST.VolumeOperator#ΩΩ
     gamma::T
     α::U
     tau::P
@@ -280,7 +304,7 @@ function BEAST.integrand(viop::div_gradG_ΩΩ, kerneldata, tvals, tgeo, bvals, b
 end
 
 
-struct gradG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
+struct gradG_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
     gamma::T
     α::U
     tau::P
@@ -300,7 +324,7 @@ function BEAST.integrand(viop::gradG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
     return @SMatrix[α * dot(gx[i], gradG * Ty * fy[j]) for i in 1:4, j in 1:1]
 end
 
-struct ndyadG_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
+struct ndyadG_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
     gamma::T
     α::U 
     tau::P
@@ -330,7 +354,7 @@ function BEAST.integrand(viop::ndyadG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo
     
     return @SMatrix[α * dot(gx[i], dyadGny) * fy[j] for i in 1:4, j in 1:3]
 end
-BEAST.kernelvals(viop::ndyadG_ΩΓ, p ,q) = kernelvalsdyad(viop, p, q)
+BEAST.kernelvals(viop::ndyadG_ΩΓ, p ,q) = kernelvalsdyad(viop, p, q) # !!!!!!!!!!!!!!! Entscheidend!!!!
 
 
 

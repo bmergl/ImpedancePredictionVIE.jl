@@ -10,89 +10,89 @@ using ImpedancePredictionVIE
 
 
     # Neudefinition ... unklar wie es anders gehen würde...
-    struct VIEhhVolume2{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ#BEAST.VolumeOperator
-        gamma::T
-        α::U
-        tau::P
-    end
-    struct VIEhhBoundary2{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΓΩ
-        gamma::T
-        α::U
-        tau::P
-    end
-    struct VIEhhVolumegradG2{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ #BEAST.VolumeOperator
-        gamma::T
-        α::U
-        tau::P
-    end
+    # struct VIEhhVolume2{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ#BEAST.VolumeOperator
+    #     gamma::T
+    #     α::U
+    #     tau::P
+    # end
+    # struct VIEhhBoundary2{T,U,P} <: ImpedancePredictionVIE.BoundaryOperatorΓΩ
+    #     gamma::T
+    #     α::U
+    #     tau::P
+    # end
+    # struct VIEhhVolumegradG2{T,U,P} <: ImpedancePredictionVIE.VolumeOperatorΩΩ #BEAST.VolumeOperator
+    #     gamma::T
+    #     α::U
+    #     tau::P
+    # end
 
-    # Konstruktoren
-    function hhvolume2(; tau=nothing)
+    # # Konstruktoren
+    # function hhvolume2(; tau=nothing)
 
-        return VIEhhVolume2(0.0, -1.0, tau)
-    end
+    #     return VIEhhVolume2(0.0, -1.0, tau)
+    # end
 
-    function hhboundary2(; tau=nothing)
+    # function hhboundary2(; tau=nothing)
 
-        return VIEhhBoundary2(0.0, 1.0, tau)
-    end
+    #     return VIEhhBoundary2(0.0, 1.0, tau)
+    # end
 
-    function hhvolumegradG2(; tau=nothing)
+    # function hhvolumegradG2(; tau=nothing)
 
-        return VIEhhVolumegradG2(0.0, -1.0, tau)
-    end
+    #     return VIEhhVolumegradG2(0.0, -1.0, tau)
+    # end
 
     
-    function BEAST.integrand(viop::VIEhhVolume2, kerneldata, tvals, tgeo, bvals, bgeo)
+    # function BEAST.integrand(viop::VIEhhVolume2, kerneldata, tvals, tgeo, bvals, bgeo)
 
-        gx = @SVector[tvals[i].value for i in 1:4]
-        fy = @SVector[bvals[i].value for i in 1:4]
+    #     gx = @SVector[tvals[i].value for i in 1:4]
+    #     fy = @SVector[bvals[i].value for i in 1:4]
 
-        dgx = @SVector[tvals[i].gradient for i in 1:4]
-        dfy = @SVector[bvals[i].gradient for i in 1:4]
+    #     dgx = @SVector[tvals[i].gradient for i in 1:4]
+    #     dfy = @SVector[bvals[i].gradient for i in 1:4]
 
-        G = kerneldata.green
-        gradG = kerneldata.gradgreen
+    #     G = kerneldata.green
+    #     gradG = kerneldata.gradgreen
 
-        Ty = kerneldata.tau
+    #     Ty = kerneldata.tau
 
-        α = viop.α
+    #     α = viop.α
 
-        return @SMatrix[α * dot(dgx[i], G*Ty*dfy[j]) for i in 1:4, j in 1:4]
-    end
+    #     return @SMatrix[α * dot(dgx[i], G*Ty*dfy[j]) for i in 1:4, j in 1:4]
+    # end
 
-    function BEAST.integrand(viop::VIEhhBoundary2, kerneldata, tvals, tgeo, bvals, bgeo)
+    # function BEAST.integrand(viop::VIEhhBoundary2, kerneldata, tvals, tgeo, bvals, bgeo)
 
-        gx = @SVector[tvals[i].value for i in 1:3]
-        dfy = @SVector[bvals[i].gradient for i in 1:4]
+    #     gx = @SVector[tvals[i].value for i in 1:3]
+    #     dfy = @SVector[bvals[i].gradient for i in 1:4]
 
-        G = kerneldata.green
-        gradG = kerneldata.gradgreen
+    #     G = kerneldata.green
+    #     gradG = kerneldata.gradgreen
 
-        Ty = kerneldata.tau
+    #     Ty = kerneldata.tau
 
-        α = viop.α
+    #     α = viop.α
 
-        return @SMatrix[α * dot( tgeo.patch.normals[1]*gx[i],G*Ty*dfy[j]) for i in 1:3, j in 1:4]
-    end
+    #     return @SMatrix[α * dot( tgeo.patch.normals[1]*gx[i],G*Ty*dfy[j]) for i in 1:3, j in 1:4]
+    # end
 
-    function BEAST.integrand(viop::VIEhhVolumegradG2, kerneldata, tvals, tgeo, bvals, bgeo)
+    # function BEAST.integrand(viop::VIEhhVolumegradG2, kerneldata, tvals, tgeo, bvals, bgeo)
 
-        gx = @SVector[tvals[i].value for i in 1:4]
-        fy = @SVector[bvals[i].value for i in 1:4]
+    #     gx = @SVector[tvals[i].value for i in 1:4]
+    #     fy = @SVector[bvals[i].value for i in 1:4]
 
-        dgx = @SVector[tvals[i].gradient for i in 1:4]
-        dfy = @SVector[bvals[i].gradient for i in 1:4]
+    #     dgx = @SVector[tvals[i].gradient for i in 1:4]
+    #     dfy = @SVector[bvals[i].gradient for i in 1:4]
 
-        G = kerneldata.green
-        gradG = -kerneldata.gradgreen # "-" to get nabla'G(r,r')
+    #     G = kerneldata.green
+    #     gradG = -kerneldata.gradgreen # "-" to get nabla'G(r,r')
 
-        Ty = kerneldata.tau
+    #     Ty = kerneldata.tau
 
-        α = viop.α
+    #     α = viop.α
 
-        return @SMatrix[α * gx[i] * dot(gradG, Ty*dfy[j]) for i in 1:4, j in 1:4]
-    end
+    #     return @SMatrix[α * gx[i] * dot(gradG, Ty*dfy[j]) for i in 1:4, j in 1:4]
+    # end
 
 
 
@@ -133,9 +133,9 @@ using ImpedancePredictionVIE
     τ = generate_tau(ε2, ε1)
 
     I = Identity()
-    V = hhvolume2(tau = τ)
-    B = hhboundary2(tau = τ)
-    Y = hhvolumegradG2(tau = τ)
+    V = VIE.hhvolume(wavenumber = 0.0, tau = τ)
+    B = VIE.hhboundary(wavenumber = 0.0, tau = τ)
+    Y = VIE.hhvolumegradG(wavenumber = 0.0, tau = τ)
 
     # I, V, B =  Identity(), VIE.hhvolume(tau = τ, wavenumber = 0.0), VIE.hhboundary(tau = τ, wavenumber = 0.0)
     # Y = VIE.hhvolumegradG(tau = τ, wavenumber = 0.0)

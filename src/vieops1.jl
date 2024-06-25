@@ -31,7 +31,7 @@ end
 
 # bottom left (bl) block ##########################################################################
 
-struct bl_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ # 5D
+struct bl_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ # 5D
     gamma::T
     α::U
     tau::P
@@ -57,7 +57,7 @@ end
 
 # bottom right (br) block #########################################################################
 
-struct br_ΩΓ{T,U,P} <: BoundaryOperatorΩΓ
+struct br_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
     gamma::T
     α::U
     tau::P
