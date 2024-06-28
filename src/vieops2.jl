@@ -76,6 +76,10 @@ function (igd::BEAST.Integrand{<:MaterialADL})(x,y,f,g)
     fvalue = BEAST.getvalue(f)
     gvalue = BEAST.getvalue(g)
 
+
+    #αgradgreen = α * 4*R^2*(cartesian(x) - cartesian(y)) # <---------------------------------------------
+
+
     return BEAST._krondot(fvalue,gvalue) * dot(n, αgradgreen*Ty) # 2. + statt -
 end
 

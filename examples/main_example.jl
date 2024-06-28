@@ -108,9 +108,10 @@ inv_τ(p)
 @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
 
 
-BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
+BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(6)
 
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(7,7,7,1,1,1)
+#BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(4,4,6,6,6,6)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,1,1,1)
 #BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
@@ -154,13 +155,12 @@ S0 = S1+S2
 
 S3 = assemble(B23_alternativ, y, X)
 
-norm(S0-S3)
+@show norm(S0-S3) # bei ! Alle KErnel anpassen
 
 
 ## 
 
-@show maximum(abs.(S0-S3)./abs.(S3))
-
+#@show maximum(abs.(S0-S3)./abs.(S3))
 relErrM = abs.(S0-S3)./abs.(S3)
 
 ind2Mind = CartesianIndices(relErrM)
@@ -174,8 +174,8 @@ for (index, element) in enumerate(relErrM)
     
     lim = 10.0
 
-    if element > lim && abs(X.pos[j][3])< 0.45
-        if norm(y.pos[i]-X.pos[j]) < 0.2 && s0 > maximum(S3)/1000
+    if element > lim #&& abs(S1[i,j]) == 0.0 #
+        if norm(y.pos[i]-X.pos[j]) > -1.0 && s3 > maximum(S3)/1000
         println("relErr: $element, S0[$i,$j]=$s0, S3[$i,$j]=$s3")
         push!(pair_list,[i,j])
         cnt += 1
@@ -188,14 +188,106 @@ end
 display(pair_list)
 
 ##
-pair = pair_list[6]
-i1 = 135#pair[1]
-i2 = 82#pair[2]
 
-Visu.points([y.pos[i1],X.pos[i2]], Visu.mesh(Ω))
+pair = pair_list[1]
+i = pair[1]
+j = pair[2]
+
+
+S1[i,j]
+S2[i,j]
+
+S3[i,j]
+
+(abs(S2[i,j])-S2[i,j])/S2[i,j]
+
+
+c1 = X.fns[j][1].cellid
+c2 = X.fns[j][2].cellid
+vertc1 = Ω.vertices[Ω.faces[c1]]
+vertc2 = Ω.vertices[Ω.faces[c2]]
+
+plt = Visu.mesh(Γ_nc)
+Visu.simplex(plt,vertc1)
+Visu.simplex(plt,vertc2)
+#Visu.points([y.pos[i],],plt)
+Visu.points([y.pos[i],X.pos[j]],plt)
+
+
+y.fns[i]
+y.pos[i]
+
+c_1 = y.fns[i][1].cellid
+c_2 = y.fns[i][2].cellid
+c_3 = y.fns[i][3].cellid
+c_4 = y.fns[i][4].cellid
+c_5 = y.fns[i][5].cellid
+c_6 = y.fns[i][6].cellid
+
+#Visu.points(vertc_5,plt)
 
 ##
-t
+
+# grid points
+[-0.5, -0.5, -0.5]
+[-0.3333333333328717, -0.5, -0.5]
+[-0.3779915320715162, -0.5, -0.3779915320715162]
+[-0.5, -0.5, -0.3333333333328717]
+[-0.3611620212023955, -0.5, -0.2522937250014939]
+[-0.2528831044819755, -0.5, -0.3630506580181511]
+# ....
+
+# lag points
+[-0.5, -0.5, -0.5]                                              
+[-0.3333333333328717, -0.5, -0.5]                               
+[-0.3779915320715162, -0.5, -0.3779915320715162] 
+
+[-0.5, -0.5, -0.3333333333328717]
+[-0.5, -0.5, -0.5]
+[-0.3779915320715162, -0.5, -0.3779915320715162]
+
+[-0.3611620212023955, -0.5, -0.2522937250014939]
+[-0.5, -0.5, -0.3333333333328717]
+[-0.3779915320715162, -0.5, -0.3779915320715162]
+
+[-0.2528831044819755, -0.5, -0.3630506580181511]
+[-0.3611620212023955, -0.5, -0.2522937250014939]
+[-0.3779915320715162, -0.5, -0.3779915320715162]
+
+[-0.3333333333328717, -0.5, -0.5]
+[-0.2528831044819755, -0.5, -0.3630506580181511]
+[-0.3779915320715162, -0.5, -0.3779915320715162]
+
+# swg points
+[-0.5, -0.3779915320723491, -0.3779915320721015]
+[-0.5, -0.5, -0.5]
+[-0.3779915320715162, -0.5, -0.3779915320715162]
+[-0.3779915320721015, -0.3779915320723491, -0.5]
+
+[-0.3779915320715162, -0.5, -0.3779915320715162]
+[-0.5, -0.3779915320723491, -0.3779915320721015]
+[-0.5, -0.5, -0.3333333333328717]
+[-0.5, -0.5, -0.5]
+
+Γ.faces[c_1]
+Γ.vertices[16]
+
+##
+i = 76
+j = 1883
+
+S1[i,j]
+S2[i,j]
+S0[i,j]
+
+S3[i,j]
+
+
+
+
+
+#
+
 #
 
 # ~,sv0,~ = svd(S0)
@@ -236,8 +328,8 @@ lhs = @varform(
 
     B21_ΓΓ[j,l] + 
     B22_Γ[j,m] + B22_ΓΓ[j,m] +
-    B23_ΓΓ[j,ntrc(n)] + B23_ΓΩ[j,n] +
-    #B23_alternativ[j,n] +
+    #B23_ΓΓ[j,ntrc(n)] + B23_ΓΩ[j,n] +
+    B23_alternativ[j,n] +
 
     B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
     B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +

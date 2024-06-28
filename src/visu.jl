@@ -103,21 +103,41 @@ function add1(plt, simplex0, refsp) #adds one cell field...
 end
 
 
-function simplex(plt, simplex0) #adds one cell field...
+function simplex(plt, simplex0::CompScienceMeshes.Simplex) #adds one cell field...
     a = simplex0.vertices[1]
     b = simplex0.vertices[2]
     c = simplex0.vertices[3]
     d = simplex0.vertices[4]
 
-    plt = plot!(plt,[a[1], b[1]], [a[2], b[2]], [a[3], b[3]], color="green", label="")
-    plt = plot!(plt,[a[1], c[1]], [a[2], c[2]], [a[3], c[3]], color="green", label="")
-    plt = plot!(plt,[a[1], d[1]], [a[2], d[2]], [a[3], d[3]], color="green", label="")
+    plt = plot!(plt,[a[1], b[1]], [a[2], b[2]], [a[3], b[3]], color="red", label="")
+    plt = plot!(plt,[a[1], c[1]], [a[2], c[2]], [a[3], c[3]], color="red", label="")
+    plt = plot!(plt,[a[1], d[1]], [a[2], d[2]], [a[3], d[3]], color="red", label="")
 
 
-    plt = plot!(plt,[b[1], c[1]], [b[2], c[2]], [b[3], c[3]], color="green", label="")
-    plt = plot!(plt,[b[1], d[1]], [b[2], d[2]], [b[3], d[3]], color="green", label="")
+    plt = plot!(plt,[b[1], c[1]], [b[2], c[2]], [b[3], c[3]], color="red", label="")
+    plt = plot!(plt,[b[1], d[1]], [b[2], d[2]], [b[3], d[3]], color="red", label="")
 
-    plt = plot!(plt,[c[1], d[1]], [c[2], d[2]], [c[3], d[3]], color="green", label="")
+    plt = plot!(plt,[c[1], d[1]], [c[2], d[2]], [c[3], d[3]], color="red", label="")
+
+    return plt
+end
+
+function simplex(plt, fourpoints) #adds one cell field...
+    @assert length(fourpoints) == 4
+    a = fourpoints[1]
+    b = fourpoints[2]
+    c = fourpoints[3]
+    d = fourpoints[4]
+
+    plt = plot!(plt,[a[1], b[1]], [a[2], b[2]], [a[3], b[3]], color="red", label="")
+    plt = plot!(plt,[a[1], c[1]], [a[2], c[2]], [a[3], c[3]], color="red", label="")
+    plt = plot!(plt,[a[1], d[1]], [a[2], d[2]], [a[3], d[3]], color="red", label="")
+
+
+    plt = plot!(plt,[b[1], c[1]], [b[2], c[2]], [b[3], c[3]], color="red", label="")
+    plt = plot!(plt,[b[1], d[1]], [b[2], d[2]], [b[3], d[3]], color="red", label="")
+
+    plt = plot!(plt,[c[1], d[1]], [c[2], d[2]], [c[3], d[3]], color="red", label="")
 
     return plt
 end

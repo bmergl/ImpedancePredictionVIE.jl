@@ -12,24 +12,25 @@ using ImpedancePredictionVIE
 
 
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
-
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
 
 # Mesh, Basis
-v_list = [point(0.0, 0.0, 0.0), point(1.0, 0.0, 0.0), point(0.0, 1.0, 0.0), point(0.0, 0.0, 1.0), point(0.0, 0.0, -1.0), point(0.0,-1.0,0.0)]#, point(-1.0,0.0,0.0), point(1.0,1.0,1.0), point(1.0,1.0,0.0)]
+v_list = [point(0.0, 0.0, 0.0), point(1.0, 0.0, 0.0), point(0.0, 1.0, 0.0), point(0.0, 0.0, 1.0), point(0.0, 0.0, -1.0), point(0.0,-1.0,0.0), point(-1.0,0.0,0.0), point(1.0,1.0,1.0), point(1.0,1.0,0.0)]
 indΩ1 = SVector(1,2,4,3)
 indΩ2 = SVector(1,4,2,6)
-# indΩ3 = SVector(1,6,7,4)
-# indΩ4 = SVector(1,7,3,4)
+#indΩ3 = SVector(1,6,7,4)
+#indΩ4 = SVector(1,7,3,4)
 
-# indΩ5 = SVector(1,2,3,5)
-# indΩ6 = SVector(1,2,5,6)
-# indΩ7 = SVector(1,6,5,7)
-# indΩ8 = SVector(1,5,3,7)
+#indΩ5 = SVector(1,2,3,5)
+#indΩ6 = SVector(1,2,5,6)
+#indΩ7 = SVector(1,6,5,7)
+#indΩ8 = SVector(1,5,3,7)
 
-# indΩ9 = SVector(2,4,3,8)
-# indΩ10 = SVector(2,3,9,8)
+#indΩ9 = SVector(2,4,3,8)
+#indΩ10 = SVector(2,3,9,8)
 
-f_list = [indΩ1, indΩ2]#, indΩ3, indΩ4, indΩ5, indΩ6, indΩ7, indΩ8, indΩ9, indΩ10] # <-------------------------
+#f_list = [indΩ1, indΩ2, indΩ3, indΩ4, indΩ5, indΩ6, indΩ7, indΩ8, indΩ9, indΩ10] # <-------------------------
+f_list = [indΩ1, indΩ2]#, indΩ5, indΩ6]
 mesh = Mesh(v_list, f_list)
 
 
@@ -71,15 +72,31 @@ display(relErrM)
 
 ## # Stop here
 
+Z_B
+Z_V
+Z_0
 
-X.pos[5] # hat bei bnd keinen Beitrag zur matrix...
-Z_B[:,5]
-Z_V[:,5]
+Z_A
 
-Z_A[:,5]
+
+j_swg = 1
+
+relErrM[:,j_swg]
+
+Z_A[:,j_swg]
+Z_0[:,j_swg]
+
+
+
+
+X.pos[j_swg] # hat bei bnd keinen Beitrag zur matrix...
+Z_B[:,j_swg]
+Z_V[:,j_swg]
+
+Z_A[:,j_swg]
 
 ##
-Visu.points([y.pos[4],X.pos[5]],Visu.mesh(mesh))
+Visu.points([y.pos[3],X.pos[j_swg]],Visu.mesh(mesh))
 
 ##
 
