@@ -362,6 +362,28 @@ BEAST.kernelvals(viop::ndyadG_ΩΓ, p ,q) = kernelvalsdyad(viop, p, q) # !!!!!!!
 
 
 
+struct testrot{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
+    gamma::T
+    α::U 
+    tau::P
+end
+function BEAST.integrand(viop::testrot, kerneldata, tvals, tgeo, bvals, bgeo)
+
+    gx = @SVector[tvals[i].curl for i in 1:3]
+    fy = @SVector[bvals[i].value for i in 1:4] 
+
+    
+    gradG = -kerneldata.gradgreen # "-" to get ∇'G(r,r')
+
+    Ty = kerneldata.tau
+
+    α = viop.α
+
+    return @SMatrix[α * dot(gx[i], cross(gradG, Ty*fy[j])) for i in 1:3, j in 1:4]
+
+end
+
+
 
 
 
@@ -388,5 +410,23 @@ function BEAST.integrand(localop::MatId, kerneldata, x, g, f)
     return α * dot(gx, Tx * fx) # geht auch wenn g und f skalar sind
 end
 
+# struct n_MatId{T,U} <: MaterialIdentity 
+#     α::T
+#     tau::U
+# end
+
+# function BEAST.integrand(localop::n_MatId, kerneldata, x, g, f)
+
+#     gx = g.value
+#     fx = f.value
+
+#     Tx = kerneldata.tau
+
+#     nx = x.patch.normals[1]
+
+#     α = localop.α
+
+#     return α * dot(gx*nx, Tx * fx) # geht auch wenn g und f skalar sind
+# end
 
 

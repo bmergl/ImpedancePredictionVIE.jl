@@ -83,6 +83,14 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         return Mod.n_gradGdiv_ΓΩ(gamma, alpha, chi)
     end
 
+    function B23_testrot(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
+        @warn "B23_ΓΓ needed for B23_testrot"
+        gamma = gammatype(0.0)
+        chi === nothing && error("")
+        
+        return Mod.testrot(gamma, alpha, chi)
+    end
+
 
 
     # B31 Block

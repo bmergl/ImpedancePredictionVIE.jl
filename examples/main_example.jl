@@ -18,7 +18,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 0.18 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 0.12 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -110,12 +110,12 @@ inv_τ(p)
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(6)
 
-#BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(4,4,6,6,6,6)
+#BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(4,4,8,6,6,6)
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,1,1,1)
 #BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
-BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
 #BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(7,7,7,7,7,7,7,7)
 
 # Anregung
@@ -149,141 +149,146 @@ B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ) # dyade a
 #norm(assemble(B23_ΓΩ, y, X))
 B23_alternativ = IPVIE2.B23_alternativ(alpha = 1.0, gammatype = Float64, chi = χ)
 
-S1 = assemble(B23_ΓΓ, y, ntrc(X))
-S2 = assemble(B23_ΓΩ, y, X)
-S0 = S1+S2
+B23_testrot = IPVIE2.B23_testrot(alpha = 1.0, gammatype = Float64, chi = χ)
+#assemble(B23_testrot, y, X)
 
-S3 = assemble(B23_alternativ, y, X)
+#
 
-@show norm(S0-S3) # bei ! Alle KErnel anpassen
+# S1 = assemble(B23_ΓΓ, y, ntrc(X))
+# S2 = assemble(B23_ΓΩ, y, X)
+# S0 = S1+S2
+
+# S3 = assemble(B23_alternativ, y, X)
+
+# @show norm(S0-S3) # bei ! Alle KErnel anpassen
 
 
-## 
+# ## 
 
-#@show maximum(abs.(S0-S3)./abs.(S3))
-relErrM = abs.(S0-S3)./abs.(S3)
+# #@show maximum(abs.(S0-S3)./abs.(S3))
+# relErrM = abs.(S0-S3)./abs.(S3)
 
-ind2Mind = CartesianIndices(relErrM)
-pair_list = []
-cnt = 0
-for (index, element) in enumerate(relErrM) 
-    i = ind2Mind[index][1]
-    j = ind2Mind[index][2]
-    s0 = S0[i,j]
-    s3 = S3[i,j]
+# ind2Mind = CartesianIndices(relErrM)
+# pair_list = []
+# cnt = 0
+# for (index, element) in enumerate(relErrM) 
+#     i = ind2Mind[index][1]
+#     j = ind2Mind[index][2]
+#     s0 = S0[i,j]
+#     s3 = S3[i,j]
     
-    lim = 10.0
+#     lim = 10.0
 
-    if element > lim #&& abs(S1[i,j]) == 0.0 #
-        if norm(y.pos[i]-X.pos[j]) > -1.0 && s3 > maximum(S3)/1000
-        println("relErr: $element, S0[$i,$j]=$s0, S3[$i,$j]=$s3")
-        push!(pair_list,[i,j])
-        cnt += 1
-        end
-    end
+#     if element > lim # 50.0 && element > 0.3 #&& abs(S1[i,j]) == 0.0 #
+#         if norm(y.pos[i]-X.pos[j]) < 0.13 && s3 > maximum(S3)/1000
+#         println("relErr: $element, S0[$i,$j]=$s0, S3[$i,$j]=$s3")
+#         push!(pair_list,[i,j])
+#         cnt += 1
+#         end
+#     end
 
-end
-@show cnt/(size(S0,1)*size(S0,2))
+# end
+# @show cnt/(size(S0,1)*size(S0,2))
 
-display(pair_list)
+# display(pair_list)
 
-##
+# ##
 
-pair = pair_list[1]
-i = pair[1]
-j = pair[2]
+# pair = pair_list[1]
+# i = pair[1]
+# j = pair[2]
 
+# i = 61
+# j = 8
 
-S1[i,j]
-S2[i,j]
+# S1[i,j]
+# S2[i,j]
 
-S3[i,j]
+# S3[i,j]
 
-(abs(S2[i,j])-S2[i,j])/S2[i,j]
-
-
-c1 = X.fns[j][1].cellid
-c2 = X.fns[j][2].cellid
-vertc1 = Ω.vertices[Ω.faces[c1]]
-vertc2 = Ω.vertices[Ω.faces[c2]]
-
-plt = Visu.mesh(Γ_nc)
-Visu.simplex(plt,vertc1)
-Visu.simplex(plt,vertc2)
-#Visu.points([y.pos[i],],plt)
-Visu.points([y.pos[i],X.pos[j]],plt)
+# (abs(S2[i,j])-S3[i,j])/S3[i,j]
 
 
-y.fns[i]
-y.pos[i]
+# c1 = X.fns[j][1].cellid
+# c2 = X.fns[j][2].cellid
+# vertc1 = Ω.vertices[Ω.faces[c1]]
+# vertc2 = Ω.vertices[Ω.faces[c2]]
 
-c_1 = y.fns[i][1].cellid
-c_2 = y.fns[i][2].cellid
-c_3 = y.fns[i][3].cellid
-c_4 = y.fns[i][4].cellid
-c_5 = y.fns[i][5].cellid
-c_6 = y.fns[i][6].cellid
+# plt = Visu.mesh(Γ_nc)
+# Visu.simplex(plt,vertc1)
+# Visu.simplex(plt,vertc2)
+# #Visu.points([y.pos[i],],plt)
+# Visu.points([y.pos[i],X.pos[j]],plt)
 
-#Visu.points(vertc_5,plt)
+# ##
 
-##
+# y.fns[i]
+# y.pos[i]
 
-# grid points
-[-0.5, -0.5, -0.5]
-[-0.3333333333328717, -0.5, -0.5]
-[-0.3779915320715162, -0.5, -0.3779915320715162]
-[-0.5, -0.5, -0.3333333333328717]
-[-0.3611620212023955, -0.5, -0.2522937250014939]
-[-0.2528831044819755, -0.5, -0.3630506580181511]
-# ....
+# c_1 = y.fns[i][1].cellid
+# c_2 = y.fns[i][2].cellid
+# c_3 = y.fns[i][3].cellid
+# c_4 = y.fns[i][4].cellid
+# c_5 = y.fns[i][5].cellid
+# c_6 = y.fns[i][6].cellid
 
-# lag points
-[-0.5, -0.5, -0.5]                                              
-[-0.3333333333328717, -0.5, -0.5]                               
-[-0.3779915320715162, -0.5, -0.3779915320715162] 
+# #Visu.points(vertc_5,plt)
 
-[-0.5, -0.5, -0.3333333333328717]
-[-0.5, -0.5, -0.5]
-[-0.3779915320715162, -0.5, -0.3779915320715162]
+# ##
 
-[-0.3611620212023955, -0.5, -0.2522937250014939]
-[-0.5, -0.5, -0.3333333333328717]
-[-0.3779915320715162, -0.5, -0.3779915320715162]
+# # grid points
+# [-0.5, -0.5, -0.5]
+# [-0.3333333333328717, -0.5, -0.5]
+# [-0.3779915320715162, -0.5, -0.3779915320715162]
+# [-0.5, -0.5, -0.3333333333328717]
+# [-0.3611620212023955, -0.5, -0.2522937250014939]
+# [-0.2528831044819755, -0.5, -0.3630506580181511]
+# # ....
 
-[-0.2528831044819755, -0.5, -0.3630506580181511]
-[-0.3611620212023955, -0.5, -0.2522937250014939]
-[-0.3779915320715162, -0.5, -0.3779915320715162]
+# # lag points
+# [-0.5, -0.5, -0.5]                                              
+# [-0.3333333333328717, -0.5, -0.5]                               
+# [-0.3779915320715162, -0.5, -0.3779915320715162] 
 
-[-0.3333333333328717, -0.5, -0.5]
-[-0.2528831044819755, -0.5, -0.3630506580181511]
-[-0.3779915320715162, -0.5, -0.3779915320715162]
+# [-0.5, -0.5, -0.3333333333328717]
+# [-0.5, -0.5, -0.5]
+# [-0.3779915320715162, -0.5, -0.3779915320715162]
 
-# swg points
-[-0.5, -0.3779915320723491, -0.3779915320721015]
-[-0.5, -0.5, -0.5]
-[-0.3779915320715162, -0.5, -0.3779915320715162]
-[-0.3779915320721015, -0.3779915320723491, -0.5]
+# [-0.3611620212023955, -0.5, -0.2522937250014939]
+# [-0.5, -0.5, -0.3333333333328717]
+# [-0.3779915320715162, -0.5, -0.3779915320715162]
 
-[-0.3779915320715162, -0.5, -0.3779915320715162]
-[-0.5, -0.3779915320723491, -0.3779915320721015]
-[-0.5, -0.5, -0.3333333333328717]
-[-0.5, -0.5, -0.5]
+# [-0.2528831044819755, -0.5, -0.3630506580181511]
+# [-0.3611620212023955, -0.5, -0.2522937250014939]
+# [-0.3779915320715162, -0.5, -0.3779915320715162]
 
-Γ.faces[c_1]
-Γ.vertices[16]
+# [-0.3333333333328717, -0.5, -0.5]
+# [-0.2528831044819755, -0.5, -0.3630506580181511]
+# [-0.3779915320715162, -0.5, -0.3779915320715162]
 
-##
-i = 76
-j = 1883
+# # swg points
+# [-0.5, -0.3779915320723491, -0.3779915320721015]
+# [-0.5, -0.5, -0.5]
+# [-0.3779915320715162, -0.5, -0.3779915320715162]
+# [-0.3779915320721015, -0.3779915320723491, -0.5]
 
-S1[i,j]
-S2[i,j]
-S0[i,j]
+# [-0.3779915320715162, -0.5, -0.3779915320715162]
+# [-0.5, -0.3779915320723491, -0.3779915320721015]
+# [-0.5, -0.5, -0.3333333333328717]
+# [-0.5, -0.5, -0.5]
 
-S3[i,j]
+# Γ.faces[c_1]
+# Γ.vertices[16]
 
+# ##
+# i = 76
+# j = 1883
 
+# S1[i,j]
+# S2[i,j]
+# S0[i,j]
 
+# S3[i,j]
 
 
 #
@@ -328,8 +333,10 @@ lhs = @varform(
 
     B21_ΓΓ[j,l] + 
     B22_Γ[j,m] + B22_ΓΓ[j,m] +
-    #B23_ΓΓ[j,ntrc(n)] + B23_ΓΩ[j,n] +
-    B23_alternativ[j,n] +
+    B23_ΓΓ[j,ntrc(n)] + 
+    #B23_ΓΩ[j,n] +
+    #B23_alternativ[j,n] +
+    -B23_testrot[j,n] +
 
     B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
     B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +

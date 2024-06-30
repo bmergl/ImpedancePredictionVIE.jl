@@ -52,7 +52,7 @@ function kernelvalsdyad(viop, p, q) # p=r_vec, q=r'_vec
                             xd_zd_3     yd_zd_3      3*zd^2-Rsq]
     dyadgreen = dyadgreen/(4*pi*R^5) # = ∇'∇'G
 
-
+    #rand()<0.0001 && @show norm(dyadgreen)
 
     # dyadgreen =  @SMatrix [8*xd^2+4*Rsq   8*xd*yd        8*xd*zd;
     #                        8*xd*yd        8*yd^2+4*Rsq   8*yd*zd;
