@@ -69,27 +69,29 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
         return Mod.MaterialADL(gamma, alpha, chi) #+ (1/2)*Mod.MatId(alpha, chi) # hinterer 0 immer STOPP evtl. falsch! ganz weg...
     end
     function B23_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
+        
         gamma = gammatype(0.0)
         chi === nothing && error("")
-
-        return Mod.n_dyadG_ΓΩ(gamma, alpha, chi)# + Zusatzterm??????
+        
+        return Mod.ncgrad_gradGc_ΓΩ(gamma, alpha, chi)
     end
 
-    function B23_alternativ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
-        @warn "χ const. needed for B23_alternativ"
+    function B23_constmed(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
+        @warn "χ const. needed for B23_constmed"
         gamma = gammatype(0.0)
         chi === nothing && error("")
         
         return Mod.n_gradGdiv_ΓΩ(gamma, alpha, chi)
     end
 
-    function B23_testrot(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
-        @warn "B23_ΓΓ needed for B23_testrot"
+    function B23_dyad(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
+        @warn "B23_ΓΓ needed for B23_dyad"
         gamma = gammatype(0.0)
         chi === nothing && error("")
-        
-        return Mod.testrot(gamma, alpha, chi)
+
+        return Mod.n_dyadG_ΓΩ(gamma, alpha, chi)
     end
+
 
 
 

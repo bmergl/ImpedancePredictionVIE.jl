@@ -50,11 +50,6 @@ v_list = [point(-0.5, -0.3779915320723491, -0.3779915320721015),point(-0.5, -0.2
 # manip: gut um Near Singularities zu zeigen!
 #v_list = [point(-0.5, -0.3779915320723491, -0.3779915320721015),point(-0.5, -0.2522937250027503, -0.3611620212027685),point(-0.5, -0.3333333333337957, -0.5),point(-0.5, -0.1666666666675912, -0.5),point(-0.5, -0.07888408893686816, -0.3316888586079301),point(-0.5, -0.2179091226067498, -0.2120159735025309),point(-0.5, -0.3630506580185957, -0.2528831044818892),       point(-0.35, -0.1, -0.4), point(-0.4511349771082896, -0.3504935351285941, -0.213866644215)]
 
-# damit soll CommonFace5D näher untersucht werden!
-v_list = [point(-0.5, -0.3779915320723491, -0.3779915320721015),point(-0.5, -0.2522937250027503, -0.3611620212027685),point(-0.5, -0.3333333333337957, -0.5),point(-0.5, -0.1666666666675912, -0.5),point(-0.5, -0.07888408893686816, -0.3316888586079301),point(-0.5, -0.2179091226067498, -0.2120159735025309),point(-0.5, -0.3630506580185957, -0.2528831044818892),       point(-0.3503355194295261, -0.09839474790376397, -0.3), point(-0.45011183980984204, -0.14319085394779416, -0.325)]#Ω.vertices
-
-
-
 indΓ1 = SVector(2,3,1) #Γ_nc.faces[c_1]
 indΓ2 = SVector(2,1,7) #Γ_nc.faces[c_2]
 indΓ3 = SVector(2,4,3) #Γ_nc.faces[c_3]
@@ -88,9 +83,6 @@ X_.fns = [X_.fns[i_swg],]
 bnd_ = boundary(mesh_)
 ntrc_ = fnsspace -> ntrace(fnsspace, bnd_)
 
-
-# manipuliere swg - sodass nur die halbe... STOPP  VERBOTEN siehe BND1
-#X_.fns = [[X_.fns[1][1]],]
 # manipuliere lagrange:
 k = 4 # <------------------------ 4 ist problematisch!
 y_.fns = [[y_.fns[1][k]],] 
@@ -108,36 +100,38 @@ display(y_.fns)
 ##
 
 q = 6
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(q,q,q,6,6,6)
-BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(q,q,q,q,q,q)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(q,q,q,q,q,q,q,q)
 
 # VIE Operators
 χ = x -> 0.5 # ACHTUNG MUSS KONSTANT SEIN OHNE SPRÜNGE
 B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
-B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
-B23_alternativ = IPVIE2.B23_alternativ(alpha = 1.0, gammatype = Float64, chi = χ)
+B23_dyad = IPVIE2.B23_dyad(alpha = 1.0, gammatype = Float64, chi = χ)
+B23_constmed = IPVIE2.B23_constmed(alpha = 1.0, gammatype = Float64, chi = χ)
 
 
 # Assembly
 Z_B = assemble(B23_ΓΓ, y_, ntrc_(X_))
-Z_V = assemble(B23_ΓΩ, y_, X_)
+Z_V = assemble(B23_dyad, y_, X_)
 
-Z_A = assemble(B23_alternativ, y_, X_)
+Z_A = assemble(B23_constmed, y_, X_)
 
 @assert Z_B[1,1] == 0.0
 
-@show (Z_V[1,1] - Z_A[1,1])/Z_A[1,1]
+@warn "manipulation not allowed for total error"
+length(y_.fns[1]) == 6 && @show (Z_V[1,1] - Z_A[1,1])/Z_A[1,1]
 
 
-##
+## Anteil oder komplett:
 
 Z_B[1,1]
 Z_V[1,1]
 
 Z_A[1,1]
 
-## 
+## # Full Lagrange
 
+@assert length(y_.fns[1]) != 1
 j=1
 c1 = X_.fns[j][1].cellid
 c2 = X_.fns[j][2].cellid
@@ -147,16 +141,28 @@ plt = Visu.mesh(bmesh)
 Visu.simplex(plt,vertc1)
 Visu.simplex(plt,vertc2)
 
+Visu.points([y_.pos[1],X_.pos[j]],plt)
+
+
+## # Single Lagrange
+
 @assert length(y_.fns[1]) == 1 #sonst ...
+j=1
+c1 = X_.fns[j][1].cellid
+c2 = X_.fns[j][2].cellid
+vertc1 = mesh_.vertices[mesh_.faces[c1]]
+vertc2 = mesh_.vertices[mesh_.faces[c2]]
+plt = Visu.mesh(bmesh)
+Visu.simplex(plt,vertc1)
+Visu.simplex(plt,vertc2)
 cy = y_.fns[1][1].cellid
 vertcy = bmesh.vertices[bmesh.faces[cy]]
 lagcenter = cartesian(CompScienceMeshes.center(simplex(vertcy)))
 
-
 Visu.points([lagcenter,X_.pos[j]],plt)
 
 
-
+##
 
 #Visu.points([y_.pos[1],X_.pos[j]],plt)
 

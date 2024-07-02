@@ -18,7 +18,7 @@ geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
 meshname = "cube.msh"
 meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-h = 0.12 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
+h = 0.07 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
 
 # Visu.mesh(Ω)
@@ -32,7 +32,7 @@ h = 0.12 # kleiner 0.18 sonst std   0.18 -> 0.09 -> 0.045 für Konvergenztest
 # linearlag (dirichlet) auf Γ_c
 topnodes = realnodes(Γ_c_t) # wichtig denn später z.B. 10V
 bottomnodes = realnodes(Γ_c_b) # ""  z.B. 0V
-dirichletnodes = append!(deepcopy(topnodes), bottomnodes)
+dirichletnodes = vcat(topnodes, bottomnodes)
 y_d = lagrangec0d1(Γ, dirichletnodes, Val{3})
 # INFO: dirichletnodes[i] gehört zu y_d.pos[i] also "Spannungsvektor": [10V 10V ..... 10V 0V 0V ..... 0V 0V]
 #Visu.fnspos(y_d, Visu.mesh(Γ))
@@ -105,23 +105,23 @@ p = SVector(0.0,0.0,0.0)
 inv_τ(p)
 τ0
 χ(p)
-@assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
+#@assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
 
 
-BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(6)
+BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = BEAST.SingleNumQStrat(3)
 
 #BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(4,4,8,6,6,6)
-BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(6,6,6,1,1,1)
-#BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
+#BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(5,5,6,6,6,6)
+BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = BEAST.SauterSchwab3DQStrat(3,3,3,3,3,3)
 
-BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
-#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(7,7,7,7,7,7,7,7)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,5,5,5,5)
+BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,3,3,3,3)
+#BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = BEAST.DoubleNumWiltonSauterQStrat(9,9,9,9,9,9,9,9)
 
 # Anregung
 u_top = ones(length(topnodes)) * 0.5  # Volle Symmetrie!
 u_bottom = ones(length(bottomnodes)) * (-0.5)
-ex = append!(deepcopy(u_top), u_bottom)
+v = vcat(u_top, u_bottom)
 
 # Definiton der Operatoren
 
@@ -145,20 +145,21 @@ B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
 #norm(assemble(B22_ΓΓ, y, w))
 B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ) #VZ? sollte passen
 #norm(assemble(B23_ΓΓ, y, ntrc(X)))
-B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ) # dyade aber sollte passen da 5D, +extra Term?
+B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
 #norm(assemble(B23_ΓΩ, y, X))
-B23_alternativ = IPVIE2.B23_alternativ(alpha = 1.0, gammatype = Float64, chi = χ)
 
-B23_testrot = IPVIE2.B23_testrot(alpha = 1.0, gammatype = Float64, chi = χ)
-#assemble(B23_testrot, y, X)
+B23_dyad = IPVIE2.B23_dyad(alpha = 1.0, gammatype = Float64, chi = χ) # !!! Hypersingular - keine Konvergenz
 
-#
+B23_constmed = IPVIE2.B23_constmed(alpha = 1.0, gammatype = Float64, chi = χ)
+
+
+# # KONTROLLE DER MATRIXELEMENTE ####################################################
 
 # S1 = assemble(B23_ΓΓ, y, ntrc(X))
-# S2 = assemble(B23_ΓΩ, y, X)
+# S2 = assemble(B23_ΓΩ, y, X) # cross Formulierung
 # S0 = S1+S2
 
-# S3 = assemble(B23_alternativ, y, X)
+# S3 = assemble(B23_constmed, y, X)
 
 # @show norm(S0-S3) # bei ! Alle KErnel anpassen
 
@@ -177,10 +178,10 @@ B23_testrot = IPVIE2.B23_testrot(alpha = 1.0, gammatype = Float64, chi = χ)
 #     s0 = S0[i,j]
 #     s3 = S3[i,j]
     
-#     lim = 10.0
+#     lim = 0.02
 
 #     if element > lim # 50.0 && element > 0.3 #&& abs(S1[i,j]) == 0.0 #
-#         if norm(y.pos[i]-X.pos[j]) < 0.13 && s3 > maximum(S3)/1000
+#         if norm(y.pos[i]-X.pos[j]) > -1.0 && s3 > maximum(S3)/1000
 #         println("relErr: $element, S0[$i,$j]=$s0, S3[$i,$j]=$s3")
 #         push!(pair_list,[i,j])
 #         cnt += 1
@@ -198,8 +199,8 @@ B23_testrot = IPVIE2.B23_testrot(alpha = 1.0, gammatype = Float64, chi = χ)
 # i = pair[1]
 # j = pair[2]
 
-# i = 61
-# j = 8
+# # i = 61
+# # j = 8
 
 # S1[i,j]
 # S2[i,j]
@@ -220,7 +221,7 @@ B23_testrot = IPVIE2.B23_testrot(alpha = 1.0, gammatype = Float64, chi = χ)
 # #Visu.points([y.pos[i],],plt)
 # Visu.points([y.pos[i],X.pos[j]],plt)
 
-# ##
+#
 
 # y.fns[i]
 # y.pos[i]
@@ -334,9 +335,10 @@ lhs = @varform(
     B21_ΓΓ[j,l] + 
     B22_Γ[j,m] + B22_ΓΓ[j,m] +
     B23_ΓΓ[j,ntrc(n)] + 
-    #B23_ΓΩ[j,n] +
-    #B23_alternativ[j,n] +
-    -B23_testrot[j,n] +
+    B23_ΓΩ[j,n] +
+    #B23_dyad[j,n] +
+    #B23_constmed[j,n] +
+    
 
     B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
     B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +
@@ -366,8 +368,8 @@ testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)
 trialSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_trial)
 R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
 
-# S*u = R*ex
-b = R*ex
+# S*u = R*v
+b = R*v
 u = S \ b
 #@assert norm(S*u - b) < 1e-8
 u_Φ = u[1:length(y)]
@@ -377,9 +379,10 @@ u_J = u[length(y)+length(w)+1:end]
 @assert length(u_Jn) == length(w.fns)
 @assert length(u_J) == length(X.fns)
 
-@show cond(S)
+#@show cond(S)
 ## selbst höchste genauigkeit bringt nichts 7% 7% 13% wird nicht unterschritten
 # ... suche also für χ ungleich null nach χ-Fehlerterm - ist es eine Dyade???
+
 
 # Stomdichte
 range_ = range(-0.49,stop=0.49,length=9)

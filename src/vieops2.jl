@@ -361,15 +361,14 @@ end
 BEAST.kernelvals(viop::ndyadG_ΩΓ, p ,q) = kernelvalsdyad(viop, p, q) # !!!!!!!!!!!!!!! Entscheidend!!!!
 
 
-
-struct testrot{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
+struct ncgrad_gradGc_ΓΩ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
     gamma::T
     α::U 
     tau::P
 end
-function BEAST.integrand(viop::testrot, kerneldata, tvals, tgeo, bvals, bgeo)
+function BEAST.integrand(viop::ncgrad_gradGc_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
-    gx = @SVector[tvals[i].curl for i in 1:3]
+    gx = @SVector[tvals[i].curl for i in 1:3] # = n̂ × ∇a(r_vec), a(r_vec) is 2D lin. Lagrange
     fy = @SVector[bvals[i].value for i in 1:4] 
 
     
@@ -379,7 +378,7 @@ function BEAST.integrand(viop::testrot, kerneldata, tvals, tgeo, bvals, bgeo)
 
     α = viop.α
 
-    return @SMatrix[α * dot(gx[i], cross(gradG, Ty*fy[j])) for i in 1:3, j in 1:4]
+    return @SMatrix[α * dot(-gx[i], cross(gradG, Ty*fy[j])) for i in 1:3, j in 1:4]
 
 end
 
