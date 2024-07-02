@@ -14,7 +14,7 @@ g = x1 -> 1.0
 Ig_exact = 1.0 # ∫[0...1]g(x1)dx1
 
 
-n_list = [500000*i for i in 1:10] #collect(5000:8000)
+n_list = [i for i in 1:10000] #collect(5000:8000)
 err_I_sum1 = []
 err_I_sum2 = []
 err_I_sum3 = []
@@ -29,11 +29,11 @@ for n in n_list
     el_vec = [w1*g(x1) for (x1, w1) in qps]
     
     n == n_list[end] && @show minimum(el_vec)
-    I_sum2 =  0.0
+    I_sum2 =  1.0
     for el in el_vec
         I_sum2 += el
     end
-    I_sum2 
+    #I_sum2 = I_sum2 -1.0
 
     # V3
     I_sum3 = sum(el_vec) # = sum([w1*g(x1) for (x1, w1) in qps])

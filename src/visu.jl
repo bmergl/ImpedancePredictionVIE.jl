@@ -9,7 +9,7 @@ using Plots
 using BEAST
 using LinearAlgebra
 using StaticArrays
-using Distributed
+#using Distributed
 
 #import ..pointlist2xyzlist
 #import ..realnodes

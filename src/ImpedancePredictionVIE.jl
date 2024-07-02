@@ -1,13 +1,16 @@
 module ImpedancePredictionVIE
 
-
-using BEAST
-using CompScienceMeshes
 using LinearAlgebra
 using StaticArrays
-using Plots
-using Distributed
+using BEAST
+using CompScienceMeshes
 using SauterSchwab3D
+
+using JLD2
+
+using Plots
+
+
 
 include("ip.jl")
 
@@ -27,6 +30,7 @@ include("geometry.jl")
 
 
 export Visu
+export IP
 export IPVIE1
 export IPVIE2
 export geo2mesh
