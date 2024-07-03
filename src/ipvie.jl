@@ -96,46 +96,28 @@ module IPVIE    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
 
 
     # B31 Block
-    function B31_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, dyad = false) # 4D
+    function B31_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
-
-        if dyad
-            return 0.0*Identity()
-        end
 
         return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) + alpha*(-1/2)*Identity()
     end
-    function B31_ΩΓ(; gammatype = ComplexF64, alpha = 1.0, dyad = false) # 5D
+    function B31_ΩΓ(; gammatype = ComplexF64, alpha = 1.0) # 5D
         gamma = gammatype(0.0)
         tau = x -> 1.0  # VIE-kernelvals needs tau
-
-        if dyad
-            alpha = -1.0*alpha
-            return Mod.ndyadG_ΩΓ(gamma, alpha, tau)
-        end
 
         return Mod.div_ngradG_ΩΓ(gamma, alpha, tau) 
     end
 
     # B32 Block
-    function B32_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing, dyad = false) # 4D
+    function B32_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 4D
         gamma = gammatype(0.0)
         invtau === nothing && error("")
-
-        if dyad
-            return 0.0*Identity()
-        end
 
         return Mod.MaterialSL(gamma, alpha, invtau)
     end
-    function B32_ΩΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing, dyad = false) # 5D
+    function B32_ΩΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 5D
         gamma = gammatype(0.0)
         invtau === nothing && error("")
-        
-        if dyad
-            alpha = -1.0*alpha
-            return Mod.gradG_ΩΓ(gamma, alpha, invtau)
-        end
 
         return Mod.div_G_ΩΓ(gamma, alpha, invtau)
     end

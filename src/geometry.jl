@@ -172,92 +172,6 @@ end
 
 
 
-function getcurrent(u_Jn, w::BEAST.LagrangeBasis{0,-1}, Γ_c_t::Mesh, Γ_c_b::Mesh) # ging das jetzt noch einfacher oder nicht? assemblydata???
-    @assert length(u_Jn) == length(w.fns)
-
-    numtopcharts = length(Γ_c_t.faces)
-    top_ccs = Vector{SVector{3, Float64}}(undef, numtopcharts)
-    top_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
-    for i in 1:length(top_ccs)
-        chart = CompScienceMeshes.chart(Γ_c_t, i)
-        center = CompScienceMeshes.center(chart)
-        top_ccs[i] = cartesian(center)
-        top_charts[i] = chart
-    end
-
-    numbottomcharts = length(Γ_c_b.faces)
-    bottom_ccs = Vector{SVector{3, Float64}}(undef, numbottomcharts)
-    bottom_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
-    for i in 1:length(bottom_ccs)
-        chart = CompScienceMeshes.chart(Γ_c_b, i)
-        center = CompScienceMeshes.center(chart)
-        bottom_ccs[i] = cartesian(center)
-        bottom_charts[i] = chart
-    end
-
-    chart_tree_top = BEAST.octree(top_charts)
-    chart_tree_bottom = BEAST.octree(bottom_charts)
-
-    I_top = 0.0
-    I_bottom = 0.0
-
-    cnt_top = 0
-    cnt_bottom = 0
-
-    for (j, pos) in enumerate(w.pos)
-
-        i = CompScienceMeshes.findchart(top_charts, chart_tree_top, pos)      # ja...hier wäre das nicht nötig assemblydata?
-        k = CompScienceMeshes.findchart(bottom_charts, chart_tree_bottom, pos)
-
-
-        if i !== nothing
-            A = top_charts[i].volume 
-            I_top += A * u_Jn[j] * w.fns[j][1].coeff
-            cnt_top += 1
-        elseif k !== nothing
-            A = bottom_charts[k].volume 
-            I_bottom += A * u_Jn[j] * w.fns[j][1].coeff
-            cnt_bottom += 1
-        else
-            error("Neither top nor bottom")
-        end
-
-    end
-
-
-    @assert cnt_top == numtopcharts
-    @assert cnt_bottom == numbottomcharts
-
-    return abs(I_top), abs(I_bottom)
-end
-
-
-# function get_Dz_ref(zbottom, ztop, Φbottom, Φtop, ϵ_vec, d_vec) # ein skalarer Wert zurück, ϵ_vec and d_vec bottom to top!
-#     n = length(ϵ_vec)
-#     @assert n == length(d_vec)
-#     @assert ztop > zbottom
-
-#     d = abs(ztop - zbottom)
-
-#     @assert abs(sum(d_vec)-d) < 1e-12 
-
-#     z_vec = Vector{n, Float64}()
-
-#     for (i,d_i) in enumerate(d_vec)
-
-#     end
-
-#     z_vec[1] = zbottom + d[1]
-#     for i = 2:n-1
-#         d_i = d[i]
-        
-
-#     end
-
-# end
-
-
-
 
 
 
@@ -269,11 +183,22 @@ function gen_tau_chi(; kappa = nothing, kappa0 = nothing, epsilon = nothing, eps
     @warn "kappa(x), epsilon(x) must refer to the mesh, x must be a 3 dimensional vector!"
 
     p = point(0,0,0)
-    
-    if kappa !== nothing && kappa0 !== nothing && epsilon === nothing && epsilon0 === nothing   #problemtype == :current
 
+    
+    if kappa !== nothing && kappa0 !== nothing && epsilon === nothing && epsilon0 === nothing && omega === nothing
+        # :current
         tau = x -> kappa(x)
         tau0 = kappa0
+    
+    else if kappa === nothing && kappa0 === nothing && epsilon !== nothing && epsilon0 !== nothing && omega === nothing
+        # :dielectic
+        tau = x -> epsilon(x)
+        tau0 = epsilon0 # this ist not ε0 !
+
+    else if kappa !== nothing && kappa0 !== nothing && epsilon !== nothing && epsilon0 !== nothing && omega !== nothing
+        # :general
+        tau = x -> kappa(x) + im*omega*epsilon(x)
+        tau0 = kappa0 + im*ω*epsilon0 # this ist not ε0 !
 
     # elseif problemtype == :dielectic
     #     error("NOT READY")
@@ -322,7 +247,7 @@ function gen_tau_chi(; kappa = nothing, kappa0 = nothing, epsilon = nothing, eps
     #     tau0 = kappa0 + im*ω*epsilon0
         
     else
-        error("Specify problem! problemtype=:current or :dielectic or :general")
+        error("Specify problem! current, dielectic or general")
     end
 
     function init_chi(tau0, tau)     #SO IST ES SCHNELL!!!!!!!!! WIESO?????? FOLGLICH ALLE EINZELN...

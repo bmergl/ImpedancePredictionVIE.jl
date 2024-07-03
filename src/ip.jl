@@ -44,26 +44,68 @@ struct meshdata
     ntrc::Function
 end
 
+
+
+
 abstract type material end
 struct constantmaterial <: material
     κ::Union{Float64, Nothing}
     ϵ::Union{Float64, Nothing}
 end
+function (mat::constantmaterial)()
+    κ = x -> mat.κ
+    ϵ = x -> mat.ϵ
+    mat.κ === nothing && (κ = nothing)
+    mat.ϵ === nothing && (ϵ = nothing)
+    return κ, ϵ
+end
+
+struct constant_zsplit <: material
+    κ_p::Union{Float64, Nothing}
+    ϵ_p::Union{Float64, Nothing}
+    z0::Float64
+    κ_m::Union{Float64, Nothing}
+    ϵ_m::Union{Float64, Nothing}
+end
+function (mat::constant_zsplit)()
+
+    function gen()
+        function kappa(x)
+            (mat.κ_p === nothing || mat.κ_m === nothing) && return nothing
+            x[3] >= z0 && return x -> mat.κ_p
+            return x -> mat.κ_m
+        end
+        function epsilon(x)
+            (mat.ϵ_p === nothing || mat.ϵ_m === nothing) && return nothing
+            x[3] >= z0 && return x -> mat.ϵ_p
+            return x -> mat.ϵ_m
+        end
+        return kappa, epsilon
+    end
+    κ, ϵ = gen()
+
+    return κ, ϵ
+end
+
+struct general_material <: material # => reconstruction is a problem!!!
+    κ::Union{Function, Nothing}
+    ϵ::Union{Function, Nothing}
+    # savesomepointswithmat::Union{....Vektoren... , Nothing} => init mit nothing
+end
+function (mat::general_material)
+    return mat.κ, mat.ϵ
+end
+
 
 
 
 struct solution
-    meshdata::meshdata
-    material::material
-    #κ::Function
+    material::material # κ::Function, ϵ::Function -> τ, inv_τ, χ über funktion bestimmbar...
     κ0::Union{Float64, Nothing}
-    #ϵ::Function
     ϵ0::Union{Float64, Nothing}
     ω::Union{Float64, Nothing}
     τ0::Union{Float64, ComplexF64}
-    # τ
-    # inv_τ
-    # χ
+    
     potential_top
     potential_bottom
     qs3D
@@ -78,6 +120,9 @@ struct solution
     u_Jn
     u_J
 end
+
+
+
 
 
 function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
@@ -122,12 +167,14 @@ function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
 end
 
 
+
+
+
 function solve(;
-    meshdata::meshdata, 
-    κ::Union{Function, Nothing} = nothing, 
+    meshdata::meshdata,
+    material::material,
     κ0::Union{Float64, Nothing} = nothing, 
-    ϵ::Union{Function, Nothing} = nothing, 
-    ϵ0::Union{Float64, Nothing} = nothing,
+    ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
     ω::Union{Float64, Nothing} = nothing, 
     potential_top::Float64, 
     potential_bottom::Float64,
@@ -135,8 +182,13 @@ function solve(;
     qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
     qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
 
+    # if typeof(material) == general_material
+        # save some points, and ...
+        # material = general_material(...,...,This time not nothing here=>some test points with mat values)
+    # end
 
     # Material
+    κ, ϵ = material()
     τ, inv_τ, τ0, χ = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
     p = point(0.0,0.0,0.0)
     τ(p) < 1e-12 && error("Disable the following lines...")
@@ -265,11 +317,143 @@ function solve(;
     @assert length(u_J) == length(X.fns)
 
 
-    @warn "Add control feature for the material functions!"
-    # kappa epsilon tau invtau chi alternative hier....
-    return solution(meshdata, material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
 end
 
+
+
+
+
+function solution_J_ana(m::IP.meshdata, s::IP.solution, points, J_MoM; body::cuboid, mat::constantmaterial)
+    
+    Jz_ana = -mat.κ*(s.potential_top-s.potential_bottom)
+
+    J_ana = fill(SVector{3, Float64}(0.0, 0.0, Jz_ana), length(J_MoM))
+
+    return J_ana
+end
+
+function solution_I_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
+
+    I_ana = mat.κ*body.L_x*body.L_y*(1/body.L_z)*(s.potential_top-s.potential_bottom)
+
+    return I_ana
+end
+
+function solution_Φ_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
+    u_Φ = s.u_Φ
+
+    function CapacitorPot(x, v_top, v_bottom) # hom. medium
+        L_z = body.L_z
+        z = x[3]
+
+        return ((v_top-v_bottom)/L_z) * (z + L_z/2) + v_bottom
+    end
+    u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+    y = m.y
+    for (i, pos) in enumerate(y.pos)
+        u_Φ_ana[i] = CapacitorPot(pos, s.potential_top, s.potential_bottom)
+    end
+
+    return u_Φ_ana
+end
+
+
+# analogen wäre Dn =? Flächenladunsdichte
+function getcurrent(m::IP.meshdata, s::IP.solution) # ging das jetzt noch einfacher oder nicht? assemblydata???
+    
+    w = m.w
+    Γ_c_t = m.Γ_c_t
+    Γ_c_b = m.Γ_c_b
+    u_Jn = s.u_Jn
+    
+    @assert length(u_Jn) == length(w.fns)
+
+    numtopcharts = length(Γ_c_t.faces)
+    top_ccs = Vector{SVector{3, Float64}}(undef, numtopcharts)
+    top_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
+    for i in 1:length(top_ccs)
+        chart = CompScienceMeshes.chart(Γ_c_t, i)
+        center = CompScienceMeshes.center(chart)
+        top_ccs[i] = cartesian(center)
+        top_charts[i] = chart
+    end
+
+    numbottomcharts = length(Γ_c_b.faces)
+    bottom_ccs = Vector{SVector{3, Float64}}(undef, numbottomcharts)
+    bottom_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
+    for i in 1:length(bottom_ccs)
+        chart = CompScienceMeshes.chart(Γ_c_b, i)
+        center = CompScienceMeshes.center(chart)
+        bottom_ccs[i] = cartesian(center)
+        bottom_charts[i] = chart
+    end
+
+    chart_tree_top = BEAST.octree(top_charts)
+    chart_tree_bottom = BEAST.octree(bottom_charts)
+
+    I_top = 0.0
+    I_bottom = 0.0
+
+    cnt_top = 0
+    cnt_bottom = 0
+
+    for (j, pos) in enumerate(w.pos)
+
+        i = CompScienceMeshes.findchart(top_charts, chart_tree_top, pos)      # ja...hier wäre das nicht nötig assemblydata?
+        k = CompScienceMeshes.findchart(bottom_charts, chart_tree_bottom, pos)
+
+
+        if i !== nothing
+            A = top_charts[i].volume 
+            I_top += -A * u_Jn[j] * w.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
+            cnt_top += 1
+        elseif k !== nothing
+            A = bottom_charts[k].volume 
+            I_bottom += A * u_Jn[j] * w.fns[j][1].coeff 
+            cnt_bottom += 1
+        else
+            error("Neither top nor bottom")
+        end
+
+    end
+
+
+    @assert cnt_top == numtopcharts
+    @assert cnt_bottom == numbottomcharts
+
+    return I_top, I_bottom
+end
+
+
+
+
+
+
+
+# function get_Dz_ref(zbottom, ztop, Φbottom, Φtop, ϵ_vec, d_vec) # ein skalarer Wert zurück, ϵ_vec and d_vec bottom to top!
+#     n = length(ϵ_vec)
+#     @assert n == length(d_vec)
+#     @assert ztop > zbottom
+
+#     d = abs(ztop - zbottom)
+
+#     @assert abs(sum(d_vec)-d) < 1e-12 
+
+#     z_vec = Vector{n, Float64}()
+
+#     for (i,d_i) in enumerate(d_vec)
+
+#     end
+
+#     z_vec[1] = zbottom + d[1]
+#     for i = 2:n-1
+#         d_i = d[i]
+        
+
+#     end
+
+# end
 
 
 

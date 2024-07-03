@@ -203,8 +203,6 @@ function BEAST.integrand(viop::n_gradGdiv_ΓΩ, kerneldata, tvals, tgeo, bvals, 
     gx = @SVector[tvals[i].value for i in 1:3]
     dfy = @SVector[bvals[i].divergence for i in 1:4]
 
-    #rand() < 0.001 && @show dfy 
-    #error("STOP")
 
     G = kerneldata.green
     gradG = kerneldata.gradgreen # "+" to get ∇G(r,r') (without ')
@@ -285,7 +283,6 @@ struct div_ngradG_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ # 5D
     tau::P
 end
 function BEAST.integrand(viop::div_ngradG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
-    @assert length(bgeo.patch.vertices) == 3
 
     dgx = @SVector[tvals[i].divergence for i in 1:4]
     fy = @SVector[bvals[i].value for i in 1:3]
@@ -297,14 +294,11 @@ function BEAST.integrand(viop::div_ngradG_ΩΓ, kerneldata, tvals, tgeo, bvals, 
 
     α = viop.α
     
-
-    pnt = cartesian(bgeo) #Ortsvektor zu einem Punkt der Dreiecksfläche ausgegen vom Zentrum des Würfels => n * Ortsvektor > 0 IMMER
-    n = bgeo.patch.normals[1]
-    dot(pnt,n) < 0.0 && error("n̂ points in wrong direction!")
+    ny = bgeo.patch.normals[1]
 
     gradGTy = gradG * Ty
 
-    return @SMatrix[α * dgx[i] * dot(bgeo.patch.normals[1], gradGTy * fy[j]) for i in 1:4, j in 1:3]
+    return @SMatrix[α * dgx[i] * dot(ny, gradGTy * fy[j]) for i in 1:4, j in 1:3]
 end
 
 struct div_G_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
@@ -313,10 +307,10 @@ struct div_G_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
     tau::P
 end
 function BEAST.integrand(viop::div_G_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
-    @assert length(bgeo.patch.vertices) == 3
 
     dgx = @SVector[tvals[i].divergence for i in 1:4]  
     fy = @SVector[bvals[i].value for i in 1:1] 
+
     G = kerneldata.green
 
     Ty = kerneldata.tau
@@ -354,7 +348,6 @@ struct gradG_ΩΓ{T,U,P} <: BEAST.BoundaryOperator#ΩΓ
     tau::P
 end
 function BEAST.integrand(viop::gradG_ΩΓ, kerneldata, tvals, tgeo, bvals, bgeo)
-    @assert length(bgeo.patch.vertices) == 3
 
     gx = @SVector[tvals[i].value for i in 1:4]  
     fy = @SVector[bvals[i].value for i in 1:1] 
