@@ -11,31 +11,25 @@ using JLD2
 using Plots
 
 
+IP = ImpedancePredictionVIE
+export IP
 
 include("ip.jl")
 
 include("visu.jl")
 
-include("integrals.jl")
-
-include("vieops1.jl")
-include("ipvie1.jl")
-
-include("vieops2.jl")
-include("ipvie2.jl")
-
+include("vieops.jl")
+include("ipvie.jl")
 
 include("geometry.jl")
 
 
 
 export Visu
-export IP
-export IPVIE1
-export IPVIE2
+
+export IPVIE
 export geo2mesh
 #export draw_arrow!
-export hello1
 export showxvec
 export MaterialIdentity
 
@@ -43,10 +37,7 @@ export realvertices
 export realnodes 
 export pointlist2xyzlist
 export swgfaces
-export gen_tau_invtau
 #export dirichlet_n2f
-export BoundaryOperatorΩΓ
-export BoundaryOperatorΓΩ
 export MaterialIdentity
 export gen_tau_chi
 export getcurrent

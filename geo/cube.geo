@@ -1,8 +1,9 @@
 // Cube for ImpedancePredictionVIE
 
-lx = 1.0; // length x direction
-ly = 1.0; // length y direction
-lz = 1.0; // length z direction
+// lx ly and lz via gmsh command line
+//lx = 1.0; // length x direction
+//ly = 1.0; // length y direction
+//lz = 1.0; // length z direction
 
 
 
@@ -10,7 +11,7 @@ lz = 1.0; // length z direction
 Point(1) = {+lx/2, +ly/2, lz/2};
 Point(2) = {-lx/2, +ly/2, lz/2};
 Point(3) = {-lx/2, -ly/2, lz/2};
-Point(4) = {+lx/2, -lx/2, lz/2};
+Point(4) = {+lx/2, -ly/2, lz/2};
 
 
 
@@ -18,7 +19,7 @@ Point(4) = {+lx/2, -lx/2, lz/2};
 Point(5) = {+lx/2, -ly/2, -lz/2};
 Point(6) = {-lx/2, -ly/2, -lz/2};
 Point(7) = {-lx/2, +ly/2, -lz/2};
-Point(8) = {+lx/2, +lx/2, -lz/2};
+Point(8) = {+lx/2, +ly/2, -lz/2};
 
 
 // Top

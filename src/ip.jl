@@ -1,7 +1,8 @@
-module IP
+#module IP
 
-using ..ImpedancePredictionVIE #damit alles exportierte hier funktioniert
+#using ..ImpedancePredictionVIE #damit alles exportierte hier funktioniert
 
+using ..ImpedancePredictionVIE
 using CompScienceMeshes
 using BEAST
 using LinearAlgebra
@@ -21,7 +22,6 @@ struct cylinder <: geometric_body
     H
     R
 end
-
 
 struct meshdata
     body::geometric_body
@@ -44,16 +44,17 @@ struct meshdata
     ntrc::Function
 end
 
-struct filling
-
-
+abstract type material end
+struct constantmaterial <: material
+    κ::Union{Float64, Nothing}
+    ϵ::Union{Float64, Nothing}
 end
 
-# was brauchen wir noch zugang zu den Materialparametern nachdem die Lösung da ist und mit 
-# JLD2 gesichert wurde? Ja irgendwie schon... 
-# Achtung irgendwann kommt material ja nicht mehr über die Funktion
+
 
 struct solution
+    meshdata::meshdata
+    material::material
     #κ::Function
     κ0::Union{Float64, Nothing}
     #ϵ::Function
@@ -88,7 +89,7 @@ function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
     #meshname = "name.msh"
     meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
 
-    Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h)
+    Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h, body = body)
 
     
     # LinearLag  on Γ_c (dirichlet)
@@ -150,57 +151,57 @@ function solve(;
 
     # Operators row 1
 
-    B11_Γ = IPVIE2.B11_Γ(alpha = 1.0) #Verschwindet!!! <---- klären....
+    B11_Γ = IPVIE.B11_Γ(alpha = 1.0) #Verschwindet!!! <---- klären....
     #assemble(B11_Γ, w, y)
-    B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
+    B11_ΓΓ = IPVIE.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
     #assemble(B11_ΓΓ, w, y)
 
-    B12_ΓΓ = IPVIE2.B12_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+    B12_ΓΓ = IPVIE.B12_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
     #assemble(B12_ΓΓ, w, w)
 
-    B13_ΓΓ = IPVIE2.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B13_ΓΓ = IPVIE.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
     #assemble(B13_ΓΓ, w, ntrc(X))
-    B13_ΓΩ = IPVIE2.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
+    B13_ΓΩ = IPVIE.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
     #assemble(B13_ΓΩ, w, X)
 
 
     # Operators row 2
 
-    B21_ΓΓ = IPVIE2.B21_ΓΓ(beta = -1.0, gammatype = Float64) # -1.0 siehe BEAST & Steinbach 6.5
+    B21_ΓΓ = IPVIE.B21_ΓΓ(beta = -1.0, gammatype = Float64) # -1.0 siehe BEAST & Steinbach 6.5
     #assemble(B21_ΓΓ, y, y)
 
-    B22_Γ = IPVIE2.B22_Γ(alpha = -1.0, invtau = inv_τ)
+    B22_Γ = IPVIE.B22_Γ(alpha = -1.0, invtau = inv_τ)
     #assemble(B22_Γ, y, w)
-    B22_ΓΓ = IPVIE2.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+    B22_ΓΓ = IPVIE.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
     #assemble(B22_ΓΓ, y, w)
 
-    B23_ΓΓ = IPVIE2.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ) #VZ? sollte passen
+    B23_ΓΓ = IPVIE.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ) #VZ? sollte passen
     #assemble(B23_ΓΓ, y, ntrc(X))
-    B23_ΓΩ = IPVIE2.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B23_ΓΩ = IPVIE.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
     #assemble(B23_ΓΩ, y, X)
 
 
     # Operators row 3
 
-    B31_ΓΓ = IPVIE2.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
+    B31_ΓΓ = IPVIE.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
     #assemble(B31_ΓΓ, ntrc(X), y)
-    B31_ΩΓ = IPVIE2.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
+    B31_ΩΓ = IPVIE.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
     #assemble(B31_ΩΓ, X, y)
 
-    B32_ΓΓ = IPVIE2.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+    B32_ΓΓ = IPVIE.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
     #assemble(B32_ΓΓ, ntrc(X), w)
-    B32_ΩΓ = IPVIE2.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+    B32_ΩΓ = IPVIE.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
     #assemble(B32_ΩΓ, X, w)
 
-    B33_Ω = IPVIE2.B33_Ω(alpha = -1.0, invtau = inv_τ)
+    B33_Ω = IPVIE.B33_Ω(alpha = -1.0, invtau = inv_τ)
     #assemble(B33_Ω, X, X)
-    B33_ΓΓ = IPVIE2.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B33_ΓΓ = IPVIE.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
     #assemble(B33_ΓΓ, ntrc(X), ntrc(X))
-    B33_ΓΩ = IPVIE2.B33_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
+    B33_ΓΩ = IPVIE.B33_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
     #assemble(B33_ΓΩ, ntrc(X), X)
-    B33_ΩΓ = IPVIE2.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
+    B33_ΩΓ = IPVIE.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
     #assemble(B33_ΩΓ, X, ntrc(X))
-    B33_ΩΩ = IPVIE2.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
     #assemble(B33_ΩΩ, X, X)
     
 
@@ -266,14 +267,14 @@ function solve(;
 
     @warn "Add control feature for the material functions!"
     # kappa epsilon tau invtau chi alternative hier....
-    return solution(κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+    return solution(meshdata, material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
 end
 
 
 
 
 
-end
+#end
 
 
 

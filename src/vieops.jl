@@ -1,4 +1,44 @@
+#####  kernelvals für Dyadische VIE Operatoren  ######################################################################
+struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
+    gamma::U
+    vect::P
+    dist::T
+    dyadgreen::Q
+    tau::K
+end
 
+function kernelvalsdyad(viop, p, q) # p=r_vec, q=r'_vec
+    # Achtung! Speziell auf gamma=0 zugeschnitten, gamma für typ wichtig
+    Y = viop.gamma  #ComplexF64/Float64 unterscheidung läuft normalerweise über Gamma...
+    r = cartesian(p)-cartesian(q)
+    R = norm(r)
+    Rsq = R^2
+
+    p_ = cartesian(p)
+    q_ = cartesian(q)
+    xd = p_[1]-q_[1]
+    yd = p_[2]-q_[2]
+    zd = p_[3]-q_[3]
+    
+    xd_yd_3 = 3*xd*yd
+    xd_zd_3 = 3*xd*zd
+    yd_zd_3 = 3*yd*zd
+
+    dyadgreen =  @SMatrix [3*xd^2-Rsq   xd_yd_3      xd_zd_3;  
+                            xd_yd_3     3*yd^2-Rsq   yd_zd_3;
+                            xd_zd_3     yd_zd_3      3*zd^2-Rsq]
+    dyadgreen = dyadgreen/(4*pi*R^5) # = ∇'∇'G
+
+    #rand()<0.0001 && @show norm(dyadgreen)
+
+    # dyadgreen =  @SMatrix [8*xd^2+4*Rsq   8*xd*yd        8*xd*zd;
+    #                        8*xd*yd        8*yd^2+4*Rsq   8*yd*zd;
+    #                        8*xd*zd        8*yd*zd        8*zd^2+4*Rsq]
+
+    tau = viop.tau(q_)
+
+    KernelValsVIEdyad(Y,r,R, dyadgreen, tau)
+end
 
 
 
@@ -384,11 +424,20 @@ end
 
 
 
+#### Material Identity #######################################################
 
+abstract type MaterialIdentity <: BEAST.LocalOperator end
 
+struct KernelValsMaterialIdentity{U}
+    tau::U # nehmen gleiche Notation wie in VIE Part
+end
+function BEAST.kernelvals(localop::MaterialIdentity, p)
 
+    tau = localop.tau(cartesian(p)) #skalare oder tensorielle Funktion der Ortes
 
-
+    return KernelValsMaterialIdentity(tau)
+end
+BEAST.scalartype(localop::MaterialIdentity) = typeof(localop.α)  # typeof(tau) geht ja schlecht weil tau function ist
 
 
 
@@ -396,7 +445,6 @@ struct MatId{T,U} <: MaterialIdentity
     α::T
     tau::U
 end
-
 function BEAST.integrand(localop::MatId, kerneldata, x, g, f)
 
     gx = g.value

@@ -1,9 +1,22 @@
+# function simpletest()
+#     @show "Hallo"
+#     return nothing
+# end
 
 
-function geo2mesh(geopath::String, meshpath::String, meshparam::Float64)
-    
+function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::IP.geometric_body)
+
+
     h = meshparam
-    run(`gmsh $geopath -3 -clmax $h -format msh2 -o $meshpath`)
+    if typeof(body) == IP.cuboid 
+        L_x = body.L_x
+        L_y = body.L_y
+        L_z = body.L_z
+        run(`gmsh $geopath -3 -clmax $h -format msh2 -setnumber lx $L_x -setnumber ly $L_y -setnumber lz $L_z -o $meshpath`)
+    else
+        #general formulation, use values from gmsh skript
+        run(`gmsh $geopath -3 -clmax $h -format msh2 -setnumber var 55 -o $meshpath`) 
+    end
     
     Ω = CompScienceMeshes.read_gmsh3d_mesh("$meshpath", physical="BodyVolume")
 
