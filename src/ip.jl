@@ -70,16 +70,43 @@ end
 function (mat::constant_zsplit)()
 
     function gen()
-        function kappa(x)
-            (mat.κ_p === nothing || mat.κ_m === nothing) && return nothing
-            x[3] >= z0 && return x -> mat.κ_p
-            return x -> mat.κ_m
+        function kappa(x) 
+            x[3] >= mat.z0 && (return mat.κ_p)
+            return mat.κ_m
         end
         function epsilon(x)
-            (mat.ϵ_p === nothing || mat.ϵ_m === nothing) && return nothing
-            x[3] >= z0 && return x -> mat.ϵ_p
-            return x -> mat.ϵ_m
+            x[3] >= mat.z0 && (return mat.ϵ_p)
+            return mat.ϵ_m
         end
+        (mat.κ_p === nothing || mat.κ_m === nothing) && (kappa = nothing)
+        (mat.ϵ_p === nothing || mat.ϵ_m === nothing) && (epsilon = nothing)
+        return kappa, epsilon
+    end
+    κ, ϵ = gen()
+
+    return κ, ϵ
+end
+
+struct constant_xsplit <: material
+    κ_p::Union{Float64, Nothing}
+    ϵ_p::Union{Float64, Nothing}
+    x0::Float64
+    κ_m::Union{Float64, Nothing}
+    ϵ_m::Union{Float64, Nothing}
+end
+function (mat::constant_xsplit)()
+
+    function gen()
+        function kappa(x) 
+            x[1] >= mat.x0 && (return mat.κ_p)
+            return mat.κ_m
+        end
+        function epsilon(x)
+            x[1] >= mat.x0 && (return mat.ϵ_p)
+            return mat.ϵ_m
+        end
+        (mat.κ_p === nothing || mat.κ_m === nothing) && (kappa = nothing)
+        (mat.ϵ_p === nothing || mat.ϵ_m === nothing) && (epsilon = nothing)
         return kappa, epsilon
     end
     κ, ϵ = gen()
@@ -171,7 +198,7 @@ end
 
 
 function solve(;
-    meshdata::meshdata,
+    md::meshdata,
     material::material,
     κ0::Union{Float64, Nothing} = nothing, 
     ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
@@ -191,13 +218,15 @@ function solve(;
     κ, ϵ = material()
     τ, inv_τ, τ0, χ = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
     p = point(0.0,0.0,0.0)
+    @show τ(p)
+
     τ(p) < 1e-12 && error("Disable the following lines...")
-    @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) <1e-10
-    @assert abs(1/inv_τ(p) -  τ(p)) <1e-10
+    @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
+    @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
 
     # Excitation
-    v_top = ones(length(meshdata.topnodes)) * potential_top
-    v_bottom = ones(length(meshdata.bottomnodes)) * potential_bottom
+    v_top = ones(length(md.topnodes)) * potential_top
+    v_bottom = ones(length(md.bottomnodes)) * potential_bottom
     v = vcat(v_top, v_bottom)
 
 
@@ -258,11 +287,11 @@ function solve(;
     
 
     # fns spaces
-    y_d = meshdata.y_d
-    y = meshdata.y
-    w = meshdata.w
-    X = meshdata.X
-    ntrc = meshdata.ntrc 
+    y_d = md.y_d
+    y = md.y
+    w = md.w
+    X = md.X
+    ntrc = md.ntrc 
 
     # LHS
     @hilbertspace i j k # row    -> test
@@ -289,6 +318,7 @@ function solve(;
     M = assemble(lhs, testSpace_lhs, trialSpace_lhs)
     S = Matrix(M)
 
+
     # RHS
     @hilbertspace o # col, only one blockcol
     rhs = @varform(
@@ -304,6 +334,35 @@ function solve(;
     testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)
     trialSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_trial)
     R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
+
+
+    # qs3Dhigh = qs3D
+    # qs4Dhigh = qs4D
+    # qs5D6Dhigh = qs5D6D
+
+    # qs3Dhigh = BEAST.SingleNumQStrat(6)
+    # qs4Dhigh = BEAST.DoubleNumWiltonSauterQStrat(6,6,6,6,6,6,6,6)
+    # qs5D6Dhigh = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
+    
+    # O11 = -B11_Γ
+    # R11 = O11.coeffs[1]*assemble(O11.ops[1], w, y_d; quadstrat = qs3Dhigh)
+
+    # O11_ = -B11_ΓΓ
+    # R11_= O11_.coeffs[2]*assemble(O11_.ops[2], w, y_d; quadstrat = qs4Dhigh) +
+    #         O11_.coeffs[1]*assemble(O11_.ops[1], w, y_d; quadstrat = qs3Dhigh)
+
+    # O21 = -B21_ΓΓ
+    # R21 = O21.coeffs[1]*assemble(O21.ops[1], y, y_d; quadstrat = qs4Dhigh)
+
+    # O31 = -B31_ΓΓ
+    # R31 = O31.coeffs[2]*assemble(O31.ops[2], ntrc(X), y_d; quadstrat = qs4Dhigh) + 
+    #         O31.coeffs[1]*assemble(O31.ops[1], ntrc(X), y_d; quadstrat = qs3Dhigh)
+
+    # O31_ = -B31_ΩΓ     
+    # R31_= O31_.coeffs[1]*assemble(O31_.ops[1], X, y_d; quadstrat = qs5D6Dhigh)
+
+    # R = vcat(R11+R11_, R21, R31+R31_)
+
 
     # S*u = R*v, solve for u
     b = R*v
@@ -324,39 +383,205 @@ end
 
 
 
-function solution_J_ana(m::IP.meshdata, s::IP.solution, points, J_MoM; body::cuboid, mat::constantmaterial)
+
+
+
+###### constantmaterial - analytic solution ####################
+
+# function solution_J_ana(m::IP.meshdata, s::IP.solution, points, J_MoM; body::cuboid, mat::constantmaterial)
     
-    Jz_ana = -mat.κ*(s.potential_top-s.potential_bottom)
+#     Jz_ana = -mat.κ*(s.potential_top-s.potential_bottom)/body.L_z
+
+#     J_ana = fill(SVector{3, Float64}(0.0, 0.0, Jz_ana), length(J_MoM))
+
+#     return J_ana
+# end
+
+# function solution_I_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
+
+#     I_ana = mat.κ*body.L_x*body.L_y*(1/body.L_z)*(s.potential_top-s.potential_bottom)
+
+#     return I_ana
+# end
+
+# function solution_Φ_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
+#     u_Φ = s.u_Φ
+
+#     function CapacitorPot(x, v_top, v_bottom) # hom. medium
+#         L_z = body.L_z
+#         z = x[3]
+
+#         return ((v_top-v_bottom)/L_z) * (z + L_z/2) + v_bottom
+#     end
+#     u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+#     y = m.y
+#     for (i, pos) in enumerate(y.pos)
+#         u_Φ_ana[i] = CapacitorPot(pos, s.potential_top, s.potential_bottom)
+#     end
+
+#     return u_Φ_ana
+# end
+
+
+###### constant_zsplit Material - analytic solution ##################
+
+function solution_J_ana(m::IP.meshdata, s::IP.solution, points, J_MoM; body::IP.cuboid, mat::IP.constant_zsplit)
+    
+    A = body.L_x * body.L_y
+    R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    U = s.potential_top - s.potential_bottom
+    I = U/R
+    Jz_ana = -I/A 
 
     J_ana = fill(SVector{3, Float64}(0.0, 0.0, Jz_ana), length(J_MoM))
 
     return J_ana
 end
 
-function solution_I_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
+function solution_I_ana(m::IP.meshdata, s::IP.solution; body::IP.cuboid, mat::IP.constant_zsplit)
 
-    I_ana = mat.κ*body.L_x*body.L_y*(1/body.L_z)*(s.potential_top-s.potential_bottom)
+    A = body.L_x * body.L_y
+    R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    U = s.potential_top - s.potential_bottom
+    I = U/R
+
+    I_ana = I
 
     return I_ana
 end
 
-function solution_Φ_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
+function solution_Φ_ana(m::IP.meshdata, s::IP.solution; body::IP.cuboid, mat::IP.constant_zsplit)
     u_Φ = s.u_Φ
 
-    function CapacitorPot(x, v_top, v_bottom) # hom. medium
+    function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
+        z = x[3] # obervation plane
         L_z = body.L_z
-        z = x[3]
 
-        return ((v_top-v_bottom)/L_z) * (z + L_z/2) + v_bottom
+        return ((Φ2 - Φ1)/(z2 - z1))*(z - z1) + Φ1
     end
+
     u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+
+    A = body.L_x * body.L_y
+    R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    U = s.potential_top - s.potential_bottom
+    I = U/R
+    R_p = (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    R_m = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A
+    U_p = U * R_p/R
+    U_m = U * R_m/R
+    
+    
+    z0 = mat.z0
     y = m.y
     for (i, pos) in enumerate(y.pos)
-        u_Φ_ana[i] = CapacitorPot(pos, s.potential_top, s.potential_bottom)
+        if pos[3] >= z0 # R_p region
+
+            z1 = z0
+            Φ1 = s.potential_top - U_p
+            z2 = body.L_z/2
+            Φ2 = s.potential_top
+
+        elseif pos[3] < z0 # R_m region
+
+            z1 = -body.L_z/2
+            Φ1 = s.potential_bottom
+            z2 = z0
+            Φ2 = s.potential_bottom + U_m
+
+        else
+            error("")
+        end
+
+        u_Φ_ana[i] = linPot_z(pos, z1, z2, Φ1, Φ2)
     end
 
     return u_Φ_ana
 end
+
+
+###### constant_xsplit Material - analytic solution ##################
+
+# function solution_J_ana(m::IP.meshdata, s::IP.solution, points, J_MoM; body::IP.cuboid, mat::IP.constant_xsplit)
+    
+#     x0 = mat.x0
+#     A_p = body.L_y * (body.L_x/2 - x0)
+#     A_m = body.L_y * (body.L_x/2 + x0)
+
+#     R_p = (1/mat.κ_p)*body.L_z/A_p
+#     R_m = (1/mat.κ_m)*body.L_z/A_m
+
+#     U = s.potential_top - s.potential_bottom
+#     I_p = U/R_p
+#     I_m = U/R_m
+
+#     Jz_p_ana = -I_p/A_p
+#     Jz_m_ana = -I_m/A_m 
+
+#     @assert length(points) == length(J_MoM)
+
+#     J_ana = Vector{SVector{3, Float64}}(undef, length(J_MoM)) #(0.0, 0.0, Jz_ana), length(J_MoM))
+#     for (i,pos) in enumerate(points)
+#         x = pos[1]
+#         if x >= x0
+#             J_ana[i] = SVector{3, Float64}(0.0, 0.0, Jz_p_ana)
+#         elseif x < x0
+#             J_ana[i] = SVector{3, Float64}(0.0, 0.0, Jz_m_ana)
+#         else
+#             error("")
+#         end
+#     end
+
+#     return J_ana
+# end
+
+# function solution_I_ana(m::IP.meshdata, s::IP.solution; body::IP.cuboid, mat::IP.constant_xsplit)
+
+#     x0 = mat.x0
+#     A_p = body.L_y * (body.L_x/2 - x0)
+#     A_m = body.L_y * (body.L_x/2 + x0)
+
+#     R_p = (1/mat.κ_p)*body.L_z/A_p
+#     R_m = (1/mat.κ_m)*body.L_z/A_m
+
+#     U = s.potential_top - s.potential_bottom
+#     I_p = U/R_p
+#     I_m = U/R_m
+#     I = I_p + I_p
+
+#     I_ana = I
+
+#     return I_ana
+# end
+
+# function solution_Φ_ana(m::IP.meshdata, s::IP.solution; body::IP.cuboid, mat::IP.constant_xsplit)
+#     u_Φ = s.u_Φ
+
+#     function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
+#         z = x[3] # obervation plane
+#         L_z = body.L_z
+
+#         return ((Φ2 - Φ1)/(z2 - z1))*(z - z1) + Φ1
+#     end
+
+#     u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+#     y = m.y
+
+#     z1 = -body.L_z/2
+#     Φ1 = s.potential_bottom
+#     z2 = body.L_z/2
+#     Φ2 = s.potential_top
+
+#     for (i, pos) in enumerate(y.pos)
+#         u_Φ_ana[i] = linPot_z(pos, z1, z2, Φ1, Φ2)
+#     end
+
+#     return u_Φ_ana
+# end
+
+
+
+
 
 
 # analogen wäre Dn =? Flächenladunsdichte

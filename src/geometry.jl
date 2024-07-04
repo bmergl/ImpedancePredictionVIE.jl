@@ -184,18 +184,23 @@ function gen_tau_chi(; kappa = nothing, kappa0 = nothing, epsilon = nothing, eps
 
     p = point(0,0,0)
 
+    @show kappa
+    @show kappa0
+    @show epsilon
+    @show epsilon0
+    @show omega
     
     if kappa !== nothing && kappa0 !== nothing && epsilon === nothing && epsilon0 === nothing && omega === nothing
         # :current
         tau = x -> kappa(x)
         tau0 = kappa0
     
-    else if kappa === nothing && kappa0 === nothing && epsilon !== nothing && epsilon0 !== nothing && omega === nothing
+    elseif kappa === nothing && kappa0 === nothing && epsilon !== nothing && epsilon0 !== nothing && omega === nothing
         # :dielectic
         tau = x -> epsilon(x)
         tau0 = epsilon0 # this ist not ε0 !
 
-    else if kappa !== nothing && kappa0 !== nothing && epsilon !== nothing && epsilon0 !== nothing && omega !== nothing
+    elseif kappa !== nothing && kappa0 !== nothing && epsilon !== nothing && epsilon0 !== nothing && omega !== nothing
         # :general
         tau = x -> kappa(x) + im*omega*epsilon(x)
         tau0 = kappa0 + im*ω*epsilon0 # this ist not ε0 !
