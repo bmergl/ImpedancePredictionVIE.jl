@@ -78,13 +78,172 @@ assemble(UB33_ΩΩ, X, X)
 
 
 
-# Schritt 1: ntrace artige function mit input
+# Schritt 1: ntrace artige function mit 
+# input: Materialvektor(tetindex) = [30.0 131.6 123.0 ... 98.3]
+# output 
+
+X.geo.faces
+elements, adX, cells = assemblydata(md.X)
+
+elements
+adX
+for (n,b) in adX[860][4]
+    @show n, b
+end
+cells
+md.X.fns
+
+# Schritt 2: erstelle X_mat basis für trial in den speziellen Fällen!
 
 
 
 
+#center of a simplex:
+el = elements[1135]
+center = cartesian(CompScienceMeshes.center(el))
+##
 
 
+
+testmat = IP.constant_xsplit(100.0, nothing, 0.1, 50.0, nothing)
+κ, ϵ = testmat() # hier noch Funktionen
+κ0 = 1.0
+ϵ0 = nothing
+ω = nothing
+
+τ, inv_τ, τ0, χ = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω) # hier noch Funktionen
+cell2mat_inv_τ = Vector{typeof(inv_τ(SVector(0,0,0)))}(undef,length(elements))
+cell2mat_χ  = Vector{typeof(χ(SVector(0,0,0)))}(undef,length(elements)) # Typenunterscheidung???
+for (n,el) in enumerate(elements)
+    center = cartesian(CompScienceMeshes.center(el))
+    inv_τ_n = inv_τ(center)
+    χ_n = χ(center)
+    cell2mat_inv_τ[n] = inv_τ_n 
+    cell2mat_χ[n] = χ_n   
+end
+cell2mat_inv_τ
+cell2mat_χ
+
+
+# erstelle X_mat aus X mittels cell2mat_χ:
+
+T = typeof(inv_τ(SVector(0,0,0)))
+newfns = Vector{Vector{BEAST.Shape{T}}}() 
+for (i,shs) in enumerate(X.fns)
+    newshs = Vector{BEAST.Shape{T}}()
+    for (j,sh) in enumerate(shs)
+        cellid = sh.cellid
+        refid = sh.refid
+        coeff = sh.coeff
+
+        χ_cell = cell2mat_χ[cellid]
+        new_coeff = coeff*χ_cell # can be ComplexF64
+        push!(newshs, BEAST.Shape(cellid, refid, new_coeff))
+    end
+    push!(newfns, newshs)
+end
+X_mat = BEAST.NDLCDBasis(X.geo, newfns, X.pos)
+
+
+X.fns
+
+t1 = BEAST.Shape(13,3,-1.0+13.3im)
+
+#X.geo.vertices = realvertices(md.Γ)
+
+
+X.geo.vertices
+
+realvertices(md.Γ)
+
+M=Matrix(connectivity(md.Γ_nc, md.Ω))
+
+md.swg_faces
+
+
+M=Matrix(connectivity(md.Γ_nc, md.Ω))
+
+swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
+
+M = Matrix(connectivity(swg_faces_mesh, md.Ω))
+
+maximum(M)
+minimum(M)
+
+(sum(abs.(M)) + 1*180 )/2
+
+Visu.mesh(swg_faces_mesh)
+
+asd
+
+
+
+
+X = md.X
+
+γ = swg_faces_mesh
+
+#function ntrace(X::Space, γ)
+
+    # on_target = overlap_gpredicate(γ)
+    # ad = assemblydata(X)
+    x = refspace(X)
+    E, ad, P = assemblydata(X)
+    igeo = geometry(X)
+    @assert dimension(γ) == dimension(igeo)-1
+    # Γ = geo
+    # Dγ = dimension(γ)
+    # Σ = skeleton(Γ,Dγ)
+
+    ogeo = boundary(igeo)
+    on_target = overlap_gpredicate(γ)
+    ogeo = submesh(ogeo) do m,f
+        ch = chart(m,f)
+        on_target(ch)
+    end
+
+    # D = copy(transpose(connectivity(ogeo, igeo, abs)))
+    D = connectivity(igeo, ogeo, abs)
+    rows, vals = BEAST.rowvals(D), BEAST.nonzeros(D)
+
+    T = scalartype(X)
+    S = BEAST.Shape{T}
+    fns = [Vector{S}() for i in 1:numfunctions(X)]
+
+    for (p,el) in enumerate(E)
+
+        for (q,fc) in enumerate(faces(el))
+            on_target(fc) || continue
+
+            # print(Q)
+            # @assert norm(Q,Inf) != 0
+            
+            r = 0
+            for k in BEAST.nzrange(D,P[p])
+                vals[k] == q && (r = rows[k]; break)
+            end
+            @assert r != 0
+            
+            fc1 = chart(ogeo, r)
+            Q = ntrace(x, el, q, fc1)
+
+            for i in 1:size(Q,1)
+                for j in 1:size(Q,2)
+                    for (m,a) in ad[p,j]
+                        # j == q && println("bingo",j,q)
+                        v = a*Q[i,j]
+                        isapprox(v,0,atol=sqrt(eps(T))) && continue
+                        push!(fns[m], Shape(r, i, v))
+                    end
+                end
+            end
+
+        end
+
+    end
+
+    ntrace(X, ogeo, fns)
+#end
 
 
 
@@ -92,19 +251,101 @@ assemble(UB33_ΩΩ, X, X)
 
 ##
 
-elements, ad, cells = assemblydata(md.X)
 
-ad[4]
+function ntrace(X::Space, γ)
 
-cells[end]
-ad[1][1]
+    # on_target = overlap_gpredicate(γ)
+    # ad = assemblydata(X)
+    x = refspace(X)
+    E, ad, P = assemblydata(X)
+    igeo = geometry(X)
+    @assert dimension(γ) == dimension(igeo)-1
+    # Γ = geo
+    # Dγ = dimension(γ)
+    # Σ = skeleton(Γ,Dγ)
 
-for (n,b) in ad[1000][1]
-    @show n, b
+    ogeo = boundary(igeo)
+    on_target = overlap_gpredicate(γ)
+    ogeo = submesh(ogeo) do m,f
+        ch = chart(m,f)
+        on_target(ch)
+    end
+
+    # D = copy(transpose(connectivity(ogeo, igeo, abs)))
+    D = connectivity(igeo, ogeo, abs)
+    rows, vals = rowvals(D), nonzeros(D)
+
+    T = scalartype(X)
+    S = Shape{T}
+    fns = [Vector{S}() for i in 1:numfunctions(X)]
+
+    for (p,el) in enumerate(E)
+
+        for (q,fc) in enumerate(faces(el))
+            on_target(fc) || continue
+
+            # print(Q)
+            # @assert norm(Q,Inf) != 0
+            
+            r = 0
+            for k in nzrange(D,P[p])
+                vals[k] == q && (r = rows[k]; break)
+            end
+            @assert r != 0
+            
+            fc1 = chart(ogeo, r)
+            Q = ntrace(x, el, q, fc1)
+
+            for i in 1:size(Q,1)
+                for j in 1:size(Q,2)
+                    for (m,a) in ad[p,j]
+                        # j == q && println("bingo",j,q)
+                        v = a*Q[i,j]
+                        isapprox(v,0,atol=sqrt(eps(T))) && continue
+                        push!(fns[m], Shape(r, i, v))
+                    end
+                end
+            end
+
+        end
+
+    end
+
+    ntrace(X, ogeo, fns)
 end
-xy
-md.X.fns
-# erstelle X_mat basis für trial in den speziellen Fällen!
+
+
+
+
+
+##
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

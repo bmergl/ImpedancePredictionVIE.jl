@@ -281,6 +281,40 @@ end
 
 
 
+# function gen_tau_chi_const(; kappa = nothing, kappa0 = nothing, epsilon = nothing, epsilon0 = nothing, omega = nothing)
+
+#     @show kappa
+#     @show kappa0
+#     @show epsilon
+#     @show epsilon0
+#     @show omega
+    
+#     if kappa !== nothing && kappa0 !== nothing && epsilon === nothing && epsilon0 === nothing && omega === nothing
+#         # :current
+#         tau = kappa
+#         tau0 = kappa0
+    
+#     elseif kappa === nothing && kappa0 === nothing && epsilon !== nothing && epsilon0 !== nothing && omega === nothing
+#         # :dielectic
+#         tau = epsilon
+#         tau0 = epsilon0 # this ist not ε0 !
+
+#     elseif kappa !== nothing && kappa0 !== nothing && epsilon !== nothing && epsilon0 !== nothing && omega !== nothing
+#         # :general
+#         tau = kappa + im*omega*epsilon
+#         tau0 = kappa0 + im*ω*epsilon0 # this ist not ε0 !
+        
+#     else
+#         error("Specify problem! current, dielectic or general")
+#     end
+
+#     chi = (tau/tau0 - 1.0)*1/tau
+#     invtau = 1/tau
+
+#     return tau, invtau, tau0, chi
+
+# end
+
 
 #########################################################
 
