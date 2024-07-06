@@ -1,4 +1,4 @@
-module IPVIE    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
+module IPVIE    # HAUPTMODUL: Konstruktor für Operatoren der Version 0
     using ..ImpedancePredictionVIE # <----- geht nur wenn das auch das PARENT MODUL ist
     Mod = ImpedancePredictionVIE
     using BEAST

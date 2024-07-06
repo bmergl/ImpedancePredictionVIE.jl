@@ -1,118 +1,173 @@
 module IPVIE1    # HAUPTMODUL: Konstruktor für Operatoren der Version 1
     using ..ImpedancePredictionVIE # <----- geht nur wenn das auch das PARENT MODUL ist
-    mainMod = ImpedancePredictionVIE
+    Mod = ImpedancePredictionVIE
     using BEAST
 
 
-
     # ACHTUNG! Im VIE Teil bei BEAST ist die Materialfunktion immer "tau" d.h.operatoren
-    # haben die Felder gamma, alpha, tau! Hier kann trotzdem chi gefordert werden!
+    # haben die Felder gamma, alpha, tau! Hier kann trotzdem tau=different_tau stehen!
 
-    # TL-Block
-    
-    function tl_Γ() # 3D
+
+    # B11 Block
+    function B11_Γ(; alpha = 1.0) # 3D
+
+        return alpha*Identity() # Später hier - 1/2....
+    end
+    function B11_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
+        gamma = gammatype(0.0)
+
+        return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) + alpha*(-1/2)*Identity()
+    end
+
+    # B12 Block
+    function UB12_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
+        gamma = gammatype(0.0)
+
+        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha)
+    end
+
+    # B13 Block
+    function UB13_ΓΩ(; gammatype = ComplexF64, alpha = 1.0) # 5D
+        gamma = gammatype(0.0)
+
+        return Mod.Gdiv_ΓΩ(gamma, alpha, x->1.0)
+    end
+    function UB13_ΓΓn(; gammatype = ComplexF64, alpha = 1.0) # 4D
+        gamma = gammatype(0.0)
+
+        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha)
+    end
+
+
+    # B21 Block
+    function B21_ΓΓ(; gammatype = ComplexF64, beta = 1.0) # 4D
+        gamma = gammatype(0.0)
+ 
+        return Helmholtz3D.hypersingular(gamma = gamma, beta=beta) # das versteckt alpha std. Null für gamma =0.0!!!
+    end
+
+    # B22 Block
+    function B22_Γ(; alpha = 1.0, invtau = nothing) # 3D
+        invtau === nothing && error("")
+
+        return Mod.MatId(alpha, invtau)
+    end
+    function B22_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 4D
+        gamma = gammatype(0.0)
+        invtau === nothing && error("")
+
+        return Mod.MaterialADL(gamma, alpha, invtau) #+ (1/2)*Mod.MatId(alpha, invtau) # hinterer 0 immer STOPP evtl. falsch! ganz weg...
+    end
+
+    # B23 Block
+    function B23_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 4D
+        gamma = gammatype(0.0)
+        chi === nothing && error("")
+
+        return Mod.MaterialADL(gamma, alpha, chi) #+ (1/2)*Mod.MatId(alpha, chi) # hinterer 0 immer STOPP evtl. falsch! ganz weg...
+    end
+    function B23_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
         
-        return Identity() # Später hier - 1/2....
-    end
-
-    function tl_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
-        #alpha != 1.0 && error("Can't change tl_ΓΓ, see tl_Γ connection!")
-
-        return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) + alpha*(-1/2)*Identity()
+        chi === nothing && error("")
+        
+        return Mod.ncgrad_gradGc_ΓΩ(gamma, alpha, chi)
     end
 
-    
-    # TR-Block
-    
-    function tr_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, invtau = nothing) # 5D
+    function B23_constmed(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
+        @warn "χ const. needed for B23_constmed"
         gamma = gammatype(0.0)
-
-        return mainMod.tr_ΓΩ(gamma, alpha, invtau)
+        chi === nothing && error("")
+        
+        return Mod.n_gradGdiv_ΓΩ(gamma, alpha, chi)
     end
 
-    function tr_ΓΓ(; gammatype = ComplexF64, alpha = 2.0, invtau = nothing) # 4D
+    function B23_dyad(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) # 5D
+        @warn "B23_ΓΓ needed for B23_dyad"
         gamma = gammatype(0.0)
-        invtau === nothing && error("Add invtau=SCALARVALUE to tr_ΓΓ")
+        chi === nothing && error("")
 
-        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha*invtau)
+        return Mod.n_dyadG_ΓΩ(gamma, alpha, chi)
     end
 
 
-    # BL-Block
 
-    function bl_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
+
+    # B31 Block
+    function B31_ΓΓ(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
 
         return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) + alpha*(-1/2)*Identity()
     end
-
-    function bl_ΩΓ(; gammatype = ComplexF64, alpha = -1.0) # 5D
+    function B31_ΩΓ(; gammatype = ComplexF64, alpha = 1.0) # 5D
         gamma = gammatype(0.0)
-        tau = x -> 1.0  # VIE-kernelvals fordert tau
+        tau = x -> 1.0  # VIE-kernelvals needs tau
 
-        return mainMod.bl_ΩΓ(gamma, alpha, tau)
+        return Mod.div_ngradG_ΩΓ(gamma, alpha, tau) 
     end
 
+    # B32 Block
+    function B32_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 4D
+        gamma = gammatype(0.0)
+        invtau === nothing && error("")
 
-    # BR-Block
+        return Mod.MaterialSL(gamma, alpha, invtau)
+    end
+    function B32_ΩΓ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 5D
+        gamma = gammatype(0.0)
+        invtau === nothing && error("")
 
-    function br_Ω(; alpha = -1.0, invtau = nothing) # 3D (Material Identity)
-
-        invtau === nothing && error("invtau=FUNCTION missing in br_Ω")
-
-        return mainMod.br_Ω(alpha, invtau)  
+        return Mod.div_G_ΩΓ(gamma, alpha, invtau)
     end
 
-    function br_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, invtau = nothing) # 5D
-        gamma = gammatype(0.0)
+    # B33 Block
+    function B33_Ω(; alpha = 1.0, invtau = nothing) # 3D (Material Identity)
+        invtau === nothing && error("invtau=FUNCTION missing in B33_Ω")
 
-        return mainMod.br_ΓΩ(gamma, alpha, invtau)
+        return Mod.MatId(alpha, invtau)
     end
-
-    function br_ΩΩ(; gammatype = ComplexF64, alpha = -1.0, invtau = nothing) # 6D
+    function B33_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) 
         gamma = gammatype(0.0)
+        chi === nothing && error("chi missing")
 
-        return mainMod.br_ΩΩ(gamma, alpha, invtau)
+        return Mod.MaterialSL(gamma,alpha,chi)
     end
-
-
-
-    function br_ΓΓ(; gammatype = ComplexF64, alpha = 2.0, invtau = nothing) # 4D
+    function B33_ΓΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) #
         gamma = gammatype(0.0)
-        invtau === nothing && error("Add invtau=SCALARVALUE to br_ΓΓ")
+        chi === nothing && error("chi missing")
 
-        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha * invtau)
+        return Mod.n_gradG_ΓΩ(gamma, alpha, chi)
+    end
+    function B33_ΩΓ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) #
+        gamma = gammatype(0.0)
+        chi === nothing && error("chi missing")
+
+        return Mod.div_G_ΩΓ(gamma, alpha, chi)
+    end
+    function B33_ΩΩ(; gammatype = ComplexF64, alpha = 1.0, chi = nothing) #
+        gamma = gammatype(0.0)
+        chi === nothing && error("chi missing")
+
+        return Mod.div_gradG_ΩΩ(gamma, alpha, chi)
     end
     
-    function br_ΩΓ(; gammatype = ComplexF64, alpha = -2.0, invtau = nothing) # 5D
-        gamma = gammatype(0.0)
-        #tau = x -> 1.0 # VIE-kernelvals fordert tau
 
-        invtau === nothing && error("Add invtau=SCALARVALUE to br_ΩΓ")
 
-        return mainMod.br_ΩΓ(gamma, alpha, invtau)
+
+
+    # Testops
+    function genMatSL(;gamma,alpha = 1.0,tau = nothing)
+        tau === nothing && error()
+        return Mod.MaterialSL(gamma,alpha,tau)
     end
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-    # function bl_Ω(; alpha = -1.0) # <---   -1.0 !     IDEE DENN ∇ Volumen-.----- Identity....
-
-    #     tau = x -> 1.0
-
-    #     return mainMod.br_Ω(alpha, tau)
-    # end
+    function genMatDL(;gamma,alpha = 1.0,tau = nothing)
+        tau === nothing && error()
+        return Mod.MaterialDL(gamma,alpha,tau)
+    end
+    function genMatADL(;gamma,alpha = 1.0,tau = nothing)
+        tau === nothing && error()
+        return Mod.MaterialADL(gamma,alpha,tau)
+    end
 
 
 end

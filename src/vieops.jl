@@ -417,6 +417,47 @@ end
 
 
 
+struct Gdiv_ΓΩ{T,U,P} <: BEAST.BoundaryOperator
+    gamma::T
+    α::U 
+    tau::P
+end
+function BEAST.integrand(viop::Gdiv_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
+
+    gx = @SVector[tvals[i].value for i in 1:1]
+    fy = @SVector[bvals[i].divergence for i in 1:4]
+
+    G = kerneldata.green
+
+    Ty = kerneldata.tau
+
+    α = viop.α
+
+    αGTy = α*G*Ty
+
+    return @SMatrix[gx[i]*αGTy*fy[j] for i in 1:1, j in 1:4]
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### Material Identity #######################################################
 
 abstract type MaterialIdentity <: BEAST.LocalOperator end

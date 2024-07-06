@@ -12,11 +12,51 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(1.0, 1.0, 1.0), h = 0.09)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(1.0, 1.0, 1.0), h = 0.18)
 print("tehrahedrons: ", length(md.Ω.faces))
 #Visu.mesh(md.Γ) 
 
 ##
+
+elements, ad, cells = assemblydata(md.X)
+
+ad[4]
+
+cells[end]
+ad[1][1]
+
+for (n,b) in ad[1000][1]
+    @show n, b
+end
+
+md.X.fns
+# erstelle X_mat basis für trial in den speziellen Fällen!
+
+
+
+mutable struct testop
+    mf::Vector{Float64}
+    v::Float64
+end
+
+a = Vector([0.1, 0.9, 1.3])
+v_ini = 0.0
+op1 = testop(a,v_ini)
+
+function change!(op)
+    #new_op = testop(op.mf,50.8)
+    #op = new_op
+    op.v = 50.8
+    return nothing
+end
+
+change!(op1)
+op1
+
+
+
+
+
 
 
 # Quadstrat
@@ -31,8 +71,8 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol = IP.solve(;
     md = md, 
-    material = IP.constant_zsplit(1000, nothing, 0.07, 100, nothing), #IP.constantmaterial(100.0, nothing), 
-    κ0 = 550.0,
+    material = IP.constant_xsplit(100.0, nothing, 0.1, 50.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
+    κ0 = 1.0,
     ϵ0 = nothing,
     ω = nothing, 
     potential_top = 0.5, 
@@ -43,8 +83,8 @@ sol = IP.solve(;
 )
 
 # save
-dataname = "qs56_lowcontr_split_fine" # for JLD2 save
-jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+#dataname = "test" # for JLD2 save
+#jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
 
 ##
@@ -65,11 +105,11 @@ using Plots
 using Plotly
 
 # load 
-dataname = "qs56_lowcontr_split_coarse"
+dataname = "qs56_lowcontr_zsplit_coarse"
 datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
 sol = load(datapath, "sol")
 md = load(datapath, "md")
-@assert sol.material == IP.constant_zsplit(1000, nothing, 0.07, 100, nothing)
+@assert sol.material == IP.constant_zsplit(1000, nothing, 0.07, 700, nothing)
 
 
 
@@ -80,7 +120,7 @@ md = load(datapath, "md")
 range_ = range(-0.49,stop=0.49,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, sol.u_J, md.X)#, type=Float64)
-J_ana = IP.solultion_J_ana(md, sol, points, J_MoM; body = md.body, mat = sol.material)
+J_ana = IP.solution_J_ana(md.body, sol.material, md, sol, points, J_MoM)
 display("Stomdichte Gesamtvolumen")
 @show norm(J_MoM-J_ana)/norm(J_ana)# = norm(norm.(J_MoM-J_ana))/norm(J_ana)
 
@@ -88,14 +128,14 @@ display("Stomdichte Gesamtvolumen")
 range_xy = range(-0.5,stop=0.5,length=9)
 points2 = [point(x,y,0.0) for x in range_xy for y in range_xy]
 J_MoM2 = BEAST.grideval(points2, sol.u_J, md.X)
-J_ana2 = IP.solultion_J_ana(md, sol, points, J_MoM2; body = md.body, mat = sol.material)
+J_ana2 = IP.solution_J_ana(md.body, sol.material, md, sol, points2, J_MoM2)
 display("Stromdichte Mitte: Ebene z=0.0")
 @show norm(J_MoM2-J_ana2)/norm(J_ana2)
 
 # Stromdichte bei Platten: Ebene z=0.49
 points3 = [point(x,y,0.49) for x in range_xy for y in range_xy]
 J_MoM3 = BEAST.grideval(points3, sol.u_J, md.X)
-J_ana3 = IP.solultion_J_ana(md, sol, points, J_MoM3; body = md.body, mat = sol.material)
+J_ana3 = IP.solution_J_ana(md.body, sol.material, md, sol, points3, J_MoM3)
 display("Stromdichte bei Platten: Ebene z=0.49")
 @show norm(J_MoM3-J_ana3)/norm(J_ana3)
 
@@ -103,14 +143,14 @@ display("Stromdichte bei Platten: Ebene z=0.49")
 display("")
 I_top, I_bottom = getcurrent(md, sol)
 #@show I_top, I_bottom
-I_ana = IP.solultion_I_ana(md, sol; body = md.body, mat = sol.material)
+I_ana = IP.solution_I_ana(md.body, sol.material, md, sol)
 @show norm(I_top-I_ana)/norm(I_ana)
 @show norm(I_bottom-I_ana)/norm(I_ana)
 display("")
 
 # Potential: Randknoten vs. Analytisch
 u_Φ = sol.u_Φ
-u_Φ_ana = IP.solultion_Φ_ana(md, sol; body = md.body, mat = sol.material)
+u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol)
 @show norm(u_Φ-u_Φ_ana)/norm(u_Φ_ana)
 
 
@@ -121,7 +161,7 @@ display(Visu.fieldplot(points, J_MoM, 0.06, Visu.mesh(md.Γ_c)))
 ## facecurrents Tests
 
 # J_n auf Γ_c
-fcr0, geo0 = facecurrents(sol.u_Jn, md.w)
+fcr0, geo0 = facecurrents(abs.(sol.u_Jn), md.w)
 Plotly.plot(patch(geo0, fcr0))
 
 # Φ auf Γ_nc -> Achtung an Plattengrenzen fehlt noch Dirichlet Beitrag!
