@@ -103,7 +103,7 @@ module IPVIE1    # HAUPTMODUL: Konstruktor für Operatoren der Version 1
     function UB33_ΓΩ(; gammatype = ComplexF64, alpha = 1.0) #
         gamma = gammatype(0.0)
 
-        return Mod.n_Gdiv_ΓΩ(gamma, alpha, x -> 1.0)
+        return Mod.Gdiv_ΓΩ(gamma, alpha, x -> 1.0)
     end
     function UB33_ΩΩ(; gammatype = ComplexF64, alpha = -1.0) #
         gamma = gammatype(0.0)

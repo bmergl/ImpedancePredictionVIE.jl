@@ -445,8 +445,8 @@ struct div_Gdiv_ΩΩ{T,U,P} <: BEAST.VolumeOperator
 end
 function BEAST.integrand(viop::div_Gdiv_ΩΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
-    dgx = @SVector[tvals[i].value for i in 1:1]
-    dfy = @SVector[bvals[i].divergence for i in 1:1]
+    dgx = @SVector[tvals[i].divergence for i in 1:4]
+    dfy = @SVector[bvals[i].divergence for i in 1:4]
 
     G = kerneldata.green
 
@@ -456,11 +456,9 @@ function BEAST.integrand(viop::div_Gdiv_ΩΩ, kerneldata, tvals, tgeo, bvals, bg
 
     αGTy = α*G*Ty
 
-    return @SMatrix[dgx[i]*αGTy*dfy[j] for i in 1:1, j in 1:1]
+    return @SMatrix[dgx[i]*αGTy*dfy[j] for i in 1:4, j in 1:4]
 
 end
-
-
 
 
 
