@@ -2,6 +2,7 @@ using MKL
 
 using LinearAlgebra
 using StaticArrays
+using SparseArrays
 using ImpedancePredictionVIE
 using BEAST
 using CompScienceMeshes
@@ -83,7 +84,7 @@ assemble(UB33_ΩΩ, X, X)
 # output 
 
 X.geo.faces
-elements, adX, cells = assemblydata(md.X)
+elementsX, adX, cellsX = assemblydata(md.X)
 
 elements
 adX
@@ -125,9 +126,8 @@ cell2mat_inv_τ
 cell2mat_χ
 
 
-# erstelle X_mat aus X mittels cell2mat_χ:
-
-T = typeof(inv_τ(SVector(0,0,0)))
+# erstelle X_mat aus X mittels cell2mat_χ: evtl sollte gen_tau_chi() den Typ T liefern
+T = typeof(χ(SVector(0, 0, 0)))
 newfns = Vector{Vector{BEAST.Shape{T}}}() 
 for (i,shs) in enumerate(X.fns)
     newshs = Vector{BEAST.Shape{T}}()
@@ -143,6 +143,57 @@ for (i,shs) in enumerate(X.fns)
     push!(newfns, newshs)
 end
 X_mat = BEAST.NDLCDBasis(X.geo, newfns, X.pos)
+
+
+# erstelle w_mat aus w mittels tri->tet, cell2mat_inv_τ:
+D = connectivity(w.geo, X.geo)
+@assert sum(D) == length(w.fns) == length(w.geo.faces)
+rows, vals = rowvals(D), nonzeros(D)
+# Bsp rows[i]=j vals[i]=a =>D[j,i]=a
+face2cell = rows
+
+T = typeof(inv_τ(SVector(0, 0, 0)))
+newfns = Vector{Vector{BEAST.Shape{T}}}() 
+for (i,shs) in enumerate(w.fns)
+    newshs = Vector{BEAST.Shape{T}}()
+    for (j,sh) in enumerate(shs)
+        cellid = sh.cellid
+        refid = sh.refid
+        coeff = sh.coeff
+
+        tricell = cellid
+        tetcell = face2cell[tricell]
+
+        inv_τ_tri = cell2mat_inv_τ[tetcell]
+
+        new_coeff = coeff*inv_τ_tri # can be ComplexF64
+        push!(newshs, BEAST.Shape(cellid, refid, new_coeff))
+    end
+    push!(newfns, newshs)
+end
+w_mat = BEAST.LagrangeBasis{0,-1,1}(w.geo, newfns, w.pos)
+
+
+
+
+# X.geo.faces
+# elementsX, adX, cellsX = assemblydata(md.X)
+# w.geo.faces
+# elementsw, adw, cellsw = assemblydata(md.w)
+
+#face2cell[170]
+#plt = Visu.iplot()
+#plt = Visu.points(elementsw[170].vertices)
+#Visu.simplex(plt, elementsX[1025])
+
+
+
+cnt = 0
+for el in md.ntrcX.fns
+    el == [] && (cnt += 1)
+end
+@show cnt
+
 
 
 X.fns
