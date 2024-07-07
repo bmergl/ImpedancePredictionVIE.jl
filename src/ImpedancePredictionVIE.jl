@@ -2,6 +2,7 @@ module ImpedancePredictionVIE
 
 using LinearAlgebra
 using StaticArrays
+using SparseArrays
 using BEAST
 using CompScienceMeshes
 using SauterSchwab3D

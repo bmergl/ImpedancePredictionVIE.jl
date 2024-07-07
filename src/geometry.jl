@@ -1,7 +1,5 @@
-# function simpletest()
-#     @show "Hallo"
-#     return nothing
-# end
+using SparseArrays
+
 
 
 function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::IP.geometric_body)
@@ -194,16 +192,19 @@ function gen_tau_chi(; kappa = nothing, kappa0 = nothing, epsilon = nothing, eps
         # :current
         tau = x -> kappa(x)
         tau0 = kappa0
+        T = Float64
     
     elseif kappa === nothing && kappa0 === nothing && epsilon !== nothing && epsilon0 !== nothing && omega === nothing
         # :dielectic
         tau = x -> epsilon(x)
         tau0 = epsilon0 # this ist not ε0 !
+        T = Float64
 
     elseif kappa !== nothing && kappa0 !== nothing && epsilon !== nothing && epsilon0 !== nothing && omega !== nothing
         # :general
         tau = x -> kappa(x) + im*omega*epsilon(x)
         tau0 = kappa0 + im*ω*epsilon0 # this ist not ε0 !
+        T = ComplexF64
 
     # elseif problemtype == :dielectic
     #     error("NOT READY")
@@ -275,7 +276,7 @@ function gen_tau_chi(; kappa = nothing, kappa0 = nothing, epsilon = nothing, eps
     invtau = init_invtau(tau)
 
 
-    return tau, invtau, tau0, chi
+    return tau, invtau, tau0, chi, T
 
 end
 
@@ -568,3 +569,220 @@ end
 #     err && @show f1
 #     err && error("Diese excluded face existiert in all_faces gar nicht")
 # end
+
+
+
+
+
+
+
+
+######## PWC MATERIAL ################################
+
+function gen_cell2mat(τ, inv_τ, τ0, χ, T, X::BEAST.NDLCDBasis)
+
+    elementsX, adX, cellsX = assemblydata(X)
+    cell2mat_inv_τ = Vector{T}(undef,length(elementsX))
+    cell2mat_χ  = Vector{T}(undef,length(elementsX)) # Typenunterscheidung???
+
+    for (n,el) in enumerate(elementsX)
+        center = cartesian(CompScienceMeshes.center(el))
+        inv_τ_n = inv_τ(center)
+        χ_n = χ(center)
+        cell2mat_inv_τ[n] = inv_τ_n 
+        cell2mat_χ[n] = χ_n   
+    end
+
+    return cell2mat_inv_τ, cell2mat_χ
+end
+
+
+function gen_X_mat(X::BEAST.NDLCDBasis, cell2mat::Vector) # cell2mat_χ or cell2mat_inv_τ
+
+    T = typeof(cell2mat[1])
+    newfns = Vector{Vector{BEAST.Shape{T}}}() 
+    for (i,shs) in enumerate(X.fns)
+        newshs = Vector{BEAST.Shape{T}}()
+        for (j,sh) in enumerate(shs)
+            cellid = sh.cellid
+            refid = sh.refid
+            coeff = sh.coeff
+
+            mat_of_cell = cell2mat[cellid]
+            new_coeff = coeff*mat_of_cell # can be ComplexF64
+            push!(newshs, BEAST.Shape(cellid, refid, new_coeff))
+        end
+        push!(newfns, newshs)
+    end
+    X_mat = BEAST.NDLCDBasis(X.geo, newfns, X.pos)
+
+    return X_mat
+end
+
+
+function gen_w_mat(w::BEAST.LagrangeBasis{0,-1}, X::BEAST.NDLCDBasis, cell2mat_inv_τ::Vector)
+
+    # erstelle w_mat aus w mittels tri->tet, cell2mat_inv_τ:
+    D = connectivity(w.geo, X.geo)
+    @assert sum(D) == length(w.fns) == length(w.geo.faces)
+    rows, vals = SparseArrays.rowvals(D), SparseArrays.nonzeros(D)
+
+    face2cell = rows # Bsp rows[i]=j vals[i]=a =>D[j,i]=a ... Nur hier so einfach!!!
+
+    T = typeof(cell2mat_inv_τ[1])
+    newfns = Vector{Vector{BEAST.Shape{T}}}() 
+    for (i,shs) in enumerate(w.fns)
+        newshs = Vector{BEAST.Shape{T}}()
+        for (j,sh) in enumerate(shs)
+            cellid = sh.cellid
+            refid = sh.refid
+            coeff = sh.coeff
+
+            tricell = cellid
+            tetcell = face2cell[tricell]
+
+            inv_τ_tri = cell2mat_inv_τ[tetcell]
+
+            new_coeff = coeff*inv_τ_tri # can be ComplexF64
+            push!(newshs, BEAST.Shape(cellid, refid, new_coeff))
+        end
+        push!(newfns, newshs)
+    end
+    w_mat = BEAST.LagrangeBasis{0,-1,1}(w.geo, newfns, w.pos)
+    
+    return w_mat
+end
+
+
+function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ::Vector)
+
+    γ = swg_faces_mesh
+
+    x = refspace(X)
+    E, ad, P = assemblydata(X)
+    igeo = geometry(X)
+    @assert dimension(γ) == dimension(igeo)-1
+
+    #ogeo = boundary(igeo) <--- ntrace klassisch
+    ogeo = γ # ja...
+    on_target = overlap_gpredicate(γ)
+    ogeo = submesh(ogeo) do m,f
+        ch = chart(m,f)
+        on_target(ch)
+    end
+
+    D = connectivity(igeo, ogeo, abs) # nzrange(D,tetnummer) liefert die 4 bzw. seltener 3 Dreiecke
+    rows, vals = rowvals(D), nonzeros(D)
+    Dt = connectivity(ogeo, igeo, abs) # nzrange(Dt,trinummer) liefert die 2 bzw. seltener 1 Tetraeder
+    rowst, valst = rowvals(Dt), nonzeros(Dt)
+
+
+    T = typeof(cell2mat_χ[1])
+    S = BEAST.Shape{T}
+    fns = [Vector{S}() for i in 1:numfunctions(X)]
+
+    for s in 1:numfunctions(X)
+        fc1 = chart(ogeo, s)
+
+        # 1-2 angrenzende Tetraeder bestimmen
+        tets = Vector{Int64}()
+        for k in nzrange(Dt,s) # s ist der index von fc1
+            push!(tets,rowst[k])
+        end
+        
+        # Wähle einen Tetraeder aus von dem aus die innere ntrace betrachtet wird -  Achtung n̂ ! 
+        
+        i_el = tets[1] # der zweite wird gar nicht betrachtet für den Fall dass es existiert
+        el = E[i_el] 
+        fc1_center = cartesian(CompScienceMeshes.center(fc1))
+        q = nothing
+        fc = nothing
+        for (k,fc_) in enumerate(faces(el))
+            fc_center = cartesian(CompScienceMeshes.center(fc_))
+            if isapprox(norm(fc_center-fc1_center),0,atol=sqrt(eps(T)))
+                q = k
+                fc = fc_
+                break
+            end
+        end
+        Q = ntrace(x, el, q, fc1)
+
+        for i in 1:size(Q,1)
+            for j in 1:size(Q,2)
+                for (m,a) in ad[i_el,j] # das ist die assemblydata der Basis X
+
+                    v = a*Q[i,j]
+
+                    n̂_n = fc1.normals[1]
+
+                    # Betrachte die 1-2 angrenzenden Tetraeder von fc1
+                    if length(tets) == 2
+                        i_tet1 = tets[1]
+                        i_tet2 = tets[2]
+                        tet1 = E[i_tet1]
+                        tet2 = E[i_tet2]
+                        center1 = cartesian(CompScienceMeshes.center(tet1))
+                        center2 = cartesian(CompScienceMeshes.center(tet2))
+                        v_f1 = center1 - fc1_center
+                        v_f2 = center2 - fc1_center
+
+                        if dot(v_f1, n̂_n) > 0.0
+                            tet_minus = tet1
+                            tet_plus = tet2
+                            i_tet_minus = i_tet1 
+                            i_tet_plus = i_tet2
+                            @assert dot(v_f2, n̂_n) < 0.0
+                        elseif dot(v_f1, n̂_n) < 0.0
+                            tet_minus = tet2
+                            tet_plus = tet1
+                            i_tet_minus = i_tet2
+                            i_tet_plus = i_tet1
+                            @assert dot(v_f2, n̂_n) > 0.0
+                        end
+                        χ_minus = cell2mat_χ[i_tet_minus]
+                        χ_plus = cell2mat_χ[i_tet_plus]
+                        δχ = χ_minus - χ_plus
+
+                    elseif length(tets) == 1
+                        i_tet1 = tets[1]
+                        tet1 = E[i_tet1]
+                        center1 = cartesian(CompScienceMeshes.center(tet1))
+                        v_f1 = center1 - fc1_center
+                        
+                        if dot(v_f1, n̂_n) > 0.0
+                            tet_minus = tet1
+                            tet_plus = nothing
+                            i_tet_minus = i_tet1 
+                            i_tet_plus = nothing
+                            χ_minus = cell2mat_χ[i_tet_minus]
+                            χ_plus = 0.0
+                        elseif dot(v_f1, n̂_n) < 0.0
+                            tet_minus = nothing
+                            tet_plus = tet1
+                            i_tet_minus = nothing
+                            i_tet_plus = i_tet1
+                            χ_minus = 0.0
+                            χ_plus = cell2mat_χ[i_tet_plus]
+                        end
+                        δχ = χ_minus - χ_plus
+
+                    else
+                        error("length(tets) problem!")
+                    end
+                    #@show δχ
+                    v_new = v * δχ
+                    isapprox(v,0,atol=sqrt(eps(T))) && continue # WICHTIG sonst unnötig viele Nullen aber ohne δχ, sonst für kleine ... ggf Probleme
+                    push!(fns[m], BEAST.Shape(s, i, v_new))
+                end
+            end
+        end
+
+    end
+
+    return BEAST.ntrace(X, ogeo, fns)
+end
+
+
+
+
+

@@ -216,7 +216,7 @@ function solve(;
 
     # Material
     κ, ϵ = material()
-    τ, inv_τ, τ0, χ = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
+    τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
     p = point(0.0,0.0,0.0)
     @show τ(p)
 
