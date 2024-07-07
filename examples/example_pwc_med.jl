@@ -175,12 +175,14 @@ w_mat = BEAST.LagrangeBasis{0,-1,1}(w.geo, newfns, w.pos)
 
 # erstelle  Xf_mat aus X und ...
 swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
-L = lagrangecxd0(swg_faces_mesh)
 
 D = connectivity(swg_faces_mesh, X.geo) # includes boundary tets
 rows, vals = rowvals(D), nonzeros(D)
 rows
 vals
+
+nzrange(D,2180)
+
 
 r = 0
 for k in BEAST.nzrange(D,2180)
@@ -196,11 +198,6 @@ BEAST.nzrange(D,2180)
 
 D[1063,2]
 
-
-colptrs = SparseArrays.columnindices(D)
-
-
-findnz(D)
 D
 
 D[1063,3]
@@ -281,43 +278,42 @@ X = md.X
 
 γ = swg_faces_mesh
 
-#function ntrace(X::Space, γ)
+#function ntrace(X::Space, swg_faces_mesh::Mesh)
 
-    # on_target = overlap_gpredicate(γ)
-    # ad = assemblydata(X)
+    γ = swg_faces_mesh
+
     x = refspace(X)
     E, ad, P = assemblydata(X)
     igeo = geometry(X)
     @assert dimension(γ) == dimension(igeo)-1
-    # Γ = geo
-    # Dγ = dimension(γ)
-    # Σ = skeleton(Γ,Dγ)
 
-    ogeo = boundary(igeo)
+    #ogeo = boundary(igeo) <--- ntrace klassisch
+    ogeo = γ # ja...
     on_target = overlap_gpredicate(γ)
     ogeo = submesh(ogeo) do m,f
         ch = chart(m,f)
         on_target(ch)
     end
 
-    # D = copy(transpose(connectivity(ogeo, igeo, abs)))
-    D = connectivity(igeo, ogeo, abs)
-    rows, vals = BEAST.rowvals(D), BEAST.nonzeros(D)
+    D = connectivity(igeo, ogeo, abs) # nzrange(D,tetnummer) liefert die 4 bzw. seltener 3 Dreiecke
+    rows, vals = rowvals(D), nonzeros(D)
+    Dt = connectivity(ogeo, igeo, abs) # nzrange(Dt,trinummer) liefert die 2 bzw. seltener 1 Tetraeder
+    rowst, valst = rowvals(Dt), nonzeros(Dt)
 
-    T = scalartype(X)
+
+    T = typeof(χ(SVector(0, 0, 0)))
     S = BEAST.Shape{T}
     fns = [Vector{S}() for i in 1:numfunctions(X)]
 
+   
     for (p,el) in enumerate(E)
 
         for (q,fc) in enumerate(faces(el))
             on_target(fc) || continue
-
-            # print(Q)
-            # @assert norm(Q,Inf) != 0
+            on_target(fc) == false && @warn "In this implementation every face should be on the target!"
             
             r = 0
-            for k in BEAST.nzrange(D,P[p])
+            for k in nzrange(D,P[p]) # P ist Liste mit tet-Nummern (hier chronologisch aber nicht immer deshalb so wie hier...)
                 vals[k] == q && (r = rows[k]; break)
             end
             @assert r != 0
@@ -328,10 +324,44 @@ X = md.X
             for i in 1:size(Q,1)
                 for j in 1:size(Q,2)
                     for (m,a) in ad[p,j]
-                        # j == q && println("bingo",j,q)
+
                         v = a*Q[i,j]
+
+                        # Berechne die 1-2 angrenzenden Tetraeder von fc1
+                        tets = []
+                        for k in nzrange(Dt,r) # r ist der index von fc1
+                            push!(rowst[k],tets)
+                        end
+                        n̂_n = fc1.normals[1]
+                        @show n̂_n
+
+                        if length(tets) == 2
+                            tet1 = tets[1]
+                            tet2 = tets[2]
+                            center1 = cartesian(CompScienceMeshes.center(tet1))
+                            center2 = cartesian(CompScienceMeshes.center(tet2))
+                            centerf = cartesian(CompScienceMeshes.center(fc1))
+                            v_f1 = center1 - centerf
+                            v_f2 = center2 - centerf
+
+                            if dot(v_f1, n̂_n) > 0.0
+                                tet_plus = tet1
+                            elseif dot(v_f1, n̂_n) < 0.0
+
+                            end
+
+                        elseif length(tets) == 1
+
+                        else
+                            error("length(tets) problem!")
+                        end
+
+
+
+                        v_new 
+
                         isapprox(v,0,atol=sqrt(eps(T))) && continue
-                        push!(fns[m], Shape(r, i, v))
+                        push!(fns[m], BEAST.Shape(r, i, v))
                     end
                 end
             end
@@ -343,9 +373,29 @@ X = md.X
     ntrace(X, ogeo, fns)
 #end
 
+r = 0
+for k in nzrange(D,1000) # P ist Liste mit tet-Nummern (hier chronologisch aber nicht immer deshalb so wie hier...)
+    @show k, rows[k], vals[k]
+    #vals[k] == 3 && (r = rows[k]; break)
+end
+@show r
+@assert r != 0
+
+
+Dt = connectivity(ogeo, igeo, abs)
+rowst, valst = rowvals(Dt), nonzeros(Dt)
+for k in nzrange(Dt,1000) # P ist Liste mit tet-Nummern (hier chronologisch aber nicht immer deshalb so wie hier...)
+    @show k, rowst[k], valst[k]
+    #vals[k] == 3 && (r = rows[k]; break)
+end
 
 
 
+
+E[1]
+a = faces(E[1])
+
+on_target(a[1])
 
 ##
 
