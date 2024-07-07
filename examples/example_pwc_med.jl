@@ -173,7 +173,54 @@ for (i,shs) in enumerate(w.fns)
 end
 w_mat = BEAST.LagrangeBasis{0,-1,1}(w.geo, newfns, w.pos)
 
+# erstelle  Xf_mat aus X und ...
+swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
+L = lagrangecxd0(swg_faces_mesh)
 
+D = connectivity(swg_faces_mesh, X.geo) # includes boundary tets
+rows, vals = rowvals(D), nonzeros(D)
+rows
+vals
+
+r = 0
+for k in BEAST.nzrange(D,2180)
+    vals[k] == -1 && (r = rows[k]; break)
+end
+r
+@assert r != 0
+
+
+
+D
+BEAST.nzrange(D,2180)
+
+D[1063,2]
+
+
+colptrs = SparseArrays.columnindices(D)
+
+
+findnz(D)
+D
+
+D[1063,3]
+D[10]
+
+
+sum(D)
+sum(abs.(D))
+@assert sum(D) == length(w.fns) == length(w.geo.faces)
+
+# Bsp rows[i]=j vals[i]=a =>D[j,i]=a
+face2cell = rows
+
+
+
+
+
+
+
+Xf_mat = BEAST.LagrangeBasis{0,-1,1}(w.geo, newfns, w.pos) # kreuz und quer verteilte Dreiecke
 
 
 # X.geo.faces
