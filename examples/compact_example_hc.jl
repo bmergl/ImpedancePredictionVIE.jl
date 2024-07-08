@@ -37,7 +37,7 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol = IP.solve1(;
     md = md, 
-    material = IP.constantmaterial(1.0, nothing),# IP.constant_xsplit(10.0, nothing, 0.0, 5.0, nothing), , #IP.constant_zsplit(1000, nothing, 0.1, 10, nothing),  #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
+    material = IP.constant_zsplit(10.0, nothing, 0.0, 2.0, nothing), #IP.constantmaterial(1.0, nothing),# IP.constant_xsplit(10.0, nothing, 0.0, 5.0, nothing), ,   #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
     κ0 = 1.0,
     ϵ0 = nothing,
     ω = nothing, 
@@ -49,12 +49,13 @@ sol = IP.solve1(;
 )
 
 # save
-#dataname = "test" # for JLD2 save
-#jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+dataname = "test_solve1" # for JLD2 save
+jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+
+
 
 
 ##
-
 
 ##
 using MKL
@@ -65,18 +66,33 @@ using SparseArrays
 using ImpedancePredictionVIE
 using BEAST
 using CompScienceMeshes
-
 using JLD2
-
 using Plots
 using Plotly
-
-# load 
-dataname = "qs56_lowcontr_zsplit_coarse"
+#load 
+dataname = "test_solve"
 datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
 sol = load(datapath, "sol")
 md = load(datapath, "md")
-@assert sol.material == IP.constant_zsplit(1000, nothing, 0.07, 700, nothing)
+
+dataname1 = "test_solve1"
+datapath1 = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname1.jld2"
+sol1 = load(datapath1, "sol")
+md1 = load(datapath1, "md")
+
+norm(sol.S-sol1.S)
+
+
+##
+
+DIFF = log.(abs.(sol.S-sol1.S) .+eps(1.0))
+
+##
+
+p = Plots.heatmap(DIFF, title = "2D Rasterplot der Differenzmatrix")
+yflip!(p; size=(1200,1000))
+
+
 
 ##
 

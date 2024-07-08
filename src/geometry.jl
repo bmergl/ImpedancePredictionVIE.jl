@@ -671,8 +671,8 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
         on_target(ch)
     end
 
-    D = connectivity(igeo, ogeo, abs) # nzrange(D,tetnummer) liefert die 4 bzw. seltener 3 Dreiecke
-    rows, vals = rowvals(D), nonzeros(D)
+    # D = connectivity(igeo, ogeo, abs) # nzrange(D,tetnummer) liefert die 4 bzw. seltener 3 Dreiecke
+    # rows, vals = rowvals(D), nonzeros(D)
     Dt = connectivity(ogeo, igeo, abs) # nzrange(Dt,trinummer) liefert die 2 bzw. seltener 1 Tetraeder
     rowst, valst = rowvals(Dt), nonzeros(Dt)
 
@@ -689,118 +689,193 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
         for k in nzrange(Dt,s) # s ist der index von fc1
             push!(tets,rowst[k])
         end
-        
-        ################### <----- FIX 
-        length(tets) == 2 || continue
-        ###################
 
-        # Wähle einen Tetraeder aus von dem aus die innere ntrace betrachtet wird -  Achtung n̂ ! 
-        
-        
-        i_tet1 = tets[1]
-        i_tet2 = tets[2]
-        tet1 = E[i_tet1]
-        tet2 = E[i_tet2]
-        center1 = cartesian(CompScienceMeshes.center(tet1))
-        center2 = cartesian(CompScienceMeshes.center(tet2))
-        fc1_center = cartesian(CompScienceMeshes.center(fc1))
-        v_f1 = center1 - fc1_center
-        v_f2 = center2 - fc1_center
-        n̂_n = fc1.normals[1]
-        if dot(v_f1, n̂_n) > 0.0
-            tet_index_ntrace_compatible = 2 #zeigt rein => nimm anderen
-            @assert dot(v_f2, n̂_n) < 0.0
-        elseif dot(v_f1, n̂_n) < 0.0
-            tet_index_ntrace_compatible = 1
-            @assert dot(v_f2, n̂_n) > 0.0
-        end
+        if length(tets) == 2
 
-        i_el = tets[tet_index_ntrace_compatible] # der zweite wird gar nicht betrachtet für den Fall dass es existiert
-        el = E[i_el] 
-        fc1_center = cartesian(CompScienceMeshes.center(fc1))
-        q = nothing
-        fc = nothing
-        for (k,fc_) in enumerate(faces(el))
-            fc_center = cartesian(CompScienceMeshes.center(fc_))
-            if isapprox(norm(fc_center-fc1_center),0,atol=sqrt(eps(T)))
-                q = k
-                fc = fc_
-                break
+            i_tet1 = tets[1]
+            i_tet2 = tets[2]
+            tet1 = E[i_tet1]
+            tet2 = E[i_tet2]
+            center1 = cartesian(CompScienceMeshes.center(tet1))
+            center2 = cartesian(CompScienceMeshes.center(tet2))
+            fc1_center = cartesian(CompScienceMeshes.center(fc1))
+            v_f1 = center1 - fc1_center
+            v_f2 = center2 - fc1_center
+            n̂_n = fc1.normals[1]
+            if dot(v_f1, n̂_n) > 0.0
+                i_tet_minus = i_tet1 # normale zeigt in tet1 => tet1=tet_minus
+                i_tet_plus = i_tet2
+                @assert dot(v_f2, n̂_n) < 0.0
+            elseif dot(v_f1, n̂_n) < 0.0
+                i_tet_minus = i_tet2
+                i_tet_plus = i_tet1
+                @assert dot(v_f2, n̂_n) > 0.0
             end
-        end
-        Q = ntrace(x, el, q, fc1) # VORSICHT, wenn man dieses ntrace verwendet MUSS man mit dem tet arbeiten wo n̂ nach AUßEN zeigt!!!!
+            χ_minus = cell2mat_χ[i_tet_minus]
+            χ_plus = cell2mat_χ[i_tet_plus]
+            δχ = χ_minus - χ_plus
 
-        for i in 1:size(Q,1)
-            for j in 1:size(Q,2)
-                for (m,a) in ad[i_el,j] # das ist die assemblydata der Basis X
-
-                    v = a*Q[i,j]
-
-                    n̂_n = fc1.normals[1]
-
-                    # Betrachte die 1-2 angrenzenden Tetraeder von fc1
-                    if length(tets) == 2
-                        i_tet1 = tets[1]
-                        i_tet2 = tets[2]
-                        tet1 = E[i_tet1]
-                        tet2 = E[i_tet2]
-                        center1 = cartesian(CompScienceMeshes.center(tet1))
-                        center2 = cartesian(CompScienceMeshes.center(tet2))
-                        v_f1 = center1 - fc1_center
-                        v_f2 = center2 - fc1_center
-
-                        if dot(v_f1, n̂_n) > 0.0
-                            tet_minus = tet1
-                            tet_plus = tet2
-                            i_tet_minus = i_tet1 
-                            i_tet_plus = i_tet2
-                            @assert dot(v_f2, n̂_n) < 0.0
-                        elseif dot(v_f1, n̂_n) < 0.0
-                            tet_minus = tet2
-                            tet_plus = tet1
-                            i_tet_minus = i_tet2
-                            i_tet_plus = i_tet1
-                            @assert dot(v_f2, n̂_n) > 0.0
-                        end
-                        χ_minus = cell2mat_χ[i_tet_minus]
-                        χ_plus = cell2mat_χ[i_tet_plus]
-                        δχ = χ_minus - χ_plus
-
-                    elseif length(tets) == 1
-                        i_tet1 = tets[1]
-                        tet1 = E[i_tet1]
-                        center1 = cartesian(CompScienceMeshes.center(tet1))
-                        v_f1 = center1 - fc1_center
-                        
-                        if dot(v_f1, n̂_n) > 0.0
-                            tet_minus = tet1
-                            tet_plus = nothing
-                            i_tet_minus = i_tet1 
-                            i_tet_plus = nothing
-                            χ_minus = cell2mat_χ[i_tet_minus]
-                            χ_plus = 0.0
-                        elseif dot(v_f1, n̂_n) < 0.0
-                            tet_minus = nothing
-                            tet_plus = tet1
-                            i_tet_minus = nothing
-                            i_tet_plus = i_tet1
-                            χ_minus = 0.0
-                            χ_plus = cell2mat_χ[i_tet_plus]
-                        end
-                        δχ = χ_minus - χ_plus
-
-                    else
-                        error("length(tets) problem!")
-                    end
-                    #@show δχ
-                    v_new = v * δχ
-                    isapprox(v,0,atol=sqrt(eps(T))) && continue # WICHTIG sonst unnötig viele Nullen aber ohne δχ, sonst für kleine ... ggf Probleme
-                    push!(fns[m], BEAST.Shape(s, i, v_new))
+            el = E[i_tet_plus] 
+            fc1_center = cartesian(CompScienceMeshes.center(fc1))
+            q = nothing
+            fc = nothing
+            for (k,fc_) in enumerate(faces(el))
+                fc_center = cartesian(CompScienceMeshes.center(fc_))
+                if isapprox(norm(fc_center-fc1_center),0,atol=sqrt(eps(T)))
+                    q = k
+                    fc = fc_
+                    break
                 end
             end
+            Q = ntrace(x, el, q, fc1) # VORSICHT, wenn man dieses ntrace verwendet MUSS man mit dem tet arbeiten wo n̂_fc1 nach AUßEN zeigt!!!!
+
+            for i in 1:size(Q,1)
+                for j in 1:size(Q,2)
+                    for (m,a) in ad[i_tet_plus,j] # das ist die assemblydata der Basis X
+                        v = a*Q[i,j] # hier kommt das VZ mit rein vmtl. hätte man also auch auf dem anderen tet arbeiten können... aber nicht auf beiden!
+                        v_new = v * δχ
+
+                        isapprox(v,0,atol=sqrt(eps(T))) && continue
+                        isapprox(v_new,0,atol=sqrt(eps(T))/100000) && continue
+                        push!(fns[m], BEAST.Shape(s, i, v_new))
+                    end
+                end
+            end
+
+        elseif length(tets) == 1
+
+            i_tet = tets[1]
+            tet = E[i_tet]
+
+            center = cartesian(CompScienceMeshes.center(tet))
+            fc1_center = cartesian(CompScienceMeshes.center(fc1))
+            v_f = center - fc1_center
+            n̂_n = fc1.normals[1]
+            if dot(v_f1, n̂_n) > 0.0
+                i_tet_minus = i_tet # normale zeigt in tet1 => tet1=tet_minus
+                χ_minus = cell2mat_χ[i_tet_minus]
+                χ_plus = 0.0
+            elseif dot(v_f1, n̂_n) < 0.0
+                i_tet_plus = i_tet
+                χ_minus = 0.0
+                χ_plus = cell2mat_χ[i_tet_plus]
+            end
+            δχ = χ_minus - χ_plus
+
+            el = E[i_tet] 
+            fc1_center = cartesian(CompScienceMeshes.center(fc1))
+            q = nothing
+            fc = nothing
+            for (k,fc_) in enumerate(faces(el))
+                fc_center = cartesian(CompScienceMeshes.center(fc_))
+                if isapprox(norm(fc_center-fc1_center),0,atol=sqrt(eps(T)))
+                    q = k
+                    fc = fc_
+                    break
+                end
+            end
+
+            @show dot(fc.normals[1], n̂_n) 
+            Q = ntrace(x, el, q, fc1)
+
+            for i in 1:size(Q,1)
+                for j in 1:size(Q,2)
+                    for (m,a) in ad[i_tet,j] # das ist die assemblydata der Basis X
+                        v = a*Q[i,j] # hier kommt das VZ mit rein vmtl. hätte man also auch auf dem anderen tet arbeiten können... aber nicht auf beiden!
+                        v_new = v * δχ
+
+                        isapprox(v,0,atol=sqrt(eps(T))) && continue
+                        isapprox(v_new,0,atol=sqrt(eps(T))/100000) && continue
+                        push!(fns[m], BEAST.Shape(s, i, v_new))
+                    end
+                end
+            end
+
+
+
+        else
+            error()
         end
 
     end
+    #i_el = tets[1]
+        
+
+    #@show Q[q], volume(fc1)
+
+    #     for i in 1:size(Q,1)
+    #         for j in 1:size(Q,2)
+    #             for (m,a) in ad[i_el,j] # das ist die assemblydata der Basis X
+
+    #                 v = a*Q[i,j]
+
+    #                 n̂_n = fc1.normals[1]
+
+    #                 # Betrachte die 1-2 angrenzenden Tetraeder von fc1
+    #                 if length(tets) == 2
+    #                     i_tet1 = tets[1]
+    #                     i_tet2 = tets[2]
+    #                     tet1 = E[i_tet1]
+    #                     tet2 = E[i_tet2]
+    #                     center1 = cartesian(CompScienceMeshes.center(tet1))
+    #                     center2 = cartesian(CompScienceMeshes.center(tet2))
+    #                     v_f1 = center1 - fc1_center
+    #                     v_f2 = center2 - fc1_center
+
+    #                     if dot(v_f1, n̂_n) > 0.0
+    #                         tet_minus = tet1
+    #                         tet_plus = tet2
+    #                         i_tet_minus = i_tet1 
+    #                         i_tet_plus = i_tet2
+    #                         @assert dot(v_f2, n̂_n) < 0.0
+    #                     elseif dot(v_f1, n̂_n) < 0.0
+    #                         tet_minus = tet2
+    #                         tet_plus = tet1
+    #                         i_tet_minus = i_tet2
+    #                         i_tet_plus = i_tet1
+    #                         @assert dot(v_f2, n̂_n) > 0.0
+    #                     end
+    #                     χ_minus = cell2mat_χ[i_tet_minus]
+    #                     χ_plus = cell2mat_χ[i_tet_plus]
+    #                     δχ = χ_minus - χ_plus
+
+    #                 elseif length(tets) == 1
+    #                     #error("")
+    #                     i_tet1 = tets[1]
+    #                     tet1 = E[i_tet1]
+    #                     center1 = cartesian(CompScienceMeshes.center(tet1))
+    #                     v_f1 = center1 - fc1_center
+                        
+    #                     if dot(v_f1, n̂_n) > 0.0
+    #                         tet_minus = tet1
+    #                         tet_plus = nothing
+    #                         i_tet_minus = i_tet1 
+    #                         i_tet_plus = nothing
+    #                         χ_minus = cell2mat_χ[i_tet_minus]
+    #                         χ_plus = 0.0
+    #                     elseif dot(v_f1, n̂_n) < 0.0
+    #                         tet_minus = nothing
+    #                         tet_plus = tet1
+    #                         i_tet_minus = nothing
+    #                         i_tet_plus = i_tet1
+    #                         χ_minus = 0.0
+    #                         χ_plus = cell2mat_χ[i_tet_plus]
+    #                     end
+    #                     δχ = χ_minus - χ_plus
+
+    #                 else
+    #                     error("length(tets) problem!")
+    #                 end
+    #                 #@show δχ
+    #                 v_new = v * δχ
+    #                 isapprox(v,0,atol=sqrt(eps(T))) && continue # WICHTIG sonst unnötig viele Nullen aber ohne δχ, sonst für kleine ... ggf Probleme
+    #                 isapprox(v_new,0,atol=sqrt(eps(T))/100000) && continue
+    #                 push!(fns[m], BEAST.Shape(s, i, v_new))
+    #             end
+    #         end
+    #     end
+
+    # end
 
     return BEAST.ntrace(X, ogeo, fns)
 end

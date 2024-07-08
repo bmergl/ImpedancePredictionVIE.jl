@@ -7,6 +7,7 @@ using StaticArrays
 
 using Test
 
+include("test_hc.jl")
 include("test_SS3D.jl")
 include("test_MaterialOPs.jl")
 

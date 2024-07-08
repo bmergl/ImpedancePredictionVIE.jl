@@ -408,10 +408,10 @@ function solve1(;   # high contrast formulation
     κ, ϵ = material()
     τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
     p = point(0.0,0.0,0.0)
-    @show τ(p)
-    @show inv_τ(p)
-    @show τ0
-    @show χ(p)
+    # @show τ(p)
+    # @show inv_τ(p)
+    # @show τ0
+    # @show χ(p)
 
     τ(p) < 1e-12 && error("Disable the following lines...")
     @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
@@ -421,7 +421,7 @@ function solve1(;   # high contrast formulation
     cell2mat_inv_τ, cell2mat_χ = IP.gen_cell2mat(τ, inv_τ, τ0, χ, T, X)
 
     X_mat = IP.gen_X_mat(X, cell2mat_χ)
-    X_mat_ = IP.gen_X_mat(X, cell2mat_inv_τ)
+    X_mat_I = IP.gen_X_mat(X, cell2mat_inv_τ)
     w_mat = IP.gen_w_mat(w, X, cell2mat_inv_τ)
 
     swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
@@ -433,53 +433,55 @@ function solve1(;   # high contrast formulation
     v_bottom = ones(length(md.bottomnodes)) * potential_bottom
     v = vcat(v_top, v_bottom)
 
-        
+
     # Operators row 1
-    B11_Γ = IPVIE1.B11_Γ()
-    B11_ΓΓ = IPVIE1.B11_ΓΓ(gammatype = Float64)
+    B11_Γ = IPVIE1.B11_Γ(alpha = 1.0)
+    B11_ΓΓ = IPVIE1.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
     B11 = assemble(B11_Γ, w, y) + assemble(B11_ΓΓ, w, y)
 
-    UB12_ΓΓ = IPVIE1.UB12_ΓΓ(gammatype = Float64)
+    UB12_ΓΓ = IPVIE1.UB12_ΓΓ(alpha = 1.0, gammatype = Float64)
     B12 = assemble(UB12_ΓΓ, w, w_mat)
 
-    UB13_ΓΓn = IPVIE1.UB13_ΓΓn(gammatype = Float64)
-    UB13_ΓΩ = IPVIE1.UB13_ΓΩ(gammatype = Float64)
-    B13 = assemble(UB13_ΓΓn, w, intrcX_mat) + assemble(UB13_ΓΩ, w, X_mat)
+    UB13_ΓΓn = IPVIE1.UB13_ΓΓn(alpha = 1.0, gammatype = Float64)
+    UB13_ΓΩ = IPVIE1.UB13_ΓΩ(alpha = 1.0, gammatype = Float64)
+    B13 =  assemble(UB13_ΓΩ, w, X_mat) + assemble(UB13_ΓΓn, w, intrcX_mat)
     #@show norm(assemble(UB13_ΓΓn, w, intrcX_mat))
 
 
     # Operators row 2
-    B21_ΓΓ = IPVIE1.B21_ΓΓ(gammatype = Float64)
+    B21_ΓΓ = IPVIE1.B21_ΓΓ(beta = -1.0, gammatype = Float64)
     B21 = assemble(B21_ΓΓ, y, y)
 
-    UB22_Γ = IPVIE1.UB22_Γ()
-    UB22_ΓΓ = IPVIE1.UB22_ΓΓ(gammatype = Float64)
+    UB22_Γ = IPVIE1.UB22_Γ(alpha = -1.0)
+    UB22_ΓΓ = IPVIE1.UB22_ΓΓ(alpha = 1.0, gammatype = Float64)
     B22 = assemble(UB22_Γ, y, w_mat) + assemble(UB22_ΓΓ, y, w_mat)
 
-    UB23_ΓΓn = IPVIE1.UB23_ΓΓn(gammatype = Float64)
-    UB23_ΓΩ = IPVIE1.UB23_ΓΩ(gammatype = Float64)
-    B23 = assemble(UB23_ΓΓn, y, intrcX_mat) + assemble(UB23_ΓΩ, y, X_mat)
+    UB23_ΓΓn = IPVIE1.UB23_ΓΓn(alpha = 1.0, gammatype = Float64)
+    UB23_ΓΩ = IPVIE1.UB23_ΓΩ(alpha = 1.0, gammatype = Float64)
+    B23 = assemble(UB23_ΓΩ, y, X_mat) + assemble(UB23_ΓΓn, y, intrcX_mat)
     #@show norm(assemble(UB23_ΓΓn, y, intrcX_mat))
 
     # Operators row 3
-    B31_ΓΓ = IPVIE1.B31_ΓΓ(gammatype = Float64)
-    B31_ΩΓ = IPVIE1.B31_ΩΓ(gammatype = Float64)
+    B31_ΓΓ = IPVIE1.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
+    B31_ΩΓ = IPVIE1.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
     B31 = assemble(B31_ΓΓ, ntrc(X), y) + assemble(B31_ΩΓ, X, y)
 
-    UB32_ΓΓ = IPVIE1.UB32_ΓΓ(gammatype = Float64)
-    UB32_ΩΓ = IPVIE1.UB32_ΩΓ(gammatype = Float64)
+    UB32_ΓΓ = IPVIE1.UB32_ΓΓ(alpha = 1.0, gammatype = Float64)
+    UB32_ΩΓ = IPVIE1.UB32_ΩΓ(alpha = -1.0, gammatype = Float64)
     B32 = assemble(UB32_ΓΓ, ntrc(X), w_mat) + assemble(UB32_ΩΓ, X, w_mat)
 
-    UB33_Ω = IPVIE1.UB33_Ω()
-    UB33_ΓΓn = IPVIE1.UB33_ΓΓn(gammatype = Float64)
-    UB33_ΓΩ = IPVIE1.UB33_ΓΩ(gammatype = Float64)
-    UB33_ΩΓn = IPVIE1.UB33_ΩΓn(gammatype = Float64)
-    UB33_ΩΩ = IPVIE1.UB33_ΩΩ(gammatype = Float64)
-    B33 = assemble(UB33_Ω, X, X_mat_) +
-            assemble(UB33_ΓΓn, ntrc(X), intrcX_mat) + 
+    UB33_Ω = IPVIE1.UB33_Ω(alpha = -1.0)
+    UB33_ΓΩ = IPVIE1.UB33_ΓΩ(alpha = 1.0, gammatype = Float64)
+    UB33_ΩΩ = IPVIE1.UB33_ΩΩ(alpha = -1.0, gammatype = Float64)
+    UB33_ΓΓn = IPVIE1.UB33_ΓΓn(alpha = 1.0, gammatype = Float64)
+    UB33_ΩΓn = IPVIE1.UB33_ΩΓn(alpha = -1.0, gammatype = Float64)
+
+    B33 = assemble(UB33_Ω, X, X_mat_I) +
             assemble(UB33_ΓΩ, ntrc(X), X_mat) +
-            assemble(UB33_ΩΓn, X, intrcX_mat) + 
-            assemble(UB33_ΩΩ, X, X_mat)
+            assemble(UB33_ΩΩ, X, X_mat) +
+            assemble(UB33_ΓΓn, ntrc(X), intrcX_mat) + 
+            assemble(UB33_ΩΓn, X, intrcX_mat)
+            
     #@show norm(assemble(UB33_ΓΓn, ntrc(X), intrcX_mat))
     #@show norm(assemble(UB33_ΩΓn, X, intrcX_mat))
 
@@ -506,6 +508,9 @@ function solve1(;   # high contrast formulation
     @assert length(u_J) == length(X.fns)
 
     return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+
+
+
 
 end
 
