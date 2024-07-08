@@ -99,9 +99,9 @@ B33 = assemble(UB33_Ω, X, X_mat_) +
         assemble(UB33_ΩΓn, X, intrcX_mat) + 
         assemble(UB33_ΩΩ, X, X_mat)
 
-R1 = assemble(-B11_Γ, w, y_d) + assemble(-B11_ΓΓ, w, y_d)
-R2 = assemble(-B21_ΓΓ, y, y_d) 
-R3 = assemble(-B31_ΓΓ, ntrc(X), y_d) + assemble(-B31_ΩΓ, X, y_d)
+R11 = assemble(-B11_Γ, w, y_d) + assemble(-B11_ΓΓ, w, y_d)
+R21 = assemble(-B21_ΓΓ, y, y_d) 
+R31 = assemble(-B31_ΓΓ, ntrc(X), y_d) + assemble(-B31_ΩΓ, X, y_d)
 
 
 ##
@@ -117,7 +117,7 @@ ROW1 = hcat(B11,B12,B13)
 ROW2 = hcat(B21,B22,B23)
 ROW3 = hcat(B31,B32,B33)
 S = vcat(ROW1,ROW2,ROW3)
-R = vcat(R1,R2,R3)
+R = vcat(R11,R21,R31)
 
 # S*u = R*v, solve for u
 b = R*v

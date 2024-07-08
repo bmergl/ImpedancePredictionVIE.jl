@@ -1,12 +1,9 @@
-#module IP
-
-#using ..ImpedancePredictionVIE #damit alles exportierte hier funktioniert
-
 using ..ImpedancePredictionVIE
 using CompScienceMeshes
 using BEAST
 using LinearAlgebra
 using StaticArrays
+using SparseArrays
 
 using Plots
 
@@ -197,7 +194,7 @@ end
 
 
 
-function solve(;
+function solve(; # low contrast formulation
     md::meshdata,
     material::material,
     κ0::Union{Float64, Nothing} = nothing, 
@@ -383,120 +380,255 @@ end
 
 
 
+function solve1(;   # high contrast formulation
+    md::meshdata,
+    material::material,
+    κ0::Union{Float64, Nothing} = nothing, 
+    ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
+    ω::Union{Float64, Nothing} = nothing, 
+    potential_top::Float64, 
+    potential_bottom::Float64,
+    qs3D = BEAST.SingleNumQStrat(3), 
+    qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+    qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
+
+    # if typeof(material) == general_material
+        # save some points, and ...
+        # material = general_material(...,...,This time not nothing here=>some test points with mat values)
+    # end
+
+    # fns spaces
+    y_d = md.y_d
+    y = md.y
+    w = md.w
+    X = md.X
+    ntrc = md.ntrc 
+
+    # Material
+    κ, ϵ = material()
+    τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
+    p = point(0.0,0.0,0.0)
+    @show τ(p)
+    @show inv_τ(p)
+    @show τ0
+    @show χ(p)
+
+    τ(p) < 1e-12 && error("Disable the following lines...")
+    @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
+    @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
+
+    # Material -> cells, Material fns
+    cell2mat_inv_τ, cell2mat_χ = IP.gen_cell2mat(τ, inv_τ, τ0, χ, T, X)
+
+    X_mat = IP.gen_X_mat(X, cell2mat_χ)
+    X_mat_ = IP.gen_X_mat(X, cell2mat_inv_τ)
+    w_mat = IP.gen_w_mat(w, X, cell2mat_inv_τ)
+
+    swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
+    intrcX_mat = IP.inner_mat_ntrace(X, swg_faces_mesh, cell2mat_χ)
+
+
+    # Excitation
+    v_top = ones(length(md.topnodes)) * potential_top
+    v_bottom = ones(length(md.bottomnodes)) * potential_bottom
+    v = vcat(v_top, v_bottom)
+
+        
+    # Operators row 1
+    B11_Γ = IPVIE1.B11_Γ()
+    B11_ΓΓ = IPVIE1.B11_ΓΓ(gammatype = Float64)
+    B11 = assemble(B11_Γ, w, y) + assemble(B11_ΓΓ, w, y)
+
+    UB12_ΓΓ = IPVIE1.UB12_ΓΓ(gammatype = Float64)
+    B12 = assemble(UB12_ΓΓ, w, w_mat)
+
+    UB13_ΓΓn = IPVIE1.UB13_ΓΓn(gammatype = Float64)
+    UB13_ΓΩ = IPVIE1.UB13_ΓΩ(gammatype = Float64)
+    B13 = assemble(UB13_ΓΓn, w, intrcX_mat) + assemble(UB13_ΓΩ, w, X_mat)
+    #@show norm(assemble(UB13_ΓΓn, w, intrcX_mat))
+
+
+    # Operators row 2
+    B21_ΓΓ = IPVIE1.B21_ΓΓ(gammatype = Float64)
+    B21 = assemble(B21_ΓΓ, y, y)
+
+    UB22_Γ = IPVIE1.UB22_Γ()
+    UB22_ΓΓ = IPVIE1.UB22_ΓΓ(gammatype = Float64)
+    B22 = assemble(UB22_Γ, y, w_mat) + assemble(UB22_ΓΓ, y, w_mat)
+
+    UB23_ΓΓn = IPVIE1.UB23_ΓΓn(gammatype = Float64)
+    UB23_ΓΩ = IPVIE1.UB23_ΓΩ(gammatype = Float64)
+    B23 = assemble(UB23_ΓΓn, y, intrcX_mat) + assemble(UB23_ΓΩ, y, X_mat)
+    #@show norm(assemble(UB23_ΓΓn, y, intrcX_mat))
+
+    # Operators row 3
+    B31_ΓΓ = IPVIE1.B31_ΓΓ(gammatype = Float64)
+    B31_ΩΓ = IPVIE1.B31_ΩΓ(gammatype = Float64)
+    B31 = assemble(B31_ΓΓ, ntrc(X), y) + assemble(B31_ΩΓ, X, y)
+
+    UB32_ΓΓ = IPVIE1.UB32_ΓΓ(gammatype = Float64)
+    UB32_ΩΓ = IPVIE1.UB32_ΩΓ(gammatype = Float64)
+    B32 = assemble(UB32_ΓΓ, ntrc(X), w_mat) + assemble(UB32_ΩΓ, X, w_mat)
+
+    UB33_Ω = IPVIE1.UB33_Ω()
+    UB33_ΓΓn = IPVIE1.UB33_ΓΓn(gammatype = Float64)
+    UB33_ΓΩ = IPVIE1.UB33_ΓΩ(gammatype = Float64)
+    UB33_ΩΓn = IPVIE1.UB33_ΩΓn(gammatype = Float64)
+    UB33_ΩΩ = IPVIE1.UB33_ΩΩ(gammatype = Float64)
+    B33 = assemble(UB33_Ω, X, X_mat_) +
+            assemble(UB33_ΓΓn, ntrc(X), intrcX_mat) + 
+            assemble(UB33_ΓΩ, ntrc(X), X_mat) +
+            assemble(UB33_ΩΓn, X, intrcX_mat) + 
+            assemble(UB33_ΩΩ, X, X_mat)
+    #@show norm(assemble(UB33_ΓΓn, ntrc(X), intrcX_mat))
+    #@show norm(assemble(UB33_ΩΓn, X, intrcX_mat))
+
+    R11 = assemble(-B11_Γ, w, y_d) + assemble(-B11_ΓΓ, w, y_d)
+    R21 = assemble(-B21_ΓΓ, y, y_d) 
+    R31 = assemble(-B31_ΓΓ, ntrc(X), y_d) + assemble(-B31_ΩΓ, X, y_d)
+
+    ROW1 = hcat(B11,B12,B13)
+    ROW2 = hcat(B21,B22,B23)
+    ROW3 = hcat(B31,B32,B33)
+    S = vcat(ROW1,ROW2,ROW3)
+    R = vcat(R11,R21,R31)
+
+    # S*u = R*v, solve for u
+    b = R*v
+    u = S \ b # it solver?
+
+    #@assert norm(S*u - b) < 1e-8
+    u_Φ = u[1:length(y)]
+    u_Jn = u[length(y)+1:length(y)+length(w)]
+    u_J = u[length(y)+length(w)+1:end]
+    @assert length(u_Φ) == length(y.fns)
+    @assert length(u_Jn) == length(w.fns)
+    @assert length(u_J) == length(X.fns)
+
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+
+end
 
 
 
-###### constantmaterial - analytic solution ####################
 
-# function solution_J_ana(m::IP.meshdata, s::IP.solution, points, J_MoM; body::cuboid, mat::constantmaterial)
+
+
+
+
+
+
+##### constantmaterial - analytic solution ####################
+
+function solution_J_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s::IP.solution, points, J_MoM)
     
-#     Jz_ana = -mat.κ*(s.potential_top-s.potential_bottom)/body.L_z
+    Jz_ana = -mat.κ*(s.potential_top-s.potential_bottom)/body.L_z
 
-#     J_ana = fill(SVector{3, Float64}(0.0, 0.0, Jz_ana), length(J_MoM))
+    J_ana = fill(SVector{3, Float64}(0.0, 0.0, Jz_ana), length(J_MoM))
 
-#     return J_ana
-# end
+    return J_ana
+end
 
-# function solution_I_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
+function solution_I_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s::IP.solution)
 
-#     I_ana = mat.κ*body.L_x*body.L_y*(1/body.L_z)*(s.potential_top-s.potential_bottom)
+    I_ana = mat.κ*body.L_x*body.L_y*(1/body.L_z)*(s.potential_top-s.potential_bottom)
 
-#     return I_ana
-# end
+    return I_ana
+end
 
-# function solution_Φ_ana(m::IP.meshdata, s::IP.solution; body::cuboid, mat::constantmaterial)
-#     u_Φ = s.u_Φ
+function solution_Φ_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s::IP.solution)
+    u_Φ = s.u_Φ
 
-#     function CapacitorPot(x, v_top, v_bottom) # hom. medium
-#         L_z = body.L_z
-#         z = x[3]
+    function CapacitorPot(x, v_top, v_bottom) # hom. medium
+        L_z = body.L_z
+        z = x[3]
 
-#         return ((v_top-v_bottom)/L_z) * (z + L_z/2) + v_bottom
-#     end
-#     u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
-#     y = m.y
-#     for (i, pos) in enumerate(y.pos)
-#         u_Φ_ana[i] = CapacitorPot(pos, s.potential_top, s.potential_bottom)
-#     end
+        return ((v_top-v_bottom)/L_z) * (z + L_z/2) + v_bottom
+    end
+    u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+    y = m.y
+    for (i, pos) in enumerate(y.pos)
+        u_Φ_ana[i] = CapacitorPot(pos, s.potential_top, s.potential_bottom)
+    end
 
-#     return u_Φ_ana
-# end
+    return u_Φ_ana
+end
 
 
-###### constant_zsplit Material - analytic solution ##################
+##### constant_zsplit Material - analytic solution ##################
 
-# function solution_J_ana(m::IP.meshdata, s::IP.solution, points, J_MoM; body::IP.cuboid, mat::IP.constant_zsplit)
+function solution_J_ana(body::IP.cuboid, mat::IP.constant_zsplit, m::IP.meshdata, s::IP.solution, points, J_MoM)
     
-#     A = body.L_x * body.L_y
-#     R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
-#     U = s.potential_top - s.potential_bottom
-#     I = U/R
-#     Jz_ana = -I/A 
+    A = body.L_x * body.L_y
+    R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    U = s.potential_top - s.potential_bottom
+    I = U/R
+    Jz_ana = -I/A 
 
-#     J_ana = fill(SVector{3, Float64}(0.0, 0.0, Jz_ana), length(J_MoM))
+    J_ana = fill(SVector{3, Float64}(0.0, 0.0, Jz_ana), length(J_MoM))
 
-#     return J_ana
-# end
+    return J_ana
+end
 
-# function solution_I_ana(m::IP.meshdata, s::IP.solution; body::IP.cuboid, mat::IP.constant_zsplit)
+function solution_I_ana(body::IP.cuboid, mat::IP.constant_zsplit, m::IP.meshdata, s::IP.solution)
 
-#     A = body.L_x * body.L_y
-#     R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
-#     U = s.potential_top - s.potential_bottom
-#     I = U/R
+    A = body.L_x * body.L_y
+    R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    U = s.potential_top - s.potential_bottom
+    I = U/R
 
-#     I_ana = I
+    I_ana = I
 
-#     return I_ana
-# end
+    return I_ana
+end
 
-# function solution_Φ_ana(m::IP.meshdata, s::IP.solution; body::IP.cuboid, mat::IP.constant_zsplit)
-#     u_Φ = s.u_Φ
+function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_zsplit, m::IP.meshdata, s::IP.solution)
+    u_Φ = s.u_Φ
 
-#     function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
-#         z = x[3] # obervation plane
+    function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
+        z = x[3] # obervation plane
 
-#         return ((Φ2 - Φ1)/(z2 - z1))*(z - z1) + Φ1
-#     end
+        return ((Φ2 - Φ1)/(z2 - z1))*(z - z1) + Φ1
+    end
 
-#     u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+    u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
 
-#     A = body.L_x * body.L_y
-#     R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
-#     U = s.potential_top - s.potential_bottom
-#     I = U/R
-#     R_p = (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
-#     R_m = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A
-#     U_p = U * R_p/R
-#     U_m = U * R_m/R
+    A = body.L_x * body.L_y
+    R = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A + (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    U = s.potential_top - s.potential_bottom
+    I = U/R
+    R_p = (1/mat.κ_p)*(body.L_z/2 - mat.z0)/A
+    R_m = (1/mat.κ_m)*(body.L_z/2 + mat.z0)/A
+    U_p = U * R_p/R
+    U_m = U * R_m/R
     
     
-#     z0 = mat.z0
-#     y = m.y
-#     for (i, pos) in enumerate(y.pos)
-#         if pos[3] >= z0 # R_p region
+    z0 = mat.z0
+    y = m.y
+    for (i, pos) in enumerate(y.pos)
+        if pos[3] >= z0 # R_p region
 
-#             z1 = z0
-#             Φ1 = s.potential_top - U_p
-#             z2 = body.L_z/2
-#             Φ2 = s.potential_top
+            z1 = z0
+            Φ1 = s.potential_top - U_p
+            z2 = body.L_z/2
+            Φ2 = s.potential_top
 
-#         elseif pos[3] < z0 # R_m region
+        elseif pos[3] < z0 # R_m region
 
-#             z1 = -body.L_z/2
-#             Φ1 = s.potential_bottom
-#             z2 = z0
-#             Φ2 = s.potential_bottom + U_m
+            z1 = -body.L_z/2
+            Φ1 = s.potential_bottom
+            z2 = z0
+            Φ2 = s.potential_bottom + U_m
 
-#         else
-#             error("")
-#         end
+        else
+            error("")
+        end
 
-#         u_Φ_ana[i] = linPot_z(pos, z1, z2, Φ1, Φ2)
-#     end
+        u_Φ_ana[i] = linPot_z(pos, z1, z2, Φ1, Φ2)
+    end
 
-#     return u_Φ_ana
-# end
+    return u_Φ_ana
+end
 
 
 ###### constant_xsplit Material - analytic solution ##################

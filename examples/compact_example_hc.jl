@@ -21,18 +21,23 @@ print("tehrahedrons: ", length(md.Ω.faces))
 
 
 # Quadstrat
+# qs3D = BEAST.SingleNumQStrat(3)
+# qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+# qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
+
 qs3D = BEAST.SingleNumQStrat(6)
 qs4D = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 qs5D6D = BEAST.SauterSchwab3DQStrat(5,5,6,6,6,6)
+
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
 BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 
-sol = IP.solve(;
+sol = IP.solve1(;
     md = md, 
-    material = IP.constant_xsplit(100.0, nothing, 0.1, 50.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
+    material = IP.constantmaterial(1.0, nothing),# IP.constant_xsplit(10.0, nothing, 0.0, 5.0, nothing), , #IP.constant_zsplit(1000, nothing, 0.1, 10, nothing),  #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
     κ0 = 1.0,
     ϵ0 = nothing,
     ω = nothing, 
@@ -51,11 +56,12 @@ sol = IP.solve(;
 ##
 
 
-
+##
 using MKL
 
 using LinearAlgebra
 using StaticArrays
+using SparseArrays
 using ImpedancePredictionVIE
 using BEAST
 using CompScienceMeshes
@@ -72,7 +78,7 @@ sol = load(datapath, "sol")
 md = load(datapath, "md")
 @assert sol.material == IP.constant_zsplit(1000, nothing, 0.07, 700, nothing)
 
-
+##
 
 ##
 
@@ -132,40 +138,4 @@ Plotly.plot(patch(geo1, fcr1))      #MANCHMAL FALSCH ORIENTIERT!!! je nach tau0+
 # Φ auf Γ_c    
 fcr2, geo2 = facecurrents(ex, y_d)
 Plotly.plot(patch(geo2, fcr2))
-
-
-
-
-
-
-
-
-
-
-
-
-
-## this could be in a seperate script later ....
-using MKL
-
-using LinearAlgebra
-using StaticArrays
-using ImpedancePredictionVIE
-using BEAST
-using CompScienceMeshes
-
-using JLD2
-
-using Plots
-using Plotly
-dataname = "sol_test1"
-datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
-all_var=load(datapath)
-
-#md = all_var["md"]
-sol = load(datapath, "sol")
-md = load(datapath, "md")
-
-
-
 

@@ -690,9 +690,32 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
             push!(tets,rowst[k])
         end
         
+        ################### <----- FIX 
+        length(tets) == 2 || continue
+        ###################
+
         # Wähle einen Tetraeder aus von dem aus die innere ntrace betrachtet wird -  Achtung n̂ ! 
         
-        i_el = tets[1] # der zweite wird gar nicht betrachtet für den Fall dass es existiert
+        
+        i_tet1 = tets[1]
+        i_tet2 = tets[2]
+        tet1 = E[i_tet1]
+        tet2 = E[i_tet2]
+        center1 = cartesian(CompScienceMeshes.center(tet1))
+        center2 = cartesian(CompScienceMeshes.center(tet2))
+        fc1_center = cartesian(CompScienceMeshes.center(fc1))
+        v_f1 = center1 - fc1_center
+        v_f2 = center2 - fc1_center
+        n̂_n = fc1.normals[1]
+        if dot(v_f1, n̂_n) > 0.0
+            tet_index_ntrace_compatible = 2 #zeigt rein => nimm anderen
+            @assert dot(v_f2, n̂_n) < 0.0
+        elseif dot(v_f1, n̂_n) < 0.0
+            tet_index_ntrace_compatible = 1
+            @assert dot(v_f2, n̂_n) > 0.0
+        end
+
+        i_el = tets[tet_index_ntrace_compatible] # der zweite wird gar nicht betrachtet für den Fall dass es existiert
         el = E[i_el] 
         fc1_center = cartesian(CompScienceMeshes.center(fc1))
         q = nothing
@@ -705,7 +728,7 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
                 break
             end
         end
-        Q = ntrace(x, el, q, fc1)
+        Q = ntrace(x, el, q, fc1) # VORSICHT, wenn man dieses ntrace verwendet MUSS man mit dem tet arbeiten wo n̂ nach AUßEN zeigt!!!!
 
         for i in 1:size(Q,1)
             for j in 1:size(Q,2)
