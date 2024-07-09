@@ -444,7 +444,7 @@ function solve1(;   # high contrast formulation
 
     UB13_ΓΓn = IPVIE1.UB13_ΓΓn(alpha = 1.0, gammatype = Float64)
     UB13_ΓΩ = IPVIE1.UB13_ΓΩ(alpha = 1.0, gammatype = Float64)
-    B13 =  assemble(UB13_ΓΩ, w, X_mat) + assemble(UB13_ΓΓn, w, intrcX_mat)
+    B13 =  assemble(UB13_ΓΓn, w, intrcX_mat) + assemble(UB13_ΓΩ, w, X_mat)
     #@show norm(assemble(UB13_ΓΓn, w, intrcX_mat))
 
 
@@ -458,7 +458,7 @@ function solve1(;   # high contrast formulation
 
     UB23_ΓΓn = IPVIE1.UB23_ΓΓn(alpha = 1.0, gammatype = Float64)
     UB23_ΓΩ = IPVIE1.UB23_ΓΩ(alpha = 1.0, gammatype = Float64)
-    B23 = assemble(UB23_ΓΩ, y, X_mat) + assemble(UB23_ΓΓn, y, intrcX_mat)
+    B23 = assemble(UB23_ΓΓn, y, intrcX_mat) + assemble(UB23_ΓΩ, y, X_mat)
     #@show norm(assemble(UB23_ΓΓn, y, intrcX_mat))
 
     # Operators row 3
@@ -499,7 +499,7 @@ function solve1(;   # high contrast formulation
     b = R*v
     u = S \ b # it solver?
 
-    #@assert norm(S*u - b) < 1e-8
+    @assert norm(S*u - b) < 1e-8
     u_Φ = u[1:length(y)]
     u_Jn = u[length(y)+1:length(y)+length(w)]
     u_J = u[length(y)+length(w)+1:end]
@@ -515,6 +515,121 @@ function solve1(;   # high contrast formulation
 end
 
 
+
+
+function solve2(;   # high contrast formulation - 2 × 2 Block
+    md::meshdata,
+    material::material,
+    κ0::Union{Float64, Nothing} = nothing, 
+    ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
+    ω::Union{Float64, Nothing} = nothing, 
+    potential_top::Float64, 
+    potential_bottom::Float64,
+    qs3D = BEAST.SingleNumQStrat(3), 
+    qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+    qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
+
+    # if typeof(material) == general_material
+        # save some points, and ...
+        # material = general_material(...,...,This time not nothing here=>some test points with mat values)
+    # end
+
+    # fns spaces
+    y_d = md.y_d
+    y = md.y
+    #w = md.w
+    X = md.X
+    ntrc = md.ntrc 
+
+    # Material
+    κ, ϵ = material()
+    τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
+    p = point(0.0,0.0,0.0)
+    # @show τ(p)
+    # @show inv_τ(p)
+    # @show τ0
+    # @show χ(p)
+
+    τ(p) < 1e-12 && error("Disable the following lines...")
+    @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
+    @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
+
+    # Material -> cells, Material fns
+    cell2mat_inv_τ, cell2mat_χ = IP.gen_cell2mat(τ, inv_τ, τ0, χ, T, X)
+
+    X_mat = IP.gen_X_mat(X, cell2mat_χ)
+    X_mat_I = IP.gen_X_mat(X, cell2mat_inv_τ)
+    #w_mat = IP.gen_w_mat(w, X, cell2mat_inv_τ)
+
+    swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
+    intrcX_mat = IP.inner_mat_ntrace(X, swg_faces_mesh, cell2mat_χ)
+
+
+    # Excitation
+    v_top = ones(length(md.topnodes)) * potential_top
+    v_bottom = ones(length(md.bottomnodes)) * potential_bottom
+    v = vcat(v_top, v_bottom)
+
+
+    # Operators row 1
+    B11_Γ = IPVIE2.B11_Γ(alpha = 1.0)
+    B11_ΓΓ = IPVIE2.B11_ΓΓ(alpha = 1.0, gammatype = T)
+    B11 = assemble(B11_Γ, y, y) + assemble(B11_ΓΓ, y, y)
+
+    UB12_ΓΓ = IPVIE2.UB12_ΓΓ(alpha = 1.0, gammatype = T)
+    UB12_ΓΩ = IPVIE2.UB12_ΓΩ(alpha = 1.0, gammatype = T)
+    UB12_ΓΓn = IPVIE2.UB12_ΓΓn(alpha = 1.0, gammatype = T)
+    B12 = assemble(UB12_ΓΓ, y, "STOPP HIER BRAUCHT MAN MAT NTRACE AU?EN - zsh zu w???") + assemble(UB12_ΓΩ, y, X_mat) + assemble(UB12_ΓΓn, y, intrcX_mat)
+
+
+    # Operators row 2
+    B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = T)
+    B21_ΩΓ = IPVIE2.B21_ΩΓ(alpha = -1.0, gammatype = T)
+    B21 = assemble(B21_ΓΓ, ntrx(X), y) + assemble(B21_ΩΓ, X, y)
+
+    UB22_Ω = IPVIE2.UB22_Ω(alpha = -1.0)
+    UB22_ΓΓ = IPVIE2.UB22_ΓΓ(alpha = 1.0, gammatype = T)
+    UB22_ΩΓ = IPVIE2.UB22_ΩΓ(alpha = -1.0, gammatype = T)
+    UB22_ΓΩ = IPVIE2.UB22_ΓΩ(alpha = 1.0, gammatype = T)
+    UB22_ΩΩ = IPVIE2.UB22_ΩΩ(alpha = -1.0, gammatype = T)
+    UB22_ΓΓn = IPVIE2.UB22_ΓΓn(alpha = 1.0, gammatype = T)
+    UB22_ΩΓn = IPVIE2.UB22_ΩΓn(alpha = -1.0, gammatype = T)
+
+    B22 = assemble(UB22_Ω, X, X_mat_I) +
+            assemble(UB22_ΓΓ, ntrc(X), "STOPP HIER BRAUCHT MAN MAT NTRACE AU?EN - zsh zu w???") + 
+            assemble(UB22_ΩΓ, X, "STOPP HIER BRAUCHT MAN MAT NTRACE AU?EN - zsh zu w???") +
+            assemble(UB22_ΓΩ, ntrc(X), X_mat) +
+            assemble(UB22_ΩΩ, X, X_mat) +
+            assemble(UB22_ΓΓn, ntrc(X), intrcX_mat) + 
+            assemble(UB22_ΩΓn, X, intrcX_mat)
+    
+
+    R11 = assemble(-B11_Γ, y, y_d) + assemble(-B11_ΓΓ, y, y_d)
+    R21 = assemble(-B21_ΓΓ, ntrc(X), y_d) + assemble(-B21_ΩΓ, X, y_d)
+
+    ROW1 = hcat(B11,B12)
+    ROW2 = hcat(B21,B22)
+    S = vcat(ROW1,ROW2)
+    R = vcat(R11,R21)
+
+    # S*u = R*v, solve for u
+    b = R*v
+    u = S \ b # it solver?
+
+    @assert norm(S*u - b) < 1e-8
+    u_Φ = u[1:length(y)]
+    u_Jn = u[length(y)+1:length(y)+length(w)]
+    u_J = u[length(y)+length(w)+1:end]
+    @assert length(u_Φ) == length(y.fns)
+    @assert length(u_Jn) == length(w.fns)
+    @assert length(u_J) == length(X.fns)
+
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+
+
+
+
+end
 
 
 

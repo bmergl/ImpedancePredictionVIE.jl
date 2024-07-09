@@ -743,6 +743,7 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
             end
 
         elseif length(tets) == 1
+            continue # !!! Muss vmlt verschwinden constantmaterial(2.0) => u_Jn Fehler viel niedriger
 
             i_tet = tets[1]
             tet = E[i_tet]
@@ -751,11 +752,11 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
             fc1_center = cartesian(CompScienceMeshes.center(fc1))
             v_f = center - fc1_center
             n̂_n = fc1.normals[1]
-            if dot(v_f1, n̂_n) > 0.0
+            if dot(v_f, n̂_n) > 0.0
                 i_tet_minus = i_tet # normale zeigt in tet1 => tet1=tet_minus
                 χ_minus = cell2mat_χ[i_tet_minus]
                 χ_plus = 0.0
-            elseif dot(v_f1, n̂_n) < 0.0
+            elseif dot(v_f, n̂_n) < 0.0
                 i_tet_plus = i_tet
                 χ_minus = 0.0
                 χ_plus = cell2mat_χ[i_tet_plus]

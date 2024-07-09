@@ -31,6 +31,7 @@ export Visu
 
 export IPVIE
 export IPVIE1
+export IPVIE2
 export geo2mesh
 #export draw_arrow!
 export showxvec

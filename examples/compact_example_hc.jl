@@ -20,7 +20,7 @@ print("tehrahedrons: ", length(md.Ω.faces))
 ##
 
 
-# Quadstrat
+#Quadstrat
 # qs3D = BEAST.SingleNumQStrat(3)
 # qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 # qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
@@ -35,9 +35,9 @@ BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 
-sol = IP.solve1(;
+sol = IP.solve(;
     md = md, 
-    material = IP.constant_zsplit(10.0, nothing, 0.0, 2.0, nothing), #IP.constantmaterial(1.0, nothing),# IP.constant_xsplit(10.0, nothing, 0.0, 5.0, nothing), ,   #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
+    material = IP.constant_zsplit(1000.0, nothing, 0.0, 0.001, nothing), #, IP.constant_zsplit(100000.0, nothing, 0.0, 10000.0, nothing), #IP.constantmaterial(100000.0, nothing), # , #IP.constantmaterial(1.0, nothing), ,   #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
     κ0 = 1.0,
     ϵ0 = nothing,
     ω = nothing, 
@@ -49,8 +49,8 @@ sol = IP.solve1(;
 )
 
 # save
-dataname = "test_solve1" # for JLD2 save
-jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+# dataname = "test_solve1" # for JLD2 save
+# jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
 
 
@@ -70,18 +70,22 @@ using JLD2
 using Plots
 using Plotly
 #load 
-dataname = "test_solve"
+dataname = "test_solve1_fine"
 datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
 sol = load(datapath, "sol")
 md = load(datapath, "md")
 
-dataname1 = "test_solve1"
-datapath1 = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname1.jld2"
-sol1 = load(datapath1, "sol")
-md1 = load(datapath1, "md")
+# dataname1 = "test_solve1"
+# datapath1 = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname1.jld2"
+# sol1 = load(datapath1, "sol")
+# md1 = load(datapath1, "md")
 
 norm(sol.S-sol1.S)
 
+norm(sol1.S)
+norm(sol.S)
+
+norm(sol.u-sol1.u)/norm(sol1.u)
 
 ##
 
@@ -100,7 +104,7 @@ yflip!(p; size=(1200,1000))
 
 
 # Stomdichte
-range_ = range(-0.49,stop=0.49,length=9)
+range_ = range(-0.49,stop=0.49,length=8)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, sol.u_J, md.X)#, type=Float64)
 J_ana = IP.solution_J_ana(md.body, sol.material, md, sol, points, J_MoM)
