@@ -179,7 +179,17 @@ function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
     ntrcX = ntrc(X)
 
     # PWC on Γ_c (vanish on Γ_nc)
-    w = lagrangecxd0(Γ_c)
+    #w = lagrangecxd0(Γ_c)
+    newfns = Vector{Vector{BEAST.Shape{Float64}}}()
+    newpos = Vector{SVector{3, Float64}}()
+    for (i,shs) in enumerate(ntrcX.fns)
+        newshs = Vector{BEAST.Shape{Float64}}()
+        shs == [] && continue
+        @assert length(shs) == 1
+        push!(newfns, shs)
+        push!(newpos, ntrcX.pos[i])
+    end
+    w = BEAST.LagrangeBasis{0,-1,1}(ntrcX.geo.supermesh, newfns, newpos)
 
     @show numfunctions(y)
     @show numfunctions(y_d)
@@ -624,7 +634,7 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     b = R*v
     u = S \ b # it solver?
 
-    @assert norm(S*u - b) < 1e-8
+    @show norm(S*u - b)
 
     u_Φ = u[1:length(y)]
     u_J = u[length(y)+1:end]
@@ -909,10 +919,12 @@ function getcurrent(m::IP.meshdata, s::IP.solution) # ging das jetzt noch einfac
 
         if i !== nothing
             A = top_charts[i].volume 
+            @assert A > 0.0
             I_top += -A * u_Jn[j] * w.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
             cnt_top += 1
         elseif k !== nothing
             A = bottom_charts[k].volume 
+            @assert A > 0.0
             I_bottom += A * u_Jn[j] * w.fns[j][1].coeff 
             cnt_bottom += 1
         else

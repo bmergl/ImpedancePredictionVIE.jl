@@ -21,13 +21,13 @@ print("tehrahedrons: ", length(md.Ω.faces))
 
 
 #Quadstrat
-# qs3D = BEAST.SingleNumQStrat(3)
-# qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
-# qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
+qs3D = BEAST.SingleNumQStrat(3)
+qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
 
-qs3D = BEAST.SingleNumQStrat(6)
-qs4D = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
-qs5D6D = BEAST.SauterSchwab3DQStrat(5,5,6,6,6,6)
+# qs3D = BEAST.SingleNumQStrat(6)
+# qs4D = BEAST.DoubleNumWiltonSauterQStrat(5,5,5,5,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+# qs5D6D = BEAST.SauterSchwab3DQStrat(5,5,6,6,6,6)
 
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
@@ -37,7 +37,7 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol = IP.solve2(;
     md = md, 
-    material = IP.constantmaterial(1000.0, nothing), #,IP.constant_zsplit(1000.0, nothing, 0.0, 0.001, nothing), #, IP.constant_zsplit(100000.0, nothing, 0.0, 10000.0, nothing),  # , #IP.constantmaterial(1.0, nothing), ,   #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
+    material = IP.constant_xsplit(4.0, nothing, 0.0, 2.0, nothing), #IP.constant_zsplit(2.0, nothing, 0.0, 3.0, nothing),#IP.constantmaterial(1000000.0, nothing),   
     κ0 = 1.0,
     ϵ0 = nothing,
     ω = nothing, 
@@ -90,9 +90,6 @@ norm(sol.u-sol1.u)/norm(sol1.u)
 ##
 
 DIFF = log.(abs.(sol.S-sol1.S) .+eps(1.0))
-
-##
-
 p = Plots.heatmap(DIFF, title = "2D Rasterplot der Differenzmatrix")
 yflip!(p; size=(1200,1000))
 
@@ -158,4 +155,8 @@ Plotly.plot(patch(geo1, fcr1))      #MANCHMAL FALSCH ORIENTIERT!!! je nach tau0+
 # Φ auf Γ_c    
 fcr2, geo2 = facecurrents(ex, y_d)
 Plotly.plot(patch(geo2, fcr2))
+
+# J_n auf Γ_c Spezialtest
+fcr0, geo0 = facecurrents(sol.u_J, md.ntrcX)
+Plotly.plot(patch(geo0, fcr0))
 
