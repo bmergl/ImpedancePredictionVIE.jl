@@ -537,9 +537,12 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     # fns spaces
     y_d = md.y_d
     y = md.y
-    #w = md.w
+    w = md.w # nur zum Anzeigen von u_Jn wichtig....
     X = md.X
-    ntrc = md.ntrc 
+    ntrc = md.ntrc
+    ntrcX = md.ntrcX
+
+    
 
     # Material
     κ, ϵ = material()
@@ -561,9 +564,14 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     X_mat_I = IP.gen_X_mat(X, cell2mat_inv_τ)
     #w_mat = IP.gen_w_mat(w, X, cell2mat_inv_τ)
 
+
     swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
     intrcX_mat = IP.inner_mat_ntrace(X, swg_faces_mesh, cell2mat_χ)
+    ntrcX_mat = IP.gen_ntrcX_mat(ntrcX, cell2mat_inv_τ)
 
+    @assert ntrcX_mat.geo ==  ntrcX.geo
+    @assert ntrcX_mat.pos ==  ntrcX.pos
+    @assert length(ntrcX_mat.fns) == length(ntrcX.fns)
 
     # Excitation
     v_top = ones(length(md.topnodes)) * potential_top
@@ -579,13 +587,13 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     UB12_ΓΓ = IPVIE2.UB12_ΓΓ(alpha = 1.0, gammatype = T)
     UB12_ΓΩ = IPVIE2.UB12_ΓΩ(alpha = 1.0, gammatype = T)
     UB12_ΓΓn = IPVIE2.UB12_ΓΓn(alpha = 1.0, gammatype = T)
-    B12 = assemble(UB12_ΓΓ, y, "STOPP HIER BRAUCHT MAN MAT NTRACE AU?EN - zsh zu w???") + assemble(UB12_ΓΩ, y, X_mat) + assemble(UB12_ΓΓn, y, intrcX_mat)
+    B12 = assemble(UB12_ΓΓ, y, ntrcX_mat) + assemble(UB12_ΓΩ, y, X_mat) + assemble(UB12_ΓΓn, y, intrcX_mat)
 
 
     # Operators row 2
     B21_ΓΓ = IPVIE2.B21_ΓΓ(alpha = 1.0, gammatype = T)
     B21_ΩΓ = IPVIE2.B21_ΩΓ(alpha = -1.0, gammatype = T)
-    B21 = assemble(B21_ΓΓ, ntrx(X), y) + assemble(B21_ΩΓ, X, y)
+    B21 = assemble(B21_ΓΓ, ntrc(X), y) + assemble(B21_ΩΓ, X, y)
 
     UB22_Ω = IPVIE2.UB22_Ω(alpha = -1.0)
     UB22_ΓΓ = IPVIE2.UB22_ΓΓ(alpha = 1.0, gammatype = T)
@@ -596,8 +604,8 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     UB22_ΩΓn = IPVIE2.UB22_ΩΓn(alpha = -1.0, gammatype = T)
 
     B22 = assemble(UB22_Ω, X, X_mat_I) +
-            assemble(UB22_ΓΓ, ntrc(X), "STOPP HIER BRAUCHT MAN MAT NTRACE AU?EN - zsh zu w???") + 
-            assemble(UB22_ΩΓ, X, "STOPP HIER BRAUCHT MAN MAT NTRACE AU?EN - zsh zu w???") +
+            assemble(UB22_ΓΓ, ntrc(X), ntrcX_mat) + 
+            assemble(UB22_ΩΓ, X, ntrcX_mat) +
             assemble(UB22_ΓΩ, ntrc(X), X_mat) +
             assemble(UB22_ΩΩ, X, X_mat) +
             assemble(UB22_ΓΓn, ntrc(X), intrcX_mat) + 
@@ -617,9 +625,29 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     u = S \ b # it solver?
 
     @assert norm(S*u - b) < 1e-8
+
     u_Φ = u[1:length(y)]
-    u_Jn = u[length(y)+1:length(y)+length(w)]
-    u_J = u[length(y)+length(w)+1:end]
+    u_J = u[length(y)+1:end]
+
+    @assert X.pos == ntrcX.pos # => X.pos[1] == ntrcX.pos[1], ...
+    #u_Jn_not_w_ready = Vector{T}()
+    index_list = Vector{Int64}()
+    for (i,fns) in enumerate(ntrcX.fns)
+        fns == [] && continue
+        #push!(u_Jn_not_w_ready, u_J[i])
+        push!(index_list, i)
+    end
+
+    u_Jn = Vector{T}()
+    for pw in w.pos
+        for index in index_list #ntrcX...
+            pn = ntrcX.pos[index]
+            if norm(pw-pn) < 1.0e-10
+                push!(u_Jn, u_J[index])
+            end
+        end
+    end
+
     @assert length(u_Φ) == length(y.fns)
     @assert length(u_Jn) == length(w.fns)
     @assert length(u_J) == length(X.fns)

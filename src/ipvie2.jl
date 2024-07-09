@@ -28,7 +28,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     function UB12_ΓΩ(; gammatype = ComplexF64, alpha = 1.0) # 5D
         gamma = gammatype(0.0)
 
-        return Mod.Gdiv_ΓΩ(gamma, alpha, x -> 1.0) 
+        return Mod.Gdiv_Γ3Ω(gamma, alpha, x -> 1.0) 
     end
     function UB12_ΓΓn(; gammatype = ComplexF64, alpha = 1.0) # 4D
         gamma = gammatype(0.0)
@@ -42,7 +42,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
 
         return Helmholtz3D.doublelayer(gamma = gamma, alpha = alpha) + alpha*(-1/2)*Identity()
     end
-    function B21_ΓΩ(; gammatype = ComplexF64, alpha = -1.0) # 4D
+    function B21_ΩΓ(; gammatype = ComplexF64, alpha = -1.0) # 4D
         gamma = gammatype(0.0)
 
         return Mod.div_ngradG_ΩΓ(gamma, alpha, x -> 1.0)
@@ -66,7 +66,7 @@ module IPVIE2    # HAUPTMODUL: Konstruktor für Operatoren der Version 2
     function UB22_ΓΩ(; gammatype = ComplexF64, alpha = 1.0) #
         gamma = gammatype(0.0)
 
-        return Mod.Gdiv_ΓΩ(gamma, alpha, x -> 1.0)
+        return Mod.Gdiv_Γ1Ω(gamma, alpha, x -> 1.0)
     end
     function UB22_ΩΩ(; gammatype = ComplexF64, alpha = -1.0) #
         gamma = gammatype(0.0)

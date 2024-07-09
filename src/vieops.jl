@@ -415,14 +415,14 @@ function BEAST.integrand(viop::ncgrad_gradGc_ΓΩ, kerneldata, tvals, tgeo, bval
 
 end
 
-struct Gdiv_ΓΩ{T,U,P} <: BEAST.BoundaryOperator
+struct Gdiv_Γ1Ω{T,U,P} <: BEAST.BoundaryOperator
     gamma::T
     α::U 
     tau::P
 end
-function BEAST.integrand(viop::Gdiv_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
+function BEAST.integrand(viop::Gdiv_Γ1Ω, kerneldata, tvals, tgeo, bvals, bgeo)
 
-    gx = @SVector[tvals[i].value for i in 1:1]
+    gx = @SVector[tvals[i].value for i in 1:1]   
     dfy = @SVector[bvals[i].divergence for i in 1:4]
 
     G = kerneldata.green
@@ -436,6 +436,29 @@ function BEAST.integrand(viop::Gdiv_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
     return @SMatrix[gx[i]*αGTy*dfy[j] for i in 1:1, j in 1:4]
 
 end
+struct Gdiv_Γ3Ω{T,U,P} <: BEAST.BoundaryOperator
+    gamma::T
+    α::U 
+    tau::P
+end
+function BEAST.integrand(viop::Gdiv_Γ3Ω, kerneldata, tvals, tgeo, bvals, bgeo)
+
+    gx = @SVector[tvals[i].value for i in 1:3]   
+    dfy = @SVector[bvals[i].divergence for i in 1:4]
+
+    G = kerneldata.green
+
+    Ty = kerneldata.tau
+
+    α = viop.α
+
+    αGTy = α*G*Ty
+
+    return @SMatrix[gx[i]*αGTy*dfy[j] for i in 1:3, j in 1:4]
+
+end
+
+
 
 
 struct div_Gdiv_ΩΩ{T,U,P} <: BEAST.VolumeOperator

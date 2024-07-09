@@ -35,9 +35,9 @@ BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 
-sol = IP.solve(;
+sol = IP.solve2(;
     md = md, 
-    material = IP.constant_zsplit(1000.0, nothing, 0.0, 0.001, nothing), #, IP.constant_zsplit(100000.0, nothing, 0.0, 10000.0, nothing), #IP.constantmaterial(100000.0, nothing), # , #IP.constantmaterial(1.0, nothing), ,   #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
+    material = IP.constantmaterial(1000.0, nothing), #,IP.constant_zsplit(1000.0, nothing, 0.0, 0.001, nothing), #, IP.constant_zsplit(100000.0, nothing, 0.0, 10000.0, nothing),  # , #IP.constantmaterial(1.0, nothing), ,   #IP.constant_xsplit(1.0, nothing, 0.1, 1.0, nothing), #IP.constant_zsplit(1000, nothing, 0.07, 100, nothing) #IP.constantmaterial(100.0, nothing), 
     κ0 = 1.0,
     ϵ0 = nothing,
     ω = nothing, 
@@ -104,7 +104,7 @@ yflip!(p; size=(1200,1000))
 
 
 # Stomdichte
-range_ = range(-0.49,stop=0.49,length=8)
+range_ = range(-0.49,stop=0.49,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, sol.u_J, md.X)#, type=Float64)
 J_ana = IP.solution_J_ana(md.body, sol.material, md, sol, points, J_MoM)
@@ -128,7 +128,7 @@ display("Stromdichte bei Platten: Ebene z=0.49")
 
 # Strom durch Platten
 display("")
-I_top, I_bottom = getcurrent(md, sol)
+I_top, I_bottom = getcurrent(md, sol) # <-------------------------------getcurrent prüfen!!! für ALLE solve   !! Betrag, Richtung, n orientierung der dreiecke sign(volume)...
 #@show I_top, I_bottom
 I_ana = IP.solution_I_ana(md.body, sol.material, md, sol)
 @show norm(I_top-I_ana)/norm(I_ana)

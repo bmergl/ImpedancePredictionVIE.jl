@@ -22,6 +22,7 @@ include("visu.jl")
 include("vieops.jl")
 include("ipvie.jl")
 include("ipvie1.jl")
+include("ipvie2.jl")
 
 include("geometry.jl")
 
