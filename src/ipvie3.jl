@@ -20,11 +20,11 @@ module IPVIE3 # 2 × 2 arbitrary Material Formulation (non HC)
     end
 
     # B12 Block
-    function B12_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, tau0 = nothing) # 4D
+    function B12_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, invtau0 = nothing) # 4D
         gamma = gammatype(0.0)
-        tau0 === nothing && error()
+        invtau0 === nothing && error()
 
-        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha/tau0)
+        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha*invtau0)
     end
     function B12_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) # 5D
         gamma = gammatype(0.0)
@@ -52,11 +52,11 @@ module IPVIE3 # 2 × 2 arbitrary Material Formulation (non HC)
         return Mod.MatId(alpha, invtau)
     end
 
-    function B22_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, tau0 = nothing) # 
+    function B22_ΓΓ(; gammatype = ComplexF64, alpha = 1.0, invtau0 = nothing) # 
         gamma = gammatype(0.0)
-        tau0 === nothing && error()
+        invtau0 === nothing && error()
 
-        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha/tau0)
+        return Helmholtz3D.singlelayer(gamma = gamma, alpha = alpha*invtau0)
     end
     function B22_ΓΩ(; gammatype = ComplexF64, alpha = -1.0, chi = nothing) #
         gamma = gammatype(0.0)
@@ -64,11 +64,9 @@ module IPVIE3 # 2 × 2 arbitrary Material Formulation (non HC)
 
         return Mod.gradG_Γ1Ω(gamma, alpha, chi) 
     end
-    function B22_ΩΓ(; gammatype = ComplexF64, alpha = -1.0, tau0 = nothing) #
+    function B22_ΩΓ(; gammatype = ComplexF64, alpha = -1.0, invtau0 = nothing) #
         gamma = gammatype(0.0)
-        tau0 = nothing && error()
-
-        invtau0 = 1/tau0
+        invtau0 === nothing && error()
 
         return Mod.div_G_ΩΓ(gamma, alpha, x -> invtau0)
     end

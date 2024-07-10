@@ -38,7 +38,7 @@ module IPVIE    # HAUPTMODUL: Konstruktor für Operatoren der Version 0
         gamma = gammatype(0.0)
         chi === nothing && error("")
 
-        return Mod.gradG_ΓΩ(gamma, alpha, chi)
+        return Mod.gradG_Γ1Ω(gamma, alpha, chi)
     end
 
     # B21 Block
