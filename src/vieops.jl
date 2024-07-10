@@ -216,12 +216,12 @@ function BEAST.integrand(viop::n_gradGdiv_ΓΩ, kerneldata, tvals, tgeo, bvals, 
     return @SMatrix[α * dot(gx[i] * nx,  gradG * Ty * dfy[j]) for i in 1:3, j in 1:4]
 end
 
-struct gradG_ΓΩ{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
+struct gradG_Γ1Ω{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
     gamma::T
     α::U
     tau::P
 end
-function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo) # 5D
+function BEAST.integrand(viop::gradG_Γ1Ω, kerneldata, tvals, tgeo, bvals, bgeo) # 5D
 
     gx = @SVector[tvals[i].value for i in 1:1] #!!!!!!!!!!!!!!!!!!!!!!!!
     fy = @SVector[bvals[i].value for i in 1:4]
@@ -235,6 +235,31 @@ function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
 
     return @SMatrix[α * dot(gx[i] * gradG, Ty*fy[j]) for i in 1:1, j in 1:4]
 end
+struct gradG_Γ3Ω{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
+    gamma::T
+    α::U
+    tau::P
+end
+function BEAST.integrand(viop::gradG_Γ3Ω, kerneldata, tvals, tgeo, bvals, bgeo) # 5D
+
+    gx = @SVector[tvals[i].value for i in 1:3] #!!!!!!!!!!!!!!!!!!!!!!!!
+    fy = @SVector[bvals[i].value for i in 1:4]
+
+    G = kerneldata.green
+    gradG = -kerneldata.gradgreen # "-" to get nabla'G(r,r')
+
+    Ty = kerneldata.tau
+
+    α = viop.α
+
+    return @SMatrix[α * dot(gx[i] * gradG, Ty*fy[j]) for i in 1:3, j in 1:4]
+end
+
+
+
+
+
+
 struct n_gradG_ΓΩ{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
     gamma::T
     α::U

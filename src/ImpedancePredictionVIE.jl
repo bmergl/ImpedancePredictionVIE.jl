@@ -23,6 +23,7 @@ include("vieops.jl")
 include("ipvie.jl")
 include("ipvie1.jl")
 include("ipvie2.jl")
+include("ipvie3.jl")
 
 include("geometry.jl")
 
@@ -33,6 +34,7 @@ export Visu
 export IPVIE
 export IPVIE1
 export IPVIE2
+export IPVIE3
 export geo2mesh
 #export draw_arrow!
 export showxvec

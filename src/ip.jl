@@ -674,6 +674,117 @@ end
 
 
 
+function solve3(;   # arb. Material formulation - 2 × 2 Block
+    md::meshdata,
+    material::material,
+    κ0::Union{Float64, Nothing} = nothing, 
+    ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
+    ω::Union{Float64, Nothing} = nothing, 
+    potential_top::Float64, 
+    potential_bottom::Float64,
+    qs3D = BEAST.SingleNumQStrat(3), 
+    qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+    qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
+
+    # if typeof(material) == general_material
+        # save some points, and ...
+        # material = general_material(...,...,This time not nothing here=>some test points with mat values)
+    # end
+
+    # fns spaces
+    y_d = md.y_d
+    y = md.y
+    w = md.w # nur zum Anzeigen von u_Jn wichtig....
+    X = md.X
+    ntrc = md.ntrc
+    ntrcX = md.ntrcX
+
+    
+
+    # Material
+    κ, ϵ = material()
+    τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
+
+    τ(p) < 1e-12 && error("Disable the following lines...")
+    @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
+    @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
+
+
+    # Excitation
+    v_top = ones(length(md.topnodes)) * potential_top
+    v_bottom = ones(length(md.bottomnodes)) * potential_bottom
+    v = vcat(v_top, v_bottom)
+
+
+    # Operators row 1
+    B11_Γ = IPVIE3.B11_Γ(alpha = 1.0)
+    B11_ΓΓ = IPVIE3.B11_ΓΓ(alpha = 1.0, gammatype = T)
+    B11 = assemble(B11_Γ, y, y) + assemble(B11_ΓΓ, y, y)
+
+    B12_ΓΓ = IPVIE3.B12_ΓΓ(alpha = 1.0, gammatype = T, tau0 = τ0)
+    B12_ΓΩ = IPVIE3.B12_ΓΩ(alpha = 1.0, gammatype = T, chi = χ)
+    B12 = assemble(B12_ΓΓ, y, ntrcX) + assemble(B12_ΓΩ, y, X)
+
+
+    # Operators row 2
+    B21_ΓΓ = IPVIE3.B21_ΓΓ(alpha = 1.0, gammatype = T)
+    B21_ΩΓ = IPVIE3.B21_ΩΓ(alpha = -1.0, gammatype = T)
+    B21 = assemble(B21_ΓΓ, ntrcX, y) + assemble(B21_ΩΓ, X, y)
+
+    B22_Ω = IPVIE3.B22_Ω(alpha = -1.0, invtau = inv_τ)
+    B22_ΓΓ = IPVIE3.B22_ΓΓ(alpha = 1.0, gammatype = T, tau0 = τ0)
+    B22_ΓΩ = IPVIE3.B22_ΓΩ(alpha = -1.0, gammatype = T, chi = χ)
+    B22_ΩΓ = IPVIE3.B22_ΩΓ(alpha = -1.0, gammatype = T, tau0 = τ0)
+    B22_ΩΩ = IPVIE3.B22_ΩΩ(alpha = 1.0, gammatype = T, chi = χ)
+
+    B22 = assemble(B22_Ω, X, X) +
+            assemble(B22_ΓΓ, ntrcX, ntrcX) + 
+            assemble(B22_ΓΩ, ntrcX, X) +
+            assemble(B22_ΩΓ, X, ntrcX)
+            assemble(B22_ΩΩ, X, X)
+    
+    R11 = assemble(-B11_Γ, y, y_d) + assemble(-B11_ΓΓ, y, y_d)
+    R21 = assemble(-B21_ΓΓ, ntrcX, y_d) + assemble(-B21_ΩΓ, X, y_d)
+
+    ROW1 = hcat(B11,B12)
+    ROW2 = hcat(B21,B22)
+    S = vcat(ROW1,ROW2)
+    R = vcat(R11,R21)
+
+    # S*u = R*v, solve for u
+    b = R*v
+    u = S \ b # it solver?
+
+    @show norm(S*u - b)
+
+    u_Φ = u[1:length(y)]
+    u_J = u[length(y)+1:end]
+
+    @assert X.pos == ntrcX.pos # => X.pos[1] == ntrcX.pos[1], ...
+    index_list = Vector{Int64}()
+    for (i,fns) in enumerate(ntrcX.fns)
+        fns == [] && continue
+        push!(index_list, i)
+    end
+    u_Jn = Vector{T}()
+    for pw in w.pos
+        for index in index_list #ntrcX...
+            pn = ntrcX.pos[index]
+            if norm(pw-pn) < 1.0e-10
+                push!(u_Jn, u_J[index])
+            end
+        end
+    end
+
+    @assert length(u_Φ) == length(y.fns)
+    @assert length(u_Jn) == length(w.fns)
+    @assert length(u_J) == length(X.fns)
+
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+end
+
+
+
 
 
 ##### constantmaterial - analytic solution ####################
