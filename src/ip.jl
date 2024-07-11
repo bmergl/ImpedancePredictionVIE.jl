@@ -111,12 +111,60 @@ function (mat::constant_xsplit)()
     return κ, ϵ
 end
 
+struct pwlinx <: material
+        κ::Union{Vector{Vector{Float64}}, Nothing}
+        ϵ::Union{Vector{Vector{Float64}}, Nothing}
+        xpos::Vector{Float64} # ! mit anfang und ende d.h -L.x/2 und L.x/2
+end
+function (mat::pwlinx)()
+    κ_vec = mat.κ
+    ϵ_vec = mat.ϵ
+    xpos = mat.xpos
+    l = length(xpos)
+    κ_vec !== nothing && @assert l == length(κ_vec) + 1
+    ϵ_vec !== nothing && @assert l == length(ϵ_vec) + 1
+
+    function gen(l_)
+        if κ_vec !== nothing
+            function kappa(x)
+                x1 = x[1]
+                for i in 1:l_ # faster
+                    x1 < xpos[i] && continue
+                    x1 > xpos[i+1] && continue
+                    return ((κ_vec[i][2] - κ_vec[i][1])/(xpos[i+1] - xpos[i]))*(x1 - xpos[i]) + κ_vec[i][1]
+                end
+                error("")
+            end
+        else
+            kappa = nothing 
+        end
+        if ϵ_vec !== nothing
+            function epsilon(x)
+                x1 = x[1]
+                for i in 1:l_ # faster
+                    x1 < xpos[i] && continue
+                    x1 > xpos[i+1] && continue
+                    return ((ϵ_vec[i][2] - ϵ_vec[i][1])/(xpos[i+1] - xpos[i]))*(x1 - xpos[i]) + ϵ_vec[i][1]
+                end
+                error("")
+            end
+        else
+            epsilon = nothing 
+        end
+        return kappa, epsilon
+    end
+    κ, ϵ = gen(l)
+
+    return κ, ϵ
+end
+
+
 struct general_material <: material # => reconstruction is a problem!!!
     κ::Union{Function, Nothing}
     ϵ::Union{Function, Nothing}
     # savesomepointswithmat::Union{....Vektoren... , Nothing} => init mit nothing
 end
-function (mat::general_material)
+function (mat::general_material)()
     return mat.κ, mat.ϵ
 end
 
@@ -977,7 +1025,81 @@ function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdat
 end
 
 
+###### pwlinx - analytic solution ##################
 
+function solution_J_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.solution, points, J_MoM)
+    
+    κ, ϵ = mat() # Funktionen
+
+    U = s.potential_top - s.potential_bottom
+    Lz = body.L_z
+
+    @assert length(points) == length(J_MoM)
+
+    J_ana = Vector{SVector{3, Float64}}(undef, length(J_MoM))
+    for (i,pos) in enumerate(points)
+        J_ana[i] = SVector{3, Float64}(0.0, 0.0, -κ(pos)*U/Lz)
+    end
+
+    return J_ana
+end
+
+function solution_I_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.solution)
+
+    U = s.potential_top - s.potential_bottom
+    Ly = body.L_y
+    Lz = body.L_z
+    xpos = mat.xpos
+    κ_vec = mat.κ
+
+    I_ana = 0.0
+    for i in 1:length(xpos)-1
+        x1 = xpos[i]
+        x2 = xpos[i+1]
+        I_part = U*(Ly/Lz)*(κ_vec[i][2]+κ_vec[i][1])*(x2-x1)/2
+        @assert I_part >= 0.0
+        I_ana += I_part
+    end
+
+    return I_ana
+end
+
+function solution_Φ_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.solution)
+    u_Φ = s.u_Φ
+
+    function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
+        z = x[3] # obervation plane
+
+        return ((Φ2 - Φ1)/(z2 - z1))*(z - z1) + Φ1
+    end
+
+    u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+    y = m.y
+
+    z1 = -body.L_z/2
+    Φ1 = s.potential_bottom
+    z2 = body.L_z/2
+    Φ2 = s.potential_top
+
+    for (i, pos) in enumerate(y.pos)
+        u_Φ_ana[i] = linPot_z(pos, z1, z2, Φ1, Φ2)
+    end
+
+    return u_Φ_ana
+end
+
+
+
+
+
+
+
+
+
+
+
+
+# getcurrent 2 => mittels ntrc!
 
 
 

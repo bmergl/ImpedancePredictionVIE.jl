@@ -13,7 +13,7 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(1.0, 1.0, 1.0), h = 0.1)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(1.0, 1.0, 1.0), h = 0.09)
 print("tehrahedrons: ", length(md.Ω.faces))
 #Visu.mesh(md.Ω) 
 
@@ -34,10 +34,11 @@ BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 
+
 sol = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), #IP.constantmaterial(1000.0, nothing),#, # #, #
-    κ0 = 0.000001,
+    material = IP.pwlinx([[10.0, 20.0],[40.0, 50.0],[50.0, 5.0]], nothing, [-md.body.L_x/2, -1/6, 1/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), #IP.constantmaterial(1000.0, nothing),#, # #, #
+    κ0 = 1.0,
     ϵ0 = nothing,
     ω = nothing, 
     potential_top = 0.5, 
@@ -69,24 +70,19 @@ using JLD2
 using Plots
 using Plotly
 #load 
-dataname = "test_solve1_fine"
-datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
-sol = load(datapath, "sol")
-md = load(datapath, "md")
-
+# dataname = "test_solve1_fine"
+# datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
+# sol = load(datapath, "sol")
+# md = load(datapath, "md")
 # dataname1 = "test_solve1"
 # datapath1 = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname1.jld2"
 # sol1 = load(datapath1, "sol")
 # md1 = load(datapath1, "md")
 
-norm(sol.S-sol1.S)
-
-norm(sol1.S)
-norm(sol.S)
-
-norm(sol.u-sol1.u)/norm(sol1.u)
-
-##
+#norm(sol.S-sol1.S)
+# norm(sol1.S)
+# norm(sol.S)
+# norm(sol.u-sol1.u)/norm(sol1.u)
 
 DIFF = log.(abs.(sol.S-sol1.S) .+eps(1.0))
 p = Plots.heatmap(DIFF, title = "2D Rasterplot der Differenzmatrix")
@@ -148,12 +144,12 @@ fcr0, geo0 = facecurrents(sol.u_Jn, md.w)
 Plotly.plot(patch(geo0, fcr0))
 
 # Φ auf Γ_nc -> Achtung an Plattengrenzen fehlt noch Dirichlet Beitrag!
-fcr1, geo1 = facecurrents(u_Φ, md.y)
+fcr1, geo1 = facecurrents(sol.u_Φ, md.y)
 Plotly.plot(patch(geo1, fcr1))      #MANCHMAL FALSCH ORIENTIERT!!! je nach tau0+-   => vmtl doch irgendwie * τ0
 
 # J_n auf Γ_c mittels u_J d.h. mittels ntrace der Volumenlösung
-fcr0, geo0 = facecurrents(sol.u_J, md.ntrcX)
-Plotly.plot(patch(geo0, fcr0))
+fcr3, geo3 = facecurrents(sol.u_J, md.ntrcX)
+Plotly.plot(patch(geo3, fcr3))
 
 for el in fcr0
     el != 0.0 && @show el
