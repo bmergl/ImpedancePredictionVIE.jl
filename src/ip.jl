@@ -183,10 +183,8 @@ struct solution
     qs3D
     qs4D
     qs5D6D
-    R
     v
     b
-    S
     u
     u_Φ
     u_Jn
@@ -275,9 +273,9 @@ function solve(; # low contrast formulation
     p = point(0.0,0.0,0.0)
     @show τ(p)
 
-    τ(p) < 1e-12 && error("Disable the following lines...")
-    @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
-    @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
+    # τ(p) < 1e-12 && error("Disable the following lines...")
+    # @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
+    # @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
 
     # Excitation
     v_top = ones(length(md.topnodes)) * potential_top
@@ -431,7 +429,7 @@ function solve(; # low contrast formulation
     @assert length(u_J) == length(X.fns)
 
 
-    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
 end
 
 
@@ -469,13 +467,13 @@ function solve1(;   # high contrast formulation
     τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
     p = point(0.0,0.0,0.0)
     # @show τ(p)
-    # @show inv_τ(p)
+    @show inv_τ(p)
     # @show τ0
-    # @show χ(p)
+    @show χ(p)
 
-    τ(p) < 1e-12 && error("Disable the following lines...")
-    @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
-    @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
+    # τ(p) < 1e-12 && error("Disable the following lines...")
+    # @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
+    # @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
 
     # Material -> cells, Material fns
     cell2mat_inv_τ, cell2mat_χ = IP.gen_cell2mat(τ, inv_τ, τ0, χ, T, X)
@@ -505,7 +503,6 @@ function solve1(;   # high contrast formulation
     UB13_ΓΓn = IPVIE1.UB13_ΓΓn(alpha = 1.0, gammatype = Float64)
     UB13_ΓΩ = IPVIE1.UB13_ΓΩ(alpha = 1.0, gammatype = Float64)
     B13 =  assemble(UB13_ΓΓn, w, intrcX_mat) + assemble(UB13_ΓΩ, w, X_mat)
-    #@show norm(assemble(UB13_ΓΓn, w, intrcX_mat))
 
 
     # Operators row 2
@@ -519,7 +516,7 @@ function solve1(;   # high contrast formulation
     UB23_ΓΓn = IPVIE1.UB23_ΓΓn(alpha = 1.0, gammatype = Float64)
     UB23_ΓΩ = IPVIE1.UB23_ΓΩ(alpha = 1.0, gammatype = Float64)
     B23 = assemble(UB23_ΓΓn, y, intrcX_mat) + assemble(UB23_ΓΩ, y, X_mat)
-    #@show norm(assemble(UB23_ΓΓn, y, intrcX_mat))
+
 
     # Operators row 3
     B31_ΓΓ = IPVIE1.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
@@ -541,9 +538,7 @@ function solve1(;   # high contrast formulation
             assemble(UB33_ΩΩ, X, X_mat) +
             assemble(UB33_ΓΓn, ntrc(X), intrcX_mat) + 
             assemble(UB33_ΩΓn, X, intrcX_mat)
-            
-    #@show norm(assemble(UB33_ΓΓn, ntrc(X), intrcX_mat))
-    #@show norm(assemble(UB33_ΩΓn, X, intrcX_mat))
+    
 
     R11 = assemble(-B11_Γ, w, y_d) + assemble(-B11_ΓΓ, w, y_d)
     R21 = assemble(-B21_ΓΓ, y, y_d) 
@@ -567,7 +562,7 @@ function solve1(;   # high contrast formulation
     @assert length(u_Jn) == length(w.fns)
     @assert length(u_J) == length(X.fns)
 
-    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
 
 end
 
@@ -710,7 +705,7 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     @assert length(u_Jn) == length(w.fns)
     @assert length(u_J) == length(X.fns)
 
-    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
 
 
 
@@ -826,7 +821,7 @@ function solve3(;   # arb. Material formulation - 2 × 2 Block
     @assert length(u_Jn) == length(w.fns)
     @assert length(u_J) == length(X.fns)
 
-    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, R, v, b, S, u, u_Φ, u_Jn, u_J)
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
 end
 
 
@@ -1100,6 +1095,71 @@ end
 
 
 # getcurrent 2 => mittels ntrc!
+function getcurrent2(m::IP.meshdata, s::IP.solution)
+
+    Γ_c_t = m.Γ_c_t
+    Γ_c_b = m.Γ_c_b
+    u_J = s.u_J # not u_Jn!
+
+    numtopcharts = length(Γ_c_t.faces)
+    top_ccs = Vector{SVector{3, Float64}}(undef, numtopcharts)
+    top_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
+    for i in 1:length(top_ccs)
+        chart = CompScienceMeshes.chart(Γ_c_t, i)
+        center = CompScienceMeshes.center(chart)
+        top_ccs[i] = cartesian(center)
+        top_charts[i] = chart
+    end
+
+    numbottomcharts = length(Γ_c_b.faces)
+    bottom_ccs = Vector{SVector{3, Float64}}(undef, numbottomcharts)
+    bottom_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, numtopcharts)
+    for i in 1:length(bottom_ccs)
+        chart = CompScienceMeshes.chart(Γ_c_b, i)
+        center = CompScienceMeshes.center(chart)
+        bottom_ccs[i] = cartesian(center)
+        bottom_charts[i] = chart
+    end
+
+    chart_tree_top = BEAST.octree(top_charts)
+    chart_tree_bottom = BEAST.octree(bottom_charts)
+
+    I_top = 0.0
+    I_bottom = 0.0
+
+    cnt_top = 0
+    cnt_bottom = 0
+
+    ntrcX = m.ntrcX
+
+    for (j, pos) in enumerate(ntrcX.pos)
+        ntrcX.fns[j] == [] && continue
+
+        i = CompScienceMeshes.findchart(top_charts, chart_tree_top, pos)      # ja...hier wäre das nicht nötig assemblydata?
+        k = CompScienceMeshes.findchart(bottom_charts, chart_tree_bottom, pos)
+
+        if i !== nothing
+            A = top_charts[i].volume 
+            @assert A > 0.0
+            I_top += -A * u_J[j] * ntrcX.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
+            cnt_top += 1
+        elseif k !== nothing
+            A = bottom_charts[k].volume 
+            @assert A > 0.0
+            I_bottom += A * u_J[j] * ntrcX.fns[j][1].coeff 
+            cnt_bottom += 1
+        else
+            error("Neither top nor bottom")
+        end
+    
+    end
+
+    @assert cnt_top == numtopcharts
+    @assert cnt_bottom == numbottomcharts
+
+    return I_top, I_bottom
+end
+
 
 
 
@@ -1150,18 +1210,20 @@ function getcurrent(m::IP.meshdata, s::IP.solution) # ging das jetzt noch einfac
 
         if i !== nothing
             A = top_charts[i].volume 
+            @assert top_charts[i].normals[1][3] > 0.0
             @assert A > 0.0
             I_top += -A * u_Jn[j] * w.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
             cnt_top += 1
         elseif k !== nothing
-            A = bottom_charts[k].volume 
+            A = bottom_charts[k].volume
+            @assert bottom_charts[k].normals[1][3] < 0.0
             @assert A > 0.0
             I_bottom += A * u_Jn[j] * w.fns[j][1].coeff 
             cnt_bottom += 1
         else
             error("Neither top nor bottom")
         end
-
+    
     end
 
 

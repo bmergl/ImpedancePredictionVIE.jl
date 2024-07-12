@@ -41,3 +41,30 @@ end
 Z=zeros(ComplexF64, 10, 10)
 farassembler(Z, Vector(1:10), Vector(1:10))
 Z
+
+##
+
+
+
+
+
+
+
+## @view example: gut für große arrays aber achtung! ändern direkt die Orginalstruktur
+
+A = [1 2; 3 4]
+
+# Using @view to create a view of the entire array
+B = @view A[:, :]
+
+# Modify the view
+B[1, 1] = 0
+
+# Check the original array A
+println(A)  # Output: [0 2; 3 4]
+
+A = [1 2; 3 4]
+
+C = A
+C[1, 1] = 0
+println(A)

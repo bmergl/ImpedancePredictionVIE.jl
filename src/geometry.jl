@@ -196,7 +196,7 @@ function gen_tau_chi(; kappa = nothing, kappa0 = nothing, epsilon = nothing, eps
     elseif kappa !== nothing && kappa0 !== nothing && epsilon !== nothing && epsilon0 !== nothing && omega !== nothing
         # :general
         tau = x -> kappa(x) + im*omega*epsilon(x)
-        tau0 = kappa0 + im*ω*epsilon0 # this ist not ε0 !
+        tau0 = kappa0 + im*omega*epsilon0 # this ist not ε0 ! sollte omega da stehen???
         T = ComplexF64
 
     # elseif problemtype == :dielectic
@@ -471,7 +471,7 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
             fc = nothing
             for (k,fc_) in enumerate(faces(el))
                 fc_center = cartesian(CompScienceMeshes.center(fc_))
-                if isapprox(norm(fc_center-fc1_center),0,atol=sqrt(eps(T)))
+                if isapprox(norm(fc_center-fc1_center),0,atol=sqrt(eps(real(T))))
                     q = k
                     fc = fc_
                     break
@@ -485,8 +485,8 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
                         v = a*Q[i,j] # hier kommt das VZ mit rein vmtl. hätte man also auch auf dem anderen tet arbeiten können... aber nicht auf beiden!
                         v_new = v * δχ
 
-                        isapprox(v,0,atol=sqrt(eps(T))) && continue
-                        isapprox(v_new,0,atol=sqrt(eps(T))/100000) && continue
+                        isapprox(v,0,atol=sqrt(eps(real(T)))) && continue
+                        isapprox(v_new,0,atol=sqrt(eps(real(T)))/100000) && continue
                         push!(fns[m], BEAST.Shape(s, i, v_new))
                     end
                 end
