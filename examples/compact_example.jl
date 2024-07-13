@@ -17,7 +17,7 @@ using Plotly
 
 md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0018)
 print("tehrahedrons: ", length(md.Ω.faces))
-Visu.mesh(md.Ω) 
+#Visu.mesh(md.Ω) 
 
 
 ##
@@ -43,8 +43,8 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constantmaterial(0.2, 10000*8.8541878188*1e-12), #IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -1/6, 1/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
-    κ0 = 0.1, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
+    material = IP.constantmaterial(0.1, 10000*8.8541878188*1e-12), #IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -1/6, 1/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    κ0 = 0.05, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = 1.0*8.8541878188*1e-12, # Größenordnung??? was ist sinnvoll?
     ω = 2*pi*1000.0, 
     potential_top = 0.5, 
@@ -102,7 +102,7 @@ md = load(datapath, "md")
 
 
 # Stomdichte
-range_ = range(-0.49,stop=0.49,length=9)
+range_ = range(-0.0049,stop=0.0049,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, sol.u_J, md.X)#, type=Float64)
 J_ana = IP.solution_J_ana(md.body, sol.material, md, sol, points, J_MoM)
@@ -110,7 +110,7 @@ display("Stomdichte Gesamtvolumen")
 @show norm(J_MoM-J_ana)/norm(J_ana)# = norm(norm.(J_MoM-J_ana))/norm(J_ana)
 
 # Stromdichte Mitte: Ebene z=0.0
-range_xy = range(-0.5,stop=0.5,length=9)
+range_xy = range(-0.005,stop=0.005,length=9)
 points2 = [point(x,y,0.0) for x in range_xy for y in range_xy]
 J_MoM2 = BEAST.grideval(points2, sol.u_J, md.X)
 J_ana2 = IP.solution_J_ana(md.body, sol.material, md, sol, points2, J_MoM2)
@@ -118,7 +118,7 @@ display("Stromdichte Mitte: Ebene z=0.0")
 @show norm(J_MoM2-J_ana2)/norm(J_ana2)
 
 # Stromdichte bei Platten: Ebene z=0.49
-points3 = [point(x,y,0.49) for x in range_xy for y in range_xy]
+points3 = [point(x,y,0.0049) for x in range_xy for y in range_xy]
 J_MoM3 = BEAST.grideval(points3, sol.u_J, md.X)
 J_ana3 = IP.solution_J_ana(md.body, sol.material, md, sol, points3, J_MoM3)
 display("Stromdichte bei Platten: Ebene z=0.49")
@@ -143,7 +143,38 @@ u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol)
 
 
 ##
-display(Visu.fieldplot(points, J_MoM, 0.06, Visu.mesh(md.Γ_c)))
+display(Visu.fieldplot(points, J_MoM_abscomp, 0.0007, Visu.mesh(md.Γ_c)))
+
+# Z mittels w auf Γ_c
+I_top
+I_bottom
+Z = (sol.potential_top-sol.potential_bottom)/I_top
+
+# Z mittels SWG auf Γ_c
+I_top2
+I_bottom2
+Z = (sol.potential_top-sol.potential_bottom)/I_top2
+
+# Nenner ≈ 1 ;) wow ...
+1 + sol.ω^2*((1/0.1)*0.01/(0.01^2))^2  *  (10000*8.8541878188*1e-12*(0.01^2)/0.01)^2
+
+# C 
+
+
+# Analyse Complexe Stromdichte
+J_MoM_abscomp = Vector{SVector{3, Float64}}()
+for J_vec in J_MoM
+    push!(J_MoM_abscomp, -abs.(J_vec))
+
+    # norm(J_vec) > 1e-12 && @show J_vec
+    # @show J_vec[1]
+    # @show J_vec[2]
+    # @show J_vec[3]
+    # @show angle(J_vec[1])*360/(3*pi)
+    # @show angle(J_vec[2])*360/(3*pi)
+    # @show angle(J_vec[3])*360/(3*pi)
+    # println()
+end
 
 
 ## facecurrents Tests
