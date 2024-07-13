@@ -272,6 +272,10 @@ function solve(; # low contrast formulation
     τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
     p = point(0.0,0.0,0.0)
     @show τ(p)
+    @show inv_τ(p)
+    @show τ0
+    @show χ(p)
+    @show T
 
     # τ(p) < 1e-12 && error("Disable the following lines...")
     # @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
@@ -287,31 +291,31 @@ function solve(; # low contrast formulation
 
     B11_Γ = IPVIE.B11_Γ(alpha = 1.0) #Verschwindet!!! <---- klären....
     #assemble(B11_Γ, w, y)
-    B11_ΓΓ = IPVIE.B11_ΓΓ(alpha = 1.0, gammatype = Float64)
+    B11_ΓΓ = IPVIE.B11_ΓΓ(alpha = 1.0, gammatype = Float64) # Float64 wenn kein Material
     #assemble(B11_ΓΓ, w, y)
 
-    B12_ΓΓ = IPVIE.B12_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+    B12_ΓΓ = IPVIE.B12_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
     #assemble(B12_ΓΓ, w, w)
 
-    B13_ΓΓ = IPVIE.B13_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B13_ΓΓ = IPVIE.B13_ΓΓ(alpha = 1.0, gammatype = T, chi = χ)
     #assemble(B13_ΓΓ, w, ntrc(X))
-    B13_ΓΩ = IPVIE.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
+    B13_ΓΩ = IPVIE.B13_ΓΩ(alpha = -1.0, gammatype = T, chi = χ)
     #assemble(B13_ΓΩ, w, X)
 
 
     # Operators row 2
 
-    B21_ΓΓ = IPVIE.B21_ΓΓ(beta = -1.0, gammatype = Float64) # -1.0 siehe BEAST & Steinbach 6.5
+    B21_ΓΓ = IPVIE.B21_ΓΓ(beta = -1.0, gammatype = Float64) # -1.0 siehe BEAST & Steinbach 6.5, Ja, Float64 statt T
     #assemble(B21_ΓΓ, y, y)
 
-    B22_Γ = IPVIE.B22_Γ(alpha = -1.0, invtau = inv_τ)
+    B22_Γ = IPVIE.B22_Γ(alpha = -1.0, invtau = inv_τ) # !!! ggf hier T(-1.0) statt -1.0 ...fraglich wieso nur unten Fehler
     #assemble(B22_Γ, y, w)
-    B22_ΓΓ = IPVIE.B22_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+    B22_ΓΓ = IPVIE.B22_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
     #assemble(B22_ΓΓ, y, w)
 
-    B23_ΓΓ = IPVIE.B23_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ) #VZ? sollte passen
+    B23_ΓΓ = IPVIE.B23_ΓΓ(alpha = 1.0, gammatype = T, chi = χ) #VZ? sollte passen
     #assemble(B23_ΓΓ, y, ntrc(X))
-    B23_ΓΩ = IPVIE.B23_ΓΩ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B23_ΓΩ = IPVIE.B23_ΓΩ(alpha = 1.0, gammatype = T, chi = χ)
     #assemble(B23_ΓΩ, y, X)
 
 
@@ -322,20 +326,20 @@ function solve(; # low contrast formulation
     B31_ΩΓ = IPVIE.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
     #assemble(B31_ΩΓ, X, y)
 
-    B32_ΓΓ = IPVIE.B32_ΓΓ(alpha = 1.0, gammatype = Float64, invtau = inv_τ)
+    B32_ΓΓ = IPVIE.B32_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
     #assemble(B32_ΓΓ, ntrc(X), w)
-    B32_ΩΓ = IPVIE.B32_ΩΓ(alpha = -1.0, gammatype = Float64, invtau = inv_τ)
+    B32_ΩΓ = IPVIE.B32_ΩΓ(alpha = -1.0, gammatype = T, invtau = inv_τ)
     #assemble(B32_ΩΓ, X, w)
 
-    B33_Ω = IPVIE.B33_Ω(alpha = -1.0, invtau = inv_τ)
+    B33_Ω = IPVIE.B33_Ω(alpha = T(-1.0), invtau = inv_τ) # def scalartype(MaterialIdentity) = alpha ...
     #assemble(B33_Ω, X, X)
-    B33_ΓΓ = IPVIE.B33_ΓΓ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B33_ΓΓ = IPVIE.B33_ΓΓ(alpha = 1.0, gammatype = T, chi = χ)
     #assemble(B33_ΓΓ, ntrc(X), ntrc(X))
-    B33_ΓΩ = IPVIE.B33_ΓΩ(alpha = -1.0, gammatype = Float64, chi = χ)
+    B33_ΓΩ = IPVIE.B33_ΓΩ(alpha = -1.0, gammatype = T, chi = χ)
     #assemble(B33_ΓΩ, ntrc(X), X)
-    B33_ΩΓ = IPVIE.B33_ΩΓ(alpha = -1.0, gammatype = Float64, chi = χ)
+    B33_ΩΓ = IPVIE.B33_ΩΓ(alpha = -1.0, gammatype = T, chi = χ)
     #assemble(B33_ΩΓ, X, ntrc(X))
-    B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = χ)
+    B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = T, chi = χ)
     #assemble(B33_ΩΩ, X, X)
     
 

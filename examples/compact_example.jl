@@ -15,31 +15,12 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(1.0, 1.0, 1.0), h = 0.18)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0018)
 print("tehrahedrons: ", length(md.Ω.faces))
-#Visu.mesh(md.Ω) 
+Visu.mesh(md.Ω) 
+
 
 ##
-
-#B13_ΓΩ = IPVIE.B13_ΓΩ(alpha = -1.0, gammatype = Float64, chi = x->1.0)
-# B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = x->1.0)
-
-# @time M = assemble(B33_ΩΩ, md.X, md.X)
-##
-
-# Mh = @views hassemble(B33_ΩΩ, md.X, md.X;
-#     treeoptions=BoxTreeOptions(nmin=500),
-#     compressor = FastBEAST.ACAOptions(tol=1e-4),
-#     #quadstratcbk=BEAST.defaultquadstrat(operator, test_functions, trial_functions),
-#     #quadstratfbk=BEAST.defaultquadstrat(operator, test_functions, trial_functions),
-#     multithreading=true,
-#     verbose=true
-# )
-# println("done!")
-#@show norm(M-Matrix(Mh)) # Matrix(Mh) geht gar nicht...
-
-##
-
 
 
 #Quadstrat
@@ -59,14 +40,13 @@ BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
 BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
-#IP.constantmaterial(1000.0, 200.0)
 
 sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -1/6, 1/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
-    κ0 = 1.0,
-    ϵ0 = nothing, #1.0,
-    ω = nothing, #50.0, 
+    material = IP.constantmaterial(0.2, 10000*8.8541878188*1e-12), #IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -1/6, 1/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    κ0 = 0.1, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
+    ϵ0 = 1.0*8.8541878188*1e-12, # Größenordnung??? was ist sinnvoll?
+    ω = 2*pi*1000.0, 
     potential_top = 0.5, 
     potential_bottom = -0.5,
     qs3D = qs3D, 
@@ -204,21 +184,36 @@ xlabel!("x")
 
 
 
-## It solver test: STOP SINNLOS OHNE PRECOND...
+## It solver test: STOP SINNLOS OHNE PRECOND... #############
 # n = 1000
 # A= 100*LinearAlgebra.I(n) +  randn(n,n)
 # cond(A)
 # b = randn(n)
 #b = vcat([100],zeros(99))
 #x = IterativeSolvers.gmres(A, b; maxiter=1000)
-
 #@show norm(A*x-b)
-#x2 = inv(A)*b
-#@show norm(A*x2-b)
-
 
 u_it, ch = IterativeSolvers.gmres(S, sol.b; maxiter=10000, log=true)
-
-
 @show norm(sol.u-u_it)
 @show ch
+
+
+## H-Matrix ... ja..... #######################################
+
+B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = x->1.0)
+
+@time M = assemble(B33_ΩΩ, md.X, md.X)
+#
+
+Mh = @views hassemble(B33_ΩΩ, md.X, md.X;
+    treeoptions=BoxTreeOptions(nmin=100),
+    compressor = FastBEAST.ACAOptions(tol=1e-4),
+    #quadstratcbk=BEAST.defaultquadstrat(operator, test_functions, trial_functions),
+    #quadstratfbk=BEAST.defaultquadstrat(operator, test_functions, trial_functions),
+    multithreading=true,
+    verbose=true
+)
+println("done!")
+@show norm(M-Matrix(Mh)) # Matrix(Mh) geht gar nicht...
+
+##
