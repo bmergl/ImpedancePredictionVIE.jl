@@ -5,7 +5,7 @@ using ..ImpedancePredictionVIE #damit alles exportierte hier funktioniert
 #import CompScienceMeshes: Mesh
 using CompScienceMeshes
 using Plots
-#using Plotly
+using Plotly
 using BEAST
 using LinearAlgebra
 using StaticArrays
@@ -23,7 +23,7 @@ using StaticArrays
 function iplot(; size=(1000,800))
     plotly()
     #plotlyjs()
-    plt = plot(size = size, xlabel = "x", ylabel = "y", zlabel = "z")
+    plt = Plots.plot(size = size, xlabel = "x", ylabel = "y", zlabel = "z")
     return plt
 end
 

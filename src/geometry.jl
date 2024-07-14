@@ -198,52 +198,6 @@ function gen_tau_chi(; kappa = nothing, kappa0 = nothing, epsilon = nothing, eps
         tau = x -> kappa(x) + im*omega*epsilon(x)
         tau0 = kappa0 + im*omega*epsilon0 # this ist not ε0 ! sollte omega da stehen???
         T = ComplexF64
-
-    # elseif problemtype == :dielectic
-    #     error("NOT READY")
-    #     epsilon === nothing && error("Add epsilon=FUNCTION IN X")
-    #     epsilon0 === nothing && error("Add epsilon0=CONSTANT SCALAR")
-    #     ((size(epsilon0, 1) != 1) || (size(epsilon0, 2) != 1)) && error("epsilon0 has to be a scalar value!")
-    #     !(size(epsilon(p), 1) == size(epsilon(p), 2)) && error("Format error")
-        
-    #     s = size(epsilon(p), 1)
-    #     !((s==1)||(s==3)) && error("epsilon must return skalar 1×1 or tensor 3×3")
-
-    #     s==1 && (I = Float64(1.0)) 
-    #     s==3 && (I = SMatrix{3,3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]))
-
-    #     tau = x -> epsilon(x) # kläre jω ?
-
-
-    # elseif problemtype == :general # epsilon0 must not be ε0! it should be 0.0 (recommended)
-
-    #     error("NOT READY")
-
-    #     kappa === nothing && error("")
-    #     epsilon === nothing && error("")
-
-    #     ((epsilon0 === nothing) && (kappa0 === nothing)) && error("Define either kappa0 or epsilon0")
-    #     epsilon0 === nothing && (epsilon0 = 0.0)
-    #     kappa0 === nothing && (kappa0 = 0.0)
-
-    #     omega === nothing && error("Add omega=VALUE to gen_tau_chi in the general case!")
-
-    #     sk = size(kappa(p), 1)
-    #     se = size(epsilon(p), 1)
-
-    #     sk >= se && (s = sk)
-    #     se >= sk && (s = se)
-
-    #     !((s==1)||(s==3)) && error("epsilon and kappa must return skalar 1×1 or tensor 3×3")
-
-    #     s==1 && (I = Float64(1.0))
-    #     s==3 && (I = SMatrix{3,3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]))
-
-    #     sk > se && (tau = x -> kappa(x) + im*I*omega*epsilon(x))
-    #     se > sk && (tau = x -> I*kappa(x) + im*omega*epsilon(x))
-    #     se == sk && (tau = x -> kappa(x) + im*omega*epsilon(x))
-
-    #     tau0 = kappa0 + im*ω*epsilon0
         
     else
         error("Specify problem! current, dielectic or general")
