@@ -37,7 +37,7 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constant_zsplit(0.2, 0.0, 0.0, 0.0, 10000.0*IP.ε0), # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing),  ,#, # #, #
+    material = IP.constant_xsplit(0.2, 0.0, 0.0, 0.0, 1.0*IP.ε0), #IP.constant_zsplit(0.2, 0.0, 0.0, 0.0, 10000.0*IP.ε0), # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  I  ,#, # #, #
     κ0 = 0.1, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = 1.0*IP.ε0,
     ω = 2*pi*1000.0, 
@@ -134,6 +134,16 @@ println()
 u_Φ = sol.u_Φ
 u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol)
 @show norm(u_Φ-u_Φ_ana)/norm(u_Φ_ana)
+
+
+##
+I_top, I_bottom = getcurrent(md, sol)
+I_top2, I_bottom2 = IP.getcurrent2(md, sol)
+
+I_top
+I_bottom
+I_top2
+I_bottom2
 
 
 ##
