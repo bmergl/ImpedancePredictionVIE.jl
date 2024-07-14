@@ -66,31 +66,31 @@ struct constant_zsplit <: material
 end
 function (mat::constant_zsplit)()
 
-    κ_p = mat.κ_p
-    ϵ_p = mat.ϵ_p
-    κ_m = mat.κ_m
-    ϵ_m = mat.ϵ_m
+    # κ_p = mat.κ_p # Beobachtung: mach das so und die funktionen unten sind extrem langsam 
+    # ϵ_p = mat.ϵ_p # d.h. unten natürlich auch mat.κ_p durch κ_p ersetzen oder so....
+    # κ_m = mat.κ_m # UNTERSUCHEN!!!!
+    # ϵ_m = mat.ϵ_m
 
     
-    if (κ_p === nothing && κ_m !== nothing) || (κ_p !== nothing && κ_m === nothing)
-        error("check....")
-        κ_p === nothing && (κ_p = 0.0)
-        κ_m === nothing && (κ_m = 0.0)
-    end
-    if (ϵ_p === nothing && ϵ_m !== nothing) || (ϵ_p !== nothing && ϵ_m === nothing)
-        error("check....")
-        ϵ_p === nothing && (ϵ_p = 0.0)
-        ϵ_m === nothing && (ϵ_m = 0.0)
-    end
+    # if (κ_p === nothing && κ_m !== nothing) || (κ_p !== nothing && κ_m === nothing)
+    #     error("check....")
+    #     κ_p === nothing && (κ_p = 0.0)
+    #     κ_m === nothing && (κ_m = 0.0)
+    # end
+    # if (ϵ_p === nothing && ϵ_m !== nothing) || (ϵ_p !== nothing && ϵ_m === nothing)
+    #     error("check....")
+    #     ϵ_p === nothing && (ϵ_p = 0.0)
+    #     ϵ_m === nothing && (ϵ_m = 0.0)
+    # end
 
     function gen()
         function kappa(x) 
-            x[3] >= mat.z0 && (return κ_p)
-            return κ_m
+            x[3] >= mat.z0 && (return mat.κ_p)
+            return mat.κ_m
         end
         function epsilon(x)
-            x[3] >= mat.z0 && (return ϵ_p)
-            return ϵ_m
+            x[3] >= mat.z0 && (return mat.ϵ_p)
+            return mat.ϵ_m
         end
         (mat.κ_p === nothing && mat.κ_m === nothing) && (kappa = nothing)  # doch mal weglassen
         (mat.ϵ_p === nothing && mat.ϵ_m === nothing) && (epsilon = nothing)

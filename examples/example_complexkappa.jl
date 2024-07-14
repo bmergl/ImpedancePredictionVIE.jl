@@ -37,10 +37,10 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constant_zsplit(0.1, 0.0, 0.0, 10000.0*IP.epsilon0, 0.0), # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing),  ,#, # #, #
-    κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
-    ϵ0 = 1.0,
-    ω = nothing, 
+    material = IP.constant_zsplit(0.2, 0.0, 0.0, 0.0, 10000.0*IP.ε0), # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing),  ,#, # #, #
+    κ0 = 0.1, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
+    ϵ0 = 1.0*IP.ε0,
+    ω = 2*pi*1000.0, 
     potential_top = 0.5, 
     potential_bottom = -0.5,
     qs3D = qs3D, 
@@ -97,6 +97,8 @@ using Plotly
 range_ = range(-0.0049,stop=0.0049,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = BEAST.grideval(points, sol.u_J, md.X)#, type=Float64)
+
+##
 J_ana = IP.solution_J_ana(md.body, sol.material, md, sol, points, J_MoM)
 display("Stomdichte Gesamtvolumen")
 @show norm(J_MoM-J_ana)/norm(J_ana)# = norm(norm.(J_MoM-J_ana))/norm(J_ana)
@@ -135,7 +137,13 @@ u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol)
 
 
 ##
-display(Visu.fieldplot(points, J_MoM, 0.0007, Visu.mesh(md.Γ_c)))
+J_MoM_part = []
+for J in J_MoM
+    push!(J_MoM_part, -abs.(J))
+end
+
+J_MoM_part
+display(Visu.fieldplot(points, J_MoM_part, 0.0007, Visu.mesh(md.Γ_c)))
 
 
 ## facecurrents Tests
