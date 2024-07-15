@@ -280,6 +280,8 @@ function solve(; # low contrast formulation
     qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
     qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
 
+    println("3×3 block matrix - classical formulation")
+
     # if typeof(material) == general_material
         # save some points, and ...
         # material = general_material(...,...,This time not nothing here=>some test points with mat values)
@@ -468,7 +470,9 @@ function solve1(;   # high contrast formulation
     potential_bottom::Float64,
     qs3D = BEAST.SingleNumQStrat(3), 
     qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
-    qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
+    qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4),
+    matalloc = :center
+    )
 
     println("3×3 block matrix - high contrast formulation")
 
@@ -482,23 +486,39 @@ function solve1(;   # high contrast formulation
     y = md.y
     w = md.w
     X = md.X
-    ntrc = md.ntrc 
+    ntrc = md.ntrc
 
     # Material
     κ, ϵ = material()
     τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
     p = point(0.0,0.0,0.0)
-    # @show τ(p)
+    @show τ(p)
     @show inv_τ(p)
-    # @show τ0
+    @show τ0
     @show χ(p)
+    @show T
 
     # τ(p) < 1e-12 && error("Disable the following lines...")
     # @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
     # @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
 
-    # Material -> cells, Material fns
-    cell2mat_inv_τ, cell2mat_χ = IP.gen_cell2mat(τ, inv_τ, τ0, χ, T, X)
+    # Material allocation to cells 
+    if matalloc == :center
+        cell2mat_inv_τ, cell2mat_χ = IP.gen_cell2mat(τ, inv_τ, τ0, χ, T, X) # <--- element order comes from assemblydata(X)
+    elseif matalloc == :avg
+        elementsX, _, _ = assemblydata(X)
+        cellvolumes = CompScienceMeshes.volume.(elementsX)
+
+        help = lagrangecxd0(md.Ω)
+        helpOP1 = IP.MatId(1.0, inv_τ)
+        helpOP2 = IP.MatId(1.0, χ)
+
+        cell2mat_inv_τ = Vector(diag(assemble(helpOP1, help, help))) ./ cellvolumes
+        cell2mat_χ = Vector(diag(assemble(helpOP2, help, help))) ./ cellvolumes
+    else
+        error("matalloc type not defined!")
+    end
+
 
     X_mat = IP.gen_X_mat(X, cell2mat_χ)
     X_mat_I = IP.gen_X_mat(X, cell2mat_inv_τ)

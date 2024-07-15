@@ -15,7 +15,7 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.001)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0008)
 print("tehrahedrons: ", length(md.Ω.faces))
 #Visu.mesh(md.Ω) 
 
@@ -37,7 +37,7 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol, S, R = IP.solve1(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_xsplit(0.2, 10000.0*IP.ε0, 0.0008, 0.5, 3000.0*IP.ε0), #IP.constant_zsplit(0.2, 0.0, 0.0, 0.0, 10000.0*IP.ε0), #     #IP.general_material(κ, nothing),  #  I  ,#, # #, #
+    material = IP.pwlinx([[100.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_xsplit(0.2, 10000.0*IP.ε0, 0.0008, 0.5, 3000.0*IP.ε0), #IP.constant_zsplit(0.2, 0.0, 0.0, 0.0, 10000.0*IP.ε0), #     #IP.general_material(κ, nothing),  #  I  ,#, # #, #
     κ0 = 0.1, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = nothing,#1.0*IP.ε0,
     ω = nothing,#2*pi*1.0, 
@@ -45,12 +45,13 @@ sol, S, R = IP.solve1(;   # solve -> arb. Mat. / solve1 -> high contrast formula
     potential_bottom = -0.5,
     qs3D = qs3D, 
     qs4D = qs4D, 
-    qs5D6D = qs5D6D 
+    qs5D6D = qs5D6D,
+    matalloc = :center
 )
 
 # save
-# dataname = "test" # for JLD2 save
-# jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+dataname = "solve1_center" # for JLD2 save
+jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
 
 
