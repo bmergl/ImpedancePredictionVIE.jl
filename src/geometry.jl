@@ -56,9 +56,9 @@ function pointlist2xyzlist(pointlist)
 
     L = length(pointlist)
 
-    allx = Vector{Float64}(undef, L)
-    ally = Vector{Float64}(undef, L)
-    allz = Vector{Float64}(undef, L)
+    allx = Vector{Any}(undef, L)
+    ally = Vector{Any}(undef, L)
+    allz = Vector{Any}(undef, L)
 
     for (i,p) in enumerate(pointlist)
         allx[i] = p[1]
