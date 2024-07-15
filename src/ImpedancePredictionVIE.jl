@@ -15,6 +15,9 @@ using Plots
 IP = ImpedancePredictionVIE
 export IP
 
+import Base.eps
+eps(var::Type{ComplexF64}) = eps(Float64) # ja...
+
 include("ip.jl")
 
 include("visu.jl")

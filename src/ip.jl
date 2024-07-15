@@ -503,6 +503,13 @@ function solve1(;   # high contrast formulation
     X_mat = IP.gen_X_mat(X, cell2mat_χ)
     X_mat_I = IP.gen_X_mat(X, cell2mat_inv_τ)
     w_mat = IP.gen_w_mat(w, X, cell2mat_inv_τ)
+    y_ctype = IP.gen_y_complextype(y, T)
+    if T == Float64 
+        #@assert y_ctype == y
+        @assert  y_ctype.geo == y.geo
+        @assert  y_ctype.fns == y.fns
+        @assert  y_ctype.pos == y.pos
+    end
 
     swg_faces_mesh = Mesh(md.Ω.vertices, md.swg_faces)
     intrcX_mat = IP.inner_mat_ntrace(X, swg_faces_mesh, cell2mat_χ)
@@ -533,7 +540,7 @@ function solve1(;   # high contrast formulation
 
     UB22_Γ = IPVIE1.UB22_Γ(alpha = -1.0)
     UB22_ΓΓ = IPVIE1.UB22_ΓΓ(alpha = 1.0, gammatype = Float64)
-    B22 = assemble(UB22_Γ, y, w_mat) + assemble(UB22_ΓΓ, y, w_mat)
+    B22 = assemble(UB22_Γ, y_ctype, w_mat) + assemble(UB22_ΓΓ, y, w_mat)  #  <--- T and T needed....
 
     UB23_ΓΓn = IPVIE1.UB23_ΓΓn(alpha = 1.0, gammatype = Float64)
     UB23_ΓΩ = IPVIE1.UB23_ΓΩ(alpha = 1.0, gammatype = Float64)
@@ -901,11 +908,13 @@ function getcurrent2(m::IP.meshdata, s::IP.solution)
             A = top_charts[i].volume 
             @assert A > 0.0
             I_top += -A * u_J[j] * ntrcX.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
+            #@show -A * u_J[j] * ntrcX.fns[j][1].coeff
             cnt_top += 1
         elseif k !== nothing
             A = bottom_charts[k].volume 
             @assert A > 0.0
-            I_bottom += A * u_J[j] * ntrcX.fns[j][1].coeff 
+            I_bottom += A * u_J[j] * ntrcX.fns[j][1].coeff
+            #@show A * u_J[j] * ntrcX.fns[j][1].coeff
             cnt_bottom += 1
         else
             error("Neither top nor bottom")

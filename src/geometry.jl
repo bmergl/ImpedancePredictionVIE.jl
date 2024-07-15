@@ -357,6 +357,25 @@ function gen_w_mat(w::BEAST.LagrangeBasis{0,-1}, X::BEAST.NDLCDBasis, cell2mat_i
     return w_mat
 end
 
+function gen_y_complextype(y::BEAST.LagrangeBasis{1, 0}, T) # nur um Complex T zu erzeugen!
+
+    newfns = Vector{Vector{BEAST.Shape{T}}}() 
+    for (i,shs) in enumerate(y.fns)
+        newshs = Vector{BEAST.Shape{T}}()
+        for (j,sh) in enumerate(shs)
+            cellid = sh.cellid
+            refid = sh.refid
+            coeff = sh.coeff
+
+            new_coeff = T(coeff)
+            push!(newshs, BEAST.Shape(cellid, refid, new_coeff))
+        end
+        push!(newfns, newshs)
+    end
+    y_ctype = BEAST.LagrangeBasis{1,0,3}(y.geo, newfns, y.pos)
+    
+    return y_ctype
+end
 
 function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ::Vector)
 
