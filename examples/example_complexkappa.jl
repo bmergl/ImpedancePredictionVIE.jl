@@ -35,18 +35,18 @@ BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
 BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 
-sol, S, R = IP.solve1(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
+sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constant_zsplit(0.5, 3000.0*IP.ε0, 0.0008, 0.2, 10000.0*IP.ε0), #IP.constant_xsplit(0.5, 3000.0*IP.ε0, 0.0008, 0.2, 10000.0*IP.ε0), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # , # ##IP.constant_zsplit(0.2, 0.0, 0.0, 0.0, 10000.0*IP.ε0), #     #IP.general_material(κ, nothing),  #  I  ,#, # #, #
+    material = IP.constant_xsplit(0.5, 3000.0*IP.ε0, 0.0008, 0.2, 10000.0*IP.ε0), # IP.constant_zsplit(0.5, 3000.0*IP.ε0, 0.0008, 0.2, 10000.0*IP.ε0), #  #, #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # , # ##IP.constant_zsplit(0.2, 0.0, 0.0, 0.0, 10000.0*IP.ε0), #     #IP.general_material(κ, nothing),  #  I  ,#, # #, #
     κ0 = 0.1, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = 1.0*IP.ε0,
-    ω = 2*pi*1000.0, 
+    ω = 2*pi*1000000.0, 
     potential_top = 0.5, 
     potential_bottom = -0.5,
     qs3D = qs3D, 
     qs4D = qs4D, 
     qs5D6D = qs5D6D,
-    matalloc = :center
+    #matalloc = :center
 )
 
 # save

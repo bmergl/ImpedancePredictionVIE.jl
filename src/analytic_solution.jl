@@ -219,19 +219,59 @@ end
 
 function solution_J_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdata, s::IP.solution, points, J_MoM)
     
-    x0 = mat.x0
-    A_p = body.L_y * (body.L_x/2 - x0)
-    A_m = body.L_y * (body.L_x/2 + x0)
+    if mat.ϵ_p !== nothing && mat.κ_p !== nothing && mat.ϵ_m !== nothing && mat.κ_m !== nothing
+        ϵ_p = mat.ϵ_p
+        κ_p = mat.κ_p
+        ϵ_m = mat.ϵ_m
+        κ_m = mat.κ_m
 
-    R_p = (1/mat.κ_p)*body.L_z/A_p
-    R_m = (1/mat.κ_m)*body.L_z/A_m
+        x0 = mat.x0
+        A1 = (body.L_x/2 - x0) * body.L_y
+        A2 = (body.L_x/2 + x0) * body.L_y
+        lz = body.L_z
 
-    U = s.potential_top - s.potential_bottom
-    I_p = U/R_p
-    I_m = U/R_m
+        ω = s.ω
 
-    Jz_p_ana = -I_p/A_p
-    Jz_m_ana = -I_m/A_m 
+        #invZ = κ_p*A1/lz + im*ω*ϵ_p*A1/lz + κ_m*A2/lz + im*ω*ϵ_m*A2/lz
+        invZ1 = κ_p*A1/lz + im*ω*ϵ_p*A1/lz
+        invZ2 = κ_m*A2/lz + im*ω*ϵ_m*A2/lz
+        
+        U = s.potential_top-s.potential_bottom
+
+        Jz_p_ana = -(U/A1)*invZ1
+        Jz_m_ana = -(U/A2)*invZ2
+
+        J_ana = Vector{SVector{3, ComplexF64}}(undef, length(J_MoM)) #(0.0, 0.0, Jz_ana), length(J_MoM))
+        for (i,pos) in enumerate(points)
+            x = pos[1]
+            if x >= x0
+                J_ana[i] = SVector{3, ComplexF64}(0.0, 0.0, Jz_p_ana)
+            elseif x < x0
+                J_ana[i] = SVector{3, ComplexF64}(0.0, 0.0, Jz_m_ana)
+            else
+                error("")
+            end
+        end
+    
+        return J_ana
+
+    else
+
+        x0 = mat.x0
+        A_p = body.L_y * (body.L_x/2 - x0)
+        A_m = body.L_y * (body.L_x/2 + x0)
+
+        R_p = (1/mat.κ_p)*body.L_z/A_p
+        R_m = (1/mat.κ_m)*body.L_z/A_m
+
+        U = s.potential_top - s.potential_bottom
+        I_p = U/R_p
+        I_m = U/R_m
+
+        Jz_p_ana = -I_p/A_p
+        Jz_m_ana = -I_m/A_m 
+    
+    end
 
     @assert length(points) == length(J_MoM)
 
@@ -251,6 +291,28 @@ function solution_J_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdata
 end
 
 function solution_I_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdata, s::IP.solution)
+
+    if mat.ϵ_p !== nothing && mat.κ_p !== nothing && mat.ϵ_m !== nothing && mat.κ_m !== nothing
+        ϵ_p = mat.ϵ_p
+        κ_p = mat.κ_p
+        ϵ_m = mat.ϵ_m
+        κ_m = mat.κ_m
+
+        x0 = mat.x0
+        A1 = (body.L_x/2 - x0) * body.L_y
+        A2 = (body.L_x/2 + x0) * body.L_y
+        lz = body.L_z
+
+        ω = s.ω
+
+        invZ = κ_p*A1/lz + im*ω*ϵ_p*A1/lz + κ_m*A2/lz + im*ω*ϵ_m*A2/lz
+    
+        U = s.potential_top-s.potential_bottom
+
+        I_ana = U*invZ
+    
+        return I_ana
+    end
 
     x0 = mat.x0
     A_p = body.L_y * (body.L_x/2 - x0)
@@ -278,7 +340,7 @@ function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdat
         return ((Φ2 - Φ1)/(z2 - z1))*(z - z1) + Φ1
     end
 
-    u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
+    u_Φ_ana = Vector{Any}(undef,length(u_Φ))
     y = m.y
 
     z1 = -body.L_z/2
