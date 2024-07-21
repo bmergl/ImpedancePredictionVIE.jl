@@ -19,7 +19,7 @@ B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = Float64, chi = x->1.0)
 @time M = assemble(B33_ΩΩ, md.X, md.X)
 #
 
-Mh = @views hassemble(B33_ΩΩ, md.X, md.X;
+Mh = hassemble(B33_ΩΩ, md.X, md.X;
     treeoptions=BoxTreeOptions(nmin=100),
     compressor = FastBEAST.ACAOptions(tol=1e-4),
     #quadstratcbk=BEAST.defaultquadstrat(operator, test_functions, trial_functions),
