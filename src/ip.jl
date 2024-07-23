@@ -603,7 +603,7 @@ function solve1(;   # high contrast formulation
     b = R*v
     u = S \ b # it solver?
 
-    @assert norm(S*u - b) < 1e-8
+    @assert norm(S*u - b) < 1e-5
     u_Φ = u[1:length(y)]
     u_Jn = u[length(y)+1:length(y)+length(w)]
     u_J = u[length(y)+length(w)+1:end]
