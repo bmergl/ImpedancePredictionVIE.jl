@@ -15,7 +15,7 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0005)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0018)
 print("tehrahedrons: ", length(md.Ω.faces))
 #Visu.mesh(md.Ω) 
 
@@ -54,7 +54,7 @@ sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulat
 )
 
 # save
-dataname = "fine_h0.0005" # for JLD2 save
+dataname = "test" # for JLD2 save
 jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
 
@@ -74,11 +74,12 @@ using CompScienceMeshes
 using JLD2
 using Plots
 using Plotly
+
 #load 
-# dataname = "layers3_stdquad_finest"
-# datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
-# sol = load(datapath, "sol")
-# md = load(datapath, "md")
+dataname = "fine_h0.0004"
+datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
+sol = load(datapath, "sol")
+md = load(datapath, "md")
 # dataname1 = "test_solve1"
 # datapath1 = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname1.jld2"
 # sol1 = load(datapath1, "sol")
@@ -92,6 +93,16 @@ using Plotly
 # DIFF = log.(abs.(sol.S-sol1.S) .+eps(1.0))
 # p = Plots.heatmap(DIFF, title = "2D Rasterplot der Differenzmatrix")
 # yflip!(p; size=(1200,1000))
+
+##
+
+#using GR
+#using GLMakie
+gr()
+MATR = log.(abs.(S) .+1.0e-2)
+p = Plots.heatmap(MATR, title = "2D Rasterplot des Betrags der Systemmatrix", aspect_ratio=:equal)
+yflip!(p; size=(1200,1000))
+
 
 ##
 
