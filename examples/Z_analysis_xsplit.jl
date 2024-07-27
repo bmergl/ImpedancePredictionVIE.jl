@@ -64,6 +64,46 @@ end
 ##
 
 
+## Plot: Re
+
+plt = Plots.plot(f_list, real.(Z_ana_list), line=:line, label = "Re{Z_ana}", size=(600,500), xaxis=:log10, legend=:bottomleft)
+plot!(plt, f_list, real.(Z_list), line=:scatter, label = "Re{Z}")
+plot!(plt, f_list, real.(Z2_list), line=:scatter, label = "Re{Z2}")
+xlabel!("f in Hz")
+ylabel!("Impedance in Ω")
+ylims!(0.0,510.0)
+
+## Plot: Im
+
+plt = Plots.plot(f_list, imag.(Z_ana_list), line=:line , label = "Im{Z_ana}", size=(600,500), xaxis=:log10, legend=:bottomleft)
+plot!(plt, f_list, imag.(Z_list), line=:scatter, label = "Im{Z}")
+plot!(plt, f_list, imag.(Z2_list), line=:scatter, label = "Im{Z2}")
+xlabel!("f in Hz")
+ylabel!("Impedance in Ω")
+
+
+## Plot: |Z|
+
+plt = Plots.plot(f_list, abs.(Z_ana_list), line=:line , label = "|Z_ana|", size=(600,500), xaxis=:log10)
+plot!(plt, f_list, abs.(Z_list), line=:scatter, label = "|Z|")
+plot!(plt, f_list, abs.(Z2_list), line=:scatter, label = "|Z2|")
+xlabel!("f in Hz")
+ylabel!("Impedance in Ω")
+#ylims!(0.0,510.0)
+
+
+## Plot: arg(Z)
+
+plt = Plots.plot(f_list, angle.(Z_ana_list)/(2*pi)*360, line=:line , label = "arg{Z_ana}", size=(600,500), xaxis=:log10, legend=:bottomleft)
+plot!(plt, f_list, angle.(Z_list)/(2*pi)*360, line=:scatter, marker = :utriangle, label = "arg{Z}")
+plot!(plt, f_list, angle.(Z2_list)/(2*pi)*360, line=:scatter, marker = :dtriangle, label = "arg{Z2}")
+xlabel!("f in Hz")
+ylabel!("Angle in °")
+ylims!(-90.0, 5.0)
+
+
+
+
 
 ## Plot
 

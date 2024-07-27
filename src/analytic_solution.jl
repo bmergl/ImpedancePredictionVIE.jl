@@ -40,8 +40,8 @@ function solution_I_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s::
         κ = mat.κ
         U = s.potential_top-s.potential_bottom
         R = (1/κ)*L_z/(L_x*L_y)
-        C = IP.ε0*ϵ*(L_x*L_y)/L_z
-        @show C
+        C = ϵ*(L_x*L_y)/L_z
+        #@show C
         Z = (R - im*ω*R^2*C)/(1 + ω^2*R^2*C^2)
 
         I_ana = U/Z

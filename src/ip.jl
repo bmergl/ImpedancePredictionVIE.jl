@@ -459,6 +459,28 @@ end
 
 
 
+function solvefem(; # FEM formulation
+    md::meshdata,
+    material::material,
+    κ0::Union{Float64, Nothing} = nothing, 
+    ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
+    ω::Union{Float64, Nothing} = nothing, 
+    potential_top::Float64, 
+    potential_bottom::Float64,
+    qs3D = BEAST.SingleNumQStrat(3))
+
+    println("2×2 block matrix - FEM formulation")
+
+    
+
+
+
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
+end
+
+
+
+
 
 function solve1(;   # high contrast formulation
     md::meshdata,

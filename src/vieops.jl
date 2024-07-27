@@ -524,22 +524,22 @@ end
 
 #### Material Identity #######################################################
 
-abstract type MaterialIdentity <: BEAST.LocalOperator end
+abstract type MaterialLocalOp <: BEAST.LocalOperator end
 
-struct KernelValsMaterialIdentity{U}
+struct KernelValsMaterialLocalOp{U}
     tau::U # nehmen gleiche Notation wie in VIE Part
 end
-function BEAST.kernelvals(localop::MaterialIdentity, p)
+function BEAST.kernelvals(localop::MaterialLocalOp, p)
 
     tau = localop.tau(cartesian(p)) #skalare oder tensorielle Funktion der Ortes
 
-    return KernelValsMaterialIdentity(tau)
+    return KernelValsMaterialLocalOp(tau)
 end
-BEAST.scalartype(localop::MaterialIdentity) = typeof(localop.α)  # typeof(tau) geht ja schlecht weil tau function ist
+BEAST.scalartype(localop::MaterialLocalOp) = typeof(localop.α)  # typeof(tau) geht ja schlecht weil tau function ist
 
 
 
-struct MatId{T,U} <: MaterialIdentity 
+struct MatId{T,U} <: MaterialLocalOp # ja...muss ja keine identity mehr sein...besser unten....
     α::T
     tau::U
 end
@@ -553,6 +553,67 @@ function BEAST.integrand(localop::MatId, kerneldata, x, g, f)
     α = localop.α
 
     return α * dot(gx, Tx * fx) # geht auch wenn g und f skalar sind
+end
+
+struct MatLoc{T,U} <: MaterialLocalOp
+    α::T
+    tau::U
+end
+function BEAST.integrand(localop::MatLoc, kerneldata, x, g, f)
+
+    gx = g.value
+    fx = f.value
+
+    Tx = kerneldata.tau
+
+    α = localop.α
+
+    return α * dot(gx, Tx * fx) # geht auch wenn g und f skalar sind
+end
+
+
+
+
+struct _grad_Ω{T,U} <: MaterialLocalOp
+    α::T
+    tau::U
+end
+function BEAST.integrand(localop::_grad_Ω, kerneldata, x, g, f)
+
+    @show g
+    @show f
+    error("STOP")
+
+
+    gx = g.value
+    dfx = f.gradient
+
+
+    Tx = kerneldata.tau
+
+    α = localop.α
+
+    return α * dot(gx, Tx * dfx)
+end
+
+struct _div_Γ{T,U} <: MaterialLocalOp
+    α::T
+    tau::U
+end
+function BEAST.integrand(localop::_div_Γ, kerneldata, x, g, f)
+
+    @show g
+    @show f
+    error("STOP")
+
+    gx = g.value
+    dfx = f.divergence
+
+    Tx = kerneldata.tau
+
+    α = localop.α
+
+    return α * gx * Tx * dfx
 end
 
 # struct n_MatId{T,U} <: MaterialIdentity 
