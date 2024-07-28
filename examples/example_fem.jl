@@ -20,48 +20,107 @@ print("tehrahedrons: ", length(md.Ω.faces))
 
 
 
+##
+
+##
+
+qs3D = BEAST.SingleNumQStrat(3)
+BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
+
+# STANDARD-TESTMATERIAL: IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2])
+
+sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
+    md = md, 
+    material = IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
+    ϵ0 = nothing,
+    ω = nothing, 
+    potential_top = 0.5, 
+    potential_bottom = -0.5,
+    qs3D = qs3D, 
+    qs4D = qs4D, 
+    qs5D6D = qs5D6D,
+    #matalloc = :center,
+)
+
+# save
+dataname = "test" # for JLD2 save
+jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
 
-Y = lagrangec0d1(md.Ω, dirichlet = false) # sinnvoll anpassen...sollte einfach sein!
-md.Ω.vertices
-X = md.X
-
-OP1 = IP.MatLoc(1.0, x->1.0)
-
-#import BEAST
-
-OP1 = IP._grad_Ω(1.0, x->1.0)
-BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.NDLCDRefSpace{T}, ::BEAST.LagrangeRefSpace{T,D1,4}) where {T,D1} = BEAST.SingleNumQStrat(6)
-function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.NDLCDRefSpace{T},
-    f::BEAST.LagrangeRefSpace{T,Deg,4}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
-    # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
-
-    o, x, y, z = CompScienceMeshes.euclidianbasis(3)
-    reftet = simplex(x,y,z,o)
-    qps = quadpoints(reftet, qs.quad_rule)
-    qd = [(w, parametric(p)) for (p,w) in qps]
-    A = BEAST._alloc_workspace(qd, g, f, tels, bels)
-    return qd, A
-end
-
-assemble(OP1, X, Y)
 
 
-OP2 = IP._div_Ω(1.0, x->1.0)
-BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.LagrangeRefSpace{T,D1,4}, ::BEAST.NDLCDRefSpace{T}) where {T,D1} = BEAST.SingleNumQStrat(6)
-function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.LagrangeRefSpace{T,Deg,4},
-    f::BEAST.NDLCDRefSpace{T}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
-    # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
 
-    o, x, y, z = CompScienceMeshes.euclidianbasis(3)
-    reftet = simplex(x,y,z,o)
-    qps = quadpoints(reftet, qs.quad_rule)
-    qd = [(w, parametric(p)) for (p,w) in qps]
-    A = BEAST._alloc_workspace(qd, g, f, tels, bels)
-    return qd, A
-end
 
-assemble(OP2, Y, X)
+
+
+# Y = lagrangec0d1(md.Ω, dirichlet = false) # sinnvoll anpassen...sollte einfach sein!
+# md.Ω.vertices
+# X = md.X
+
+# topnodes = realnodes(md.Γ_c_t)
+# bottomnodes = realnodes(md.Γ_c_b)
+# dirichletnodes = vcat(topnodes, bottomnodes)
+
+# Y_d = lagrangec0d1(md.Ω, dirichletnodes, Val{3})
+# Visu.fnspos(Y_d)
+
+
+
+# nondirichletnodes = Vector{Int64}()
+# for k in 1:length(md.Ω.vertices)
+#     push_ = true
+#     for n in dirichletnodes 
+#         if k == n 
+#             push_ = false
+#             break
+#         end
+#     end
+#     push_ && push!(nondirichletnodes, k)
+# end
+# @assert length(nondirichletnodes) + length(dirichletnodes) == length(md.Ω.vertices)
+
+# Y = lagrangec0d1(md.Ω, nondirichletnodes, Val{3})
+# Visu.fnspos(Y)
+
+# BEAST.interior_and_junction_vertices(md.Ω, md.Γ)
+
+# OP1 = IP.MatLoc(1.0, x->1.0)
+
+# #import BEAST
+
+# OP1 = IP._grad_Ω(1.0, x->1.0)
+# BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.NDLCDRefSpace{T}, ::BEAST.LagrangeRefSpace{T,D1,4}) where {T,D1} = BEAST.SingleNumQStrat(6)
+# function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.NDLCDRefSpace{T},
+#     f::BEAST.LagrangeRefSpace{T,Deg,4}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
+#     # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
+
+#     o, x, y, z = CompScienceMeshes.euclidianbasis(3)
+#     reftet = simplex(x,y,z,o)
+#     qps = quadpoints(reftet, qs.quad_rule)
+#     qd = [(w, parametric(p)) for (p,w) in qps]
+#     A = BEAST._alloc_workspace(qd, g, f, tels, bels)
+#     return qd, A
+# end
+
+# assemble(OP1, X, Y)
+
+
+# OP2 = IP._div_Ω(1.0, x->1.0)
+# BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.LagrangeRefSpace{T,D1,4}, ::BEAST.NDLCDRefSpace{T}) where {T,D1} = BEAST.SingleNumQStrat(6)
+# function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.LagrangeRefSpace{T,Deg,4},
+#     f::BEAST.NDLCDRefSpace{T}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
+#     # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
+
+#     o, x, y, z = CompScienceMeshes.euclidianbasis(3)
+#     reftet = simplex(x,y,z,o)
+#     qps = quadpoints(reftet, qs.quad_rule)
+#     qd = [(w, parametric(p)) for (p,w) in qps]
+#     A = BEAST._alloc_workspace(qd, g, f, tels, bels)
+#     return qd, A
+# end
+
+# assemble(OP2, Y, X)
 
 
 
@@ -203,31 +262,6 @@ assemble(OP2, Y, X)
 
 
 
-
-##
-
-qs3D = BEAST.SingleNumQStrat(3)
-BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
-
-# STANDARD-TESTMATERIAL: IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2])
-
-sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
-    md = md, 
-    material = IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
-    κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
-    ϵ0 = nothing,
-    ω = nothing, 
-    potential_top = 0.5, 
-    potential_bottom = -0.5,
-    qs3D = qs3D, 
-    qs4D = qs4D, 
-    qs5D6D = qs5D6D,
-    #matalloc = :center,
-)
-
-# save
-dataname = "test" # for JLD2 save
-jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
 
 

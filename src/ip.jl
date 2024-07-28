@@ -471,11 +471,89 @@ function solvefem(; # FEM formulation
 
     println("2×2 block matrix - FEM formulation")
 
+    # Material
+    κ, ϵ = material()
+    τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
+
+    # Excitation
+    v_top = ones(length(md.topnodes)) * potential_top
+    v_bottom = ones(length(md.bottomnodes)) * potential_bottom
+    v = vcat(v_top, v_bottom)
+
+    nondirichletnodes = Vector{Int64}()
+    for k in 1:length(md.Ω.vertices)
+        push_ = true
+        for n in md.dirichletnodes 
+            if k == n 
+                push_ = false
+                break
+            end
+        end
+        push_ && push!(nondirichletnodes, k)
+    end
+    @assert length(nondirichletnodes) + length(dirichletnodes) == length(md.Ω.vertices)
+
+    # Basis
+    X = md.X
+    Y_d = lagrangec0d1(md.Ω, md.dirichletnodes, Val{3})
+    Y = lagrangec0d1(md.Ω, nondirichletnodes, Val{3})
+
+    # Operators
+
+    O = zeros(T,length(Y.fns),length(Y.fns))
+    Õ = zeros(T,length(Y.fns),length(Y_d.fns)) 
+    I = assemble(BEAST.Identity(), X, X)
+
+    BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.NDLCDRefSpace{T}, ::BEAST.LagrangeRefSpace{T,D1,4}) where {T,D1} = BEAST.SingleNumQStrat(6)
+    function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.NDLCDRefSpace{T},
+        f::BEAST.LagrangeRefSpace{T,Deg,4}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
+        # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
+
+        o, x, y, z = CompScienceMeshes.euclidianbasis(3)
+        reftet = simplex(x,y,z,o)
+        qps = quadpoints(reftet, qs.quad_rule)
+        qd = [(w, parametric(p)) for (p,w) in qps]
+        A = BEAST._alloc_workspace(qd, g, f, tels, bels)
+        return qd, A
+    end
+
+    Op_A = IP._grad_Ω(1.0, τ)
+    A = assemble(Op_A, X, Y)
+    Ã = -assemble(Op_A, X, Y_d)
+
+
+    BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.LagrangeRefSpace{T,D1,4}, ::BEAST.NDLCDRefSpace{T}) where {T,D1} = BEAST.SingleNumQStrat(6)
+    function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.LagrangeRefSpace{T,Deg,4},
+        f::BEAST.NDLCDRefSpace{T}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
+        # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
+
+        o, x, y, z = CompScienceMeshes.euclidianbasis(3)
+        reftet = simplex(x,y,z,o)
+        qps = quadpoints(reftet, qs.quad_rule)
+        qd = [(w, parametric(p)) for (p,w) in qps]
+        A = BEAST._alloc_workspace(qd, g, f, tels, bels)
+        return qd, A
+    end
+
+    Op_B = IP._div_Ω(1.0, τ)
+    B = assemble(Op_B, Y, X)
+
+    row1 = hcat(O,B)
+    row2 = hcat(A,I)
+    S = vcat(row1,row2)
+    R = vcat(Õ,Ã)
     
+    b = R*v
+    u = inv(S)*b
 
+    u_Φ = u[1:length(Y)]
+    u_Jn = nothing #u[length(y)+1:length(y)+length(w)]
+    u_J = u[length(Y):end]
+    @assert length(u_Φ) == length(Y.fns)
+    #@assert length(u_Jn) == length(w.fns)
+    @assert length(u_J) == length(X.fns)
 
-
-    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, nothing, nothing, v, b, u, u_Φ, u_Jn, u_J), S, R
 end
 
 
