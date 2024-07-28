@@ -580,11 +580,6 @@ struct _grad_Ω{T,U} <: MaterialLocalOp
 end
 function BEAST.integrand(localop::_grad_Ω, kerneldata, x, g, f)
 
-    @show g
-    @show f
-    error("STOP")
-
-
     gx = g.value
     dfx = f.gradient
 
@@ -596,15 +591,11 @@ function BEAST.integrand(localop::_grad_Ω, kerneldata, x, g, f)
     return α * dot(gx, Tx * dfx)
 end
 
-struct _div_Γ{T,U} <: MaterialLocalOp
+struct _div_Ω{T,U} <: MaterialLocalOp
     α::T
     tau::U
 end
-function BEAST.integrand(localop::_div_Γ, kerneldata, x, g, f)
-
-    @show g
-    @show f
-    error("STOP")
+function BEAST.integrand(localop::_div_Ω, kerneldata, x, g, f)
 
     gx = g.value
     dfx = f.divergence
