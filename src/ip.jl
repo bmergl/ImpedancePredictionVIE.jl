@@ -491,7 +491,7 @@ function solvefem(; # FEM formulation
         end
         push_ && push!(nondirichletnodes, k)
     end
-    @assert length(nondirichletnodes) + length(dirichletnodes) == length(md.Ω.vertices)
+    @assert length(nondirichletnodes) + length(md.dirichletnodes) == length(md.Ω.vertices)
 
     # Basis
     X = md.X
@@ -504,36 +504,10 @@ function solvefem(; # FEM formulation
     Õ = zeros(T,length(Y.fns),length(Y_d.fns)) 
     I = assemble(BEAST.Identity(), X, X)
 
-    BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.NDLCDRefSpace{T}, ::BEAST.LagrangeRefSpace{T,D1,4}) where {T,D1} = BEAST.SingleNumQStrat(6)
-    function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.NDLCDRefSpace{T},
-        f::BEAST.LagrangeRefSpace{T,Deg,4}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
-        # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
-
-        o, x, y, z = CompScienceMeshes.euclidianbasis(3)
-        reftet = simplex(x,y,z,o)
-        qps = quadpoints(reftet, qs.quad_rule)
-        qd = [(w, parametric(p)) for (p,w) in qps]
-        A = BEAST._alloc_workspace(qd, g, f, tels, bels)
-        return qd, A
-    end
 
     Op_A = IP._grad_Ω(1.0, τ)
     A = assemble(Op_A, X, Y)
     Ã = -assemble(Op_A, X, Y_d)
-
-
-    BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.LagrangeRefSpace{T,D1,4}, ::BEAST.NDLCDRefSpace{T}) where {T,D1} = BEAST.SingleNumQStrat(6)
-    function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.LagrangeRefSpace{T,Deg,4},
-        f::BEAST.NDLCDRefSpace{T}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
-        # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
-
-        o, x, y, z = CompScienceMeshes.euclidianbasis(3)
-        reftet = simplex(x,y,z,o)
-        qps = quadpoints(reftet, qs.quad_rule)
-        qd = [(w, parametric(p)) for (p,w) in qps]
-        A = BEAST._alloc_workspace(qd, g, f, tels, bels)
-        return qd, A
-    end
 
     Op_B = IP._div_Ω(1.0, τ)
     B = assemble(Op_B, Y, X)

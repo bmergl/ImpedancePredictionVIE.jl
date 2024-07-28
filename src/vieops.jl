@@ -626,4 +626,32 @@ end
 #     return α * dot(gx*nx, Tx * fx) # geht auch wenn g und f skalar sind
 # end
 
+BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.NDLCDRefSpace{T}, ::BEAST.LagrangeRefSpace{T,D1,4}) where {T,D1} = BEAST.SingleNumQStrat(6)
+function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.NDLCDRefSpace{T},
+    f::BEAST.LagrangeRefSpace{T,Deg,4}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
+    # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
+
+    o, x, y, z = CompScienceMeshes.euclidianbasis(3)
+    reftet = simplex(x,y,z,o)
+    qps = quadpoints(reftet, qs.quad_rule)
+    qd = [(w, parametric(p)) for (p,w) in qps]
+    A = BEAST._alloc_workspace(qd, g, f, tels, bels)
+    return qd, A
+end
+
+BEAST.defaultquadstrat(::BEAST.LocalOperator, ::BEAST.LagrangeRefSpace{T,D1,4}, ::BEAST.NDLCDRefSpace{T}) where {T,D1} = BEAST.SingleNumQStrat(6)
+function BEAST.quaddata(op::BEAST.LocalOperator, g::BEAST.LagrangeRefSpace{T,Deg,4},
+    f::BEAST.NDLCDRefSpace{T}, tels::Vector, bels::Vector, qs::BEAST.SingleNumQStrat) where {T,Deg} 
+    # besser: quaddata(op::LocalOperator, g::LinearRefSpaceTetr, f::LinearRefSpaceTetr... gibt es aber nicht mit lag... 
+
+    o, x, y, z = CompScienceMeshes.euclidianbasis(3)
+    reftet = simplex(x,y,z,o)
+    qps = quadpoints(reftet, qs.quad_rule)
+    qd = [(w, parametric(p)) for (p,w) in qps]
+    A = BEAST._alloc_workspace(qd, g, f, tels, bels)
+    return qd, A
+end
+
+
+
 

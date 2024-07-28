@@ -27,19 +27,21 @@ print("tehrahedrons: ", length(md.Ω.faces))
 qs3D = BEAST.SingleNumQStrat(3)
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
 
+OP1 = IP._grad_Ω(1.0, x->1.0)
+assemble(OP1, md.X, Y)
+
+
 # STANDARD-TESTMATERIAL: IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2])
 
-sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
+sol, S, R = IP.solvefem(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    material = IP.constantmaterial(1.0, nothing), #IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
     κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = nothing,
     ω = nothing, 
     potential_top = 0.5, 
     potential_bottom = -0.5,
     qs3D = qs3D, 
-    qs4D = qs4D, 
-    qs5D6D = qs5D6D,
     #matalloc = :center,
 )
 
