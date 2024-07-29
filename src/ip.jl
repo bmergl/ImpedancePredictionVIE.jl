@@ -495,8 +495,8 @@ function solvefem(; # FEM formulation
 
     # Basis
     X = md.X
-    Y_d = lagrangec0d1(md.Ω, md.dirichletnodes, Val{3})
-    Y = lagrangec0d1(md.Ω, nondirichletnodes, Val{3})
+    Y_d = lagrangec0d1(md.Ω, md.dirichletnodes, Val{4})
+    Y = lagrangec0d1(md.Ω, nondirichletnodes, Val{4})
 
     # Operators
 
@@ -518,11 +518,13 @@ function solvefem(; # FEM formulation
     R = vcat(Õ,Ã)
     
     b = R*v
-    u = inv(S)*b
+    u = S \ b
+    @assert norm(S*u-b)<1.0e-7
+
 
     u_Φ = u[1:length(Y)]
     u_Jn = nothing #u[length(y)+1:length(y)+length(w)]
-    u_J = u[length(Y):end]
+    u_J = u[length(Y)+1:end]
     @assert length(u_Φ) == length(Y.fns)
     #@assert length(u_Jn) == length(w.fns)
     @assert length(u_J) == length(X.fns)

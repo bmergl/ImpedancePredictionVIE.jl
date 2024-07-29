@@ -527,6 +527,47 @@ function inner_mat_ntrace(X::BEAST.NDLCDBasis, swg_faces_mesh::Mesh, cell2mat_χ
     return BEAST.ntrace(X, ogeo, fns)
 end
 
+# build continuous linear Lagrange elements on a 3D manifold
+function BEAST.lagrangec0d1(mesh, vertexlist::Vector, ::Type{Val{4}})
+
+    T = coordtype(mesh)
+    U = universedimension(mesh)
+
+    cellids, ncells = vertextocellmap(mesh)
+
+    Cells = cells(mesh)
+    Verts = vertices(mesh)
+
+    # create the local shapes
+    fns = Vector{BEAST.Shape{T}}[]
+    pos = Vector{vertextype(mesh)}()
+
+    sizehint!(fns, length(vertexlist))
+    sizehint!(pos, length(vertexlist))
+    for v in vertexlist
+
+        numshapes = ncells[v]
+        numshapes == 0 && continue
+
+        shapes = Vector{BEAST.Shape{T}}(undef,numshapes)
+        for s in 1: numshapes
+            c = cellids[v,s]
+            # cell = mesh.faces[c]
+            cell = Cells[c]
+
+            localid = something(findfirst(isequal(v), cell),0)
+            @assert localid != 0
+
+            shapes[s] = BEAST.Shape(c, localid, T(1.0))
+        end
+
+        push!(fns, shapes)
+        push!(pos, Verts[v])
+    end
+
+    NF = 4
+    BEAST.LagrangeBasis{1,0,NF}(mesh, fns, pos)
+end
 
 
 
