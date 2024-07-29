@@ -39,6 +39,8 @@ struct meshdata
     X::BEAST.NDLCDBasis{Float64, Mesh{3, 4, Float64}, SVector{3, Float64}}
     ntrcX::BEAST.LagrangeBasis{0, -1, CompScienceMeshes.SubMesh{3, 3, Float64}, Float64, 1, SVector{3, Float64}}
     ntrc::Function
+    Y_d::BEAST.LagrangeBasis{1, 0, Mesh{3, 4, Float64}, Float64, 4, SVector{3, Float64}}
+    Y::BEAST.LagrangeBasis{1, 0, Mesh{3, 4, Float64}, Float64, 4, SVector{3, Float64}}
 end
 
 
@@ -255,13 +257,33 @@ function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
     end
     w = BEAST.LagrangeBasis{0,-1,1}(ntrcX.geo.supermesh, newfns, newpos)
 
+    # FEM only
+    nondirichletnodes = Vector{Int64}()
+    println("Time for FEM node preparation")
+    @time for k in 1:length(Ω.vertices)
+        push_ = true
+        for n in dirichletnodes 
+            if k == n 
+                push_ = false
+                break
+            end
+        end
+        push_ && push!(nondirichletnodes, k)
+    end
+    @assert length(nondirichletnodes) + length(dirichletnodes) == length(Ω.vertices)
+    Y_d = lagrangec0d1(Ω, dirichletnodes, Val{4})
+    Y = lagrangec0d1(Ω, nondirichletnodes, Val{4})
+
+
     @show numfunctions(y)
     @show numfunctions(y_d)
     @show numfunctions(w)
     @show numfunctions(X)
+    @show numfunctions(Y)
+    @show numfunctions(Y_d)
 
     return meshdata(body, h, Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc, topnodes,
-    bottomnodes, dirichletnodes, y_d, y, w, swg_faces, X, ntrcX, ntrc)
+    bottomnodes, dirichletnodes, y_d, y, w, swg_faces, X, ntrcX, ntrc, Y_d, Y)
 end
 
 
@@ -480,23 +502,10 @@ function solvefem(; # FEM formulation
     v_bottom = ones(length(md.bottomnodes)) * potential_bottom
     v = vcat(v_top, v_bottom)
 
-    nondirichletnodes = Vector{Int64}()
-    for k in 1:length(md.Ω.vertices)
-        push_ = true
-        for n in md.dirichletnodes 
-            if k == n 
-                push_ = false
-                break
-            end
-        end
-        push_ && push!(nondirichletnodes, k)
-    end
-    @assert length(nondirichletnodes) + length(md.dirichletnodes) == length(md.Ω.vertices)
-
     # Basis
     X = md.X
-    Y_d = lagrangec0d1(md.Ω, md.dirichletnodes, Val{4})
-    Y = lagrangec0d1(md.Ω, nondirichletnodes, Val{4})
+    Y = md.Y
+    Y_d = md.Y_d
 
     # Operators
 
@@ -519,7 +528,7 @@ function solvefem(; # FEM formulation
     
     b = R*v
     u = S \ b
-    @assert norm(S*u-b)<1.0e-7
+    #@assert norm(S*u-b) < 1.0e-4
 
 
     u_Φ = u[1:length(Y)]

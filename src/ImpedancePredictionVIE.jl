@@ -6,6 +6,7 @@ using SparseArrays
 using BEAST
 using CompScienceMeshes
 using SauterSchwab3D
+using Base.Threads
 
 using JLD2
 

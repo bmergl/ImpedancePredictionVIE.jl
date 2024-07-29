@@ -15,12 +15,12 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0003)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0006)
 print("tehrahedrons: ", length(md.Ω.faces))
 
 
-
 ##
+
 
 qs3D = BEAST.SingleNumQStrat(3)
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
@@ -40,7 +40,14 @@ sol, S, R = IP.solvefem(;   # solve -> arb. Mat. / solve1 -> high contrast formu
     #matalloc = :center,
 )
 
+# dataname = "test" # for JLD2 save
+# jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+
+
 ##
+
+
+
 
 ##
 
@@ -78,16 +85,13 @@ println()
 println()
 
 # Potential: Randknoten vs. Analytisch ACHTUNG!!! DIE FUNKTION GEHT NICHT MEHR
-#u_Φ = sol.u_Φ
-#u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol)
-#@show norm(u_Φ-u_Φ_ana)/norm(u_Φ_ana)
-
-maximum(u_Φ)
-minimum(u_Φ)
+u_Φ = sol.u_Φ
+u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol; FEM = true)
+@show norm(u_Φ-u_Φ_ana)/norm(u_Φ_ana)
 
 
 ##
-display(Visu.fieldplot(points, J_MoM, 0.0007, Visu.mesh(md.Γ_c)))
+#display(Visu.fieldplot(points, J_MoM, 0.0007, Visu.mesh(md.Γ_c)))
 
 
 ## facecurrents Tests
@@ -104,7 +108,7 @@ Plotly.plot(patch(geo3, fcr3))
 ## x-line at y0, z0 - J_z only inside the sphere mesh valid!
 y0 = 0.0
 z0 = 0.0
-x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 200)
+x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 400)
 points_x = [point(x, y0, z0) for x in x_range]
 x = collect(x_range)
 

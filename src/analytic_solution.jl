@@ -54,7 +54,7 @@ function solution_I_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s::
     return I_ana
 end
 
-function solution_Φ_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s::IP.solution)
+function solution_Φ_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s::IP.solution; FEM = false)
     u_Φ = s.u_Φ
 
     function CapacitorPot(x, v_top, v_bottom) # hom. medium
@@ -65,6 +65,7 @@ function solution_Φ_ana(body::cuboid, mat::constantmaterial, m::IP.meshdata, s:
     end
     u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
     y = m.y
+    FEM == true && (y = m.Y)
     for (i, pos) in enumerate(y.pos)
         u_Φ_ana[i] = CapacitorPot(pos, s.potential_top, s.potential_bottom)
     end
@@ -148,7 +149,7 @@ function solution_I_ana(body::IP.cuboid, mat::IP.constant_zsplit, m::IP.meshdata
     return I_ana
 end
 
-function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_zsplit, m::IP.meshdata, s::IP.solution)
+function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_zsplit, m::IP.meshdata, s::IP.solution; FEM = false)
     u_Φ = s.u_Φ
 
     function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
@@ -189,6 +190,7 @@ function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_zsplit, m::IP.meshdat
     
     z0 = mat.z0
     y = m.y
+    FEM == true && (y = m.Y)
     for (i, pos) in enumerate(y.pos)
         if pos[3] >= z0 # R_p region
 
@@ -331,7 +333,7 @@ function solution_I_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdata
     return I_ana
 end
 
-function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdata, s::IP.solution)
+function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdata, s::IP.solution; FEM = false)
     u_Φ = s.u_Φ
 
     function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
@@ -342,6 +344,7 @@ function solution_Φ_ana(body::IP.cuboid, mat::IP.constant_xsplit, m::IP.meshdat
 
     u_Φ_ana = Vector{Any}(undef,length(u_Φ))
     y = m.y
+    FEM == true && (y = m.Y)
 
     z1 = -body.L_z/2
     Φ1 = s.potential_bottom
@@ -395,7 +398,7 @@ function solution_I_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.s
     return I_ana
 end
 
-function solution_Φ_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.solution)
+function solution_Φ_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.solution; FEM = false)
     u_Φ = s.u_Φ
 
     function linPot_z(x, z1, z2, Φ1, Φ2) # linear in section [z1,z2] -> [Φ1, Φ2]
@@ -406,6 +409,7 @@ function solution_Φ_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.
 
     u_Φ_ana = Vector{Float64}(undef,length(u_Φ))
     y = m.y
+    FEM == true && (y = m.Y)
 
     z1 = -body.L_z/2
     Φ1 = s.potential_bottom

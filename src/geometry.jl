@@ -1,6 +1,6 @@
 using SparseArrays
-
-
+using BEAST
+using Base.Threads
 
 function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::IP.geometric_body)
 
@@ -121,44 +121,78 @@ function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<-----
 
 
     all_faces_mesh = skeleton(volmesh,2)
+
+
     l = length(all_faces_mesh.faces)
-    #all_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, l)
     all_charts_centers = Vector{SVector{3, Float64}}(undef, l)
     for i in 1:l
-        chart = CompScienceMeshes.chart(all_faces_mesh, i)      #ÜBER assemblydata!!!
-        #all_charts[i] = chart
-
+        chart = CompScienceMeshes.chart(all_faces_mesh, i)
         center = CompScienceMeshes.center(chart)
         all_charts_centers[i] = cartesian(center)
     end
 
     l_ = length(ncbndmesh.faces)
     excluded_charts = Vector{CompScienceMeshes.Simplex{3, 2, 1, 3, Float64}}(undef, l_)
-    #excluded_charts_centers = Vector{SVector{3, Float64}}(undef, l_)
     for i in 1:l_
-        chart = CompScienceMeshes.chart(ncbndmesh, i)   #ÜBER assemblydata!!!
+        chart = CompScienceMeshes.chart(ncbndmesh, i)
         excluded_charts[i] = chart 
-
-        #center = CompScienceMeshes.center(chart)
-        #excluded_charts_centers[i] = cartesian(center)
     end
 
     swg_faces = Vector{SVector{3, Int64}}()
-    excluded_charts_tree = BEAST.octree(excluded_charts)
 
+
+    ######## Multi Threading ############
+    # Threads Anzahl
+    nthreads = Threads.nthreads()
+    # Initialisierung eines Arrays von leeren Vektoren für jedes Thread
+    thread_results = [Vector{SVector{3, Int64}}() for i in 1:nthreads]
+
+
+    excluded_charts_tree = BEAST.octree(excluded_charts)
     @assert length(all_charts_centers) >  length(excluded_charts)
     @assert length(all_charts_centers) ==  length(all_faces_mesh.faces)
 
-    for (j,pos) in enumerate(all_charts_centers)
+    enumerated_tupel = collect(enumerate(all_charts_centers))
+    #Threads.@threads for (j,pos) in enumerated_tupel#enumerate(all_charts_centers)
+    println("Time for findchart in swgfaces")
+    @time Threads.@threads for k in 1:length(enumerated_tupel)  #enumerated_tupel#enumerate(all_charts_centers)
+        j, pos = enumerated_tupel[k]
 
         i = CompScienceMeshes.findchart(excluded_charts, excluded_charts_tree, pos)
 
         if i === nothing    # nicht gefunden => face hinzufügen
-            push!(swg_faces, all_faces_mesh.faces[j])
+            push!(thread_results[threadid()], all_faces_mesh.faces[j])
+            #push!(swg_faces, all_faces_mesh.faces[j])
         else
             # gefunden! => face liegt auf Γ_nc und muss ausgeschlossen werden!
         end
     end
+
+    # Zusammenführen aller Thread-spezifischen Vektoren
+    for t in 1:nthreads
+        append!(swg_faces, thread_results[t])
+    end
+    ####################################
+
+
+    ######### Single Threading ##########
+    # excluded_charts_tree = BEAST.octree(excluded_charts)
+    # @assert length(all_charts_centers) >  length(excluded_charts)
+    # @assert length(all_charts_centers) ==  length(all_faces_mesh.faces)
+
+    # @time for (j,pos) in enumerate(all_charts_centers)
+
+    #     i = CompScienceMeshes.findchart(excluded_charts, excluded_charts_tree, pos)
+
+    #     if i === nothing    # nicht gefunden => face hinzufügen
+    #         push!(swg_faces, all_faces_mesh.faces[j])
+    #     else
+    #         # gefunden! => face liegt auf Γ_nc und muss ausgeschlossen werden!
+    #     end
+    # end
+    ####################################
+
+
 
     @assert length(all_charts_centers) == length(excluded_charts) + length(swg_faces)
     
