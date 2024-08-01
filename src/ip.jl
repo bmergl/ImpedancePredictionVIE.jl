@@ -410,6 +410,7 @@ function solve(; # low contrast formulation
         B33_Ω[k,n] + B33_ΓΓ[ntrc(k),ntrc(n)] + B33_ΓΩ[ntrc(k),n] + B33_ΩΓ[k,ntrc(n)] + B33_ΩΩ[k,n]
     )
     lhsd = @discretise lhs i∈w j∈y k∈X l∈y m∈w n∈X # w und y swapped for test!
+    
     lhsd_test = lhsd.test_space_dict
     lhsd_trial = lhsd.trial_space_dict
     testSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_test)
@@ -428,6 +429,7 @@ function solve(; # low contrast formulation
         -B31_ΓΓ[ntrc(k),o] -B31_ΩΓ[k,o]
     )
     rhsd = @discretise rhs i∈w j∈y k∈X o∈y_d # w und y swapped for test!
+
     rhsd_test = rhsd.test_space_dict
     rhsd_trial = rhsd.trial_space_dict
     testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)
@@ -435,13 +437,9 @@ function solve(; # low contrast formulation
     R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
 
 
-    # qs3Dhigh = qs3D
-    # qs4Dhigh = qs4D
-    # qs5D6Dhigh = qs5D6D
-
-    # qs3Dhigh = BEAST.SingleNumQStrat(6)
-    # qs4Dhigh = BEAST.DoubleNumWiltonSauterQStrat(6,6,6,6,6,6,6,6)
-    # qs5D6Dhigh = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
+    # qs3Dhigh = BEAST.SingleNumQStrat(10)
+    # qs4Dhigh = BEAST.DoubleNumWiltonSauterQStrat(10,10,10,10,10,10,10,10)
+    # qs5D6Dhigh = BEAST.SauterSchwab3DQStrat(10,10,10,1,1,1)
     
     # O11 = -B11_Γ
     # R11 = O11.coeffs[1]*assemble(O11.ops[1], w, y_d; quadstrat = qs3Dhigh)
@@ -474,10 +472,161 @@ function solve(; # low contrast formulation
     @assert length(u_Jn) == length(w.fns)
     @assert length(u_J) == length(X.fns)
 
-
     return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
 end
 
+
+function solve0(; # low contrast formulation, same as solve but operators are easier accessible
+    md::meshdata,
+    material::material,
+    κ0::Union{Float64, Nothing} = nothing, 
+    ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
+    ω::Union{Float64, Nothing} = nothing, 
+    potential_top::Float64, 
+    potential_bottom::Float64,
+    qs3D = BEAST.SingleNumQStrat(3), 
+    qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+    qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
+
+    println("3×3 block matrix - classical formulation")
+
+    # Material
+    κ, ϵ = material()
+    τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
+    p = point(0.0,0.0,0.0)
+    @show τ(p)
+    @show inv_τ(p)
+    @show τ0
+    @show χ(p)
+    @show T
+
+    # Excitation
+    v_top = ones(length(md.topnodes)) * potential_top
+    v_bottom = ones(length(md.bottomnodes)) * potential_bottom
+    v = vcat(v_top, v_bottom)
+
+
+    # Operators row 1
+
+    B11_Γ = IPVIE.B11_Γ(alpha = 1.0) #Verschwindet!!! <---- klären....
+    #assemble(B11_Γ, w, y)
+    B11_ΓΓ = IPVIE.B11_ΓΓ(alpha = 1.0, gammatype = Float64) # Float64 wenn kein Material
+    #assemble(B11_ΓΓ, w, y)
+
+    B12_ΓΓ = IPVIE.B12_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
+    #assemble(B12_ΓΓ, w, w)
+
+    B13_ΓΓ = IPVIE.B13_ΓΓ(alpha = 1.0, gammatype = T, chi = χ)
+    #assemble(B13_ΓΓ, w, ntrc(X))
+    B13_ΓΩ = IPVIE.B13_ΓΩ(alpha = -1.0, gammatype = T, chi = χ)
+    #assemble(B13_ΓΩ, w, X)
+
+
+    # Operators row 2
+
+    B21_ΓΓ = IPVIE.B21_ΓΓ(beta = -1.0, gammatype = Float64) # -1.0 siehe BEAST & Steinbach 6.5, Ja, Float64 statt T
+    #assemble(B21_ΓΓ, y, y)
+
+    B22_Γ = IPVIE.B22_Γ(alpha = -1.0, invtau = inv_τ) # !!! ggf hier T(-1.0) statt -1.0 ...fraglich wieso nur unten Fehler
+    #assemble(B22_Γ, y, w)
+    B22_ΓΓ = IPVIE.B22_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
+    #assemble(B22_ΓΓ, y, w)
+
+    B23_ΓΓ = IPVIE.B23_ΓΓ(alpha = 1.0, gammatype = T, chi = χ) #VZ? sollte passen
+    #assemble(B23_ΓΓ, y, ntrc(X))
+    B23_ΓΩ = IPVIE.B23_ΓΩ(alpha = 1.0, gammatype = T, chi = χ)
+    #assemble(B23_ΓΩ, y, X)
+
+
+    # Operators row 3
+
+    B31_ΓΓ = IPVIE.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
+    #assemble(B31_ΓΓ, ntrc(X), y)
+    B31_ΩΓ = IPVIE.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
+    #assemble(B31_ΩΓ, X, y)
+
+    B32_ΓΓ = IPVIE.B32_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
+    #assemble(B32_ΓΓ, ntrc(X), w)
+    B32_ΩΓ = IPVIE.B32_ΩΓ(alpha = -1.0, gammatype = T, invtau = inv_τ)
+    #assemble(B32_ΩΓ, X, w)
+
+    B33_Ω = IPVIE.B33_Ω(alpha = T(-1.0), invtau = inv_τ) # def scalartype(MaterialIdentity) = alpha ...
+    #assemble(B33_Ω, X, X)
+    B33_ΓΓ = IPVIE.B33_ΓΓ(alpha = 1.0, gammatype = T, chi = χ)
+    #assemble(B33_ΓΓ, ntrc(X), ntrc(X))
+    B33_ΓΩ = IPVIE.B33_ΓΩ(alpha = -1.0, gammatype = T, chi = χ)
+    #assemble(B33_ΓΩ, ntrc(X), X)
+    B33_ΩΓ = IPVIE.B33_ΩΓ(alpha = -1.0, gammatype = T, chi = χ)
+    #assemble(B33_ΩΓ, X, ntrc(X))
+    B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = T, chi = χ)
+    #assemble(B33_ΩΩ, X, X)
+    
+
+    # fns spaces
+    y_d = md.y_d
+    y = md.y
+    w = md.w
+    X = md.X
+    ntrc = md.ntrc 
+
+    # LHS
+    @hilbertspace i j k # row    -> test
+    @hilbertspace l m n # col    -> trial
+    lhs = @varform(
+        B11_Γ[i,l] + B11_ΓΓ[i,l] +
+        B12_ΓΓ[i,m] +
+        B13_ΓΓ[i,ntrc(n)] + B13_ΓΩ[i,n] + 
+
+        B21_ΓΓ[j,l] + 
+        B22_Γ[j,m] + B22_ΓΓ[j,m] +
+        B23_ΓΓ[j,ntrc(n)] + 
+        B23_ΓΩ[j,n] +
+
+        B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
+        B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +
+        B33_Ω[k,n] + B33_ΓΓ[ntrc(k),ntrc(n)] + B33_ΓΩ[ntrc(k),n] + B33_ΩΓ[k,ntrc(n)] + B33_ΩΩ[k,n]
+    )
+    lhsd = @discretise lhs i∈w j∈y k∈X l∈y m∈w n∈X # w und y swapped for test!
+    
+    lhsd_test = lhsd.test_space_dict
+    lhsd_trial = lhsd.trial_space_dict
+    testSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_test)
+    trialSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_trial)
+    M = assemble(lhs, testSpace_lhs, trialSpace_lhs)
+    S = Matrix(M)
+
+
+    # RHS
+    @hilbertspace o # col, only one blockcol
+    rhs = @varform(
+        -B11_Γ[i,o] -B11_ΓΓ[i,o] +
+
+        -B21_ΓΓ[j,o] + 
+
+        -B31_ΓΓ[ntrc(k),o] -B31_ΩΓ[k,o]
+    )
+    rhsd = @discretise rhs i∈w j∈y k∈X o∈y_d # w und y swapped for test!
+
+    rhsd_test = rhsd.test_space_dict
+    rhsd_trial = rhsd.trial_space_dict
+    testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)
+    trialSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_trial)
+    R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
+    
+
+    # S*u = R*v, solve for u
+    b = R*v
+    u = S \ b # it solver...
+    #@assert norm(S*u - b) < 1e-8
+    u_Φ = u[1:length(y)]
+    u_Jn = u[length(y)+1:length(y)+length(w)]
+    u_J = u[length(y)+length(w)+1:end]
+    @assert length(u_Φ) == length(y.fns)
+    @assert length(u_Jn) == length(w.fns)
+    @assert length(u_J) == length(X.fns)
+
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
+end
 
 
 
@@ -715,6 +864,7 @@ function solve2(;   # high contrast formulation - 2 × 2 Block
     qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
     qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
 
+    println("2×2 block matrix - high contrast formulation")
 
     # if typeof(material) == general_material
         # save some points, and ...
@@ -1105,4 +1255,3 @@ function getcurrent(m::IP.meshdata, s::IP.solution) # ging das jetzt noch einfac
 
     return I_top, I_bottom
 end
-

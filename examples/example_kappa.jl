@@ -15,7 +15,7 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.001)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0018)
 print("tehrahedrons: ", length(md.Ω.faces))
 #Visu.mesh(md.Ω) 
 
@@ -27,12 +27,12 @@ print("tehrahedrons: ", length(md.Ω.faces))
 # qs3D = BEAST.SingleNumQStrat(1)
 # qs4D = BEAST.DoubleNumWiltonSauterQStrat(1,1,1,1,1,1,1,1) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 # qs5D6D = BEAST.SauterSchwab3DQStrat(1,1,1,1,1,1)
-# qs3D = BEAST.SingleNumQStrat(3)
-# qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
-# qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
-qs3D = BEAST.SingleNumQStrat(6)
-qs4D = BEAST.DoubleNumWiltonSauterQStrat(6,6,6,6,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
-qs5D6D = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
+qs3D = BEAST.SingleNumQStrat(4)
+qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
+# qs3D = BEAST.SingleNumQStrat(6)
+# qs4D = BEAST.DoubleNumWiltonSauter>QStrat(6,6,6,6,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+# qs5D6D = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
 BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
@@ -42,7 +42,7 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    material = IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
     κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = nothing,
     ω = nothing, 
@@ -51,12 +51,46 @@ sol, S, R = IP.solve(;   # solve -> arb. Mat. / solve1 -> high contrast formulat
     qs3D = qs3D, 
     qs4D = qs4D, 
     qs5D6D = qs5D6D,
-    #matalloc = :center,
+    #matalloc = :avg#:center,
 )
 
 # save
-dataname = "test" # for JLD2 save
-jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+#dataname = "test" # for JLD2 save
+#jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+
+# cond(S)
+# D_S = Diagonal(S)
+
+# C = D_S #inv(D_S)*0.01
+
+
+
+# # Zeilenskalierungsfaktoren berechnen
+# row_scale_factors = maximum(abs, S, dims=2)
+# D_r = Diagonal(Vector(1.0 ./ row_scale_factors[:,1]))
+
+# # Spaltenskalierungsfaktoren berechnen
+# col_scale_factors = maximum(abs, S, dims=1)
+# D_c = Diagonal(1.0 ./ col_scale_factors[1,:])
+
+# # Beidseitige Skalierung der Matrix
+# S_scaled = D_r * S * D_c
+
+# # Skaliere die RHS
+# b_scaled = D_r * sol.b
+
+# # Löse das skalierte System
+# y = S_scaled \ b_scaled
+
+# # Transformiere die Lösung zurück
+# x = D_c * y
+
+# sol.u
+
+# norm(x-sol.u)
+
+# cond(S)
+# cond(S_scaled)
 
 
 
@@ -132,7 +166,29 @@ points3 = [point(x,y,0.0049) for x in range_xy for y in range_xy]
 J_MoM3 = BEAST.grideval(points3, sol.u_J, md.X)
 J_ana3 = IP.solution_J_ana(md.body, sol.material, md, sol, points3, J_MoM3)
 display("Stromdichte bei Platten: Ebene z=0.49")
-@show norm(J_MoM3-J_ana3)/norm(J_ana3)
+@show norm(J_MoM3-J_ana3)/norm(J_ana3) 
+println()
+
+# Stromdicht auf Platten mit Flächenbasisfunktion - HIER NUR für constant z-split Fall!
+# sol.u_Jn
+# A = md.body.L_x * md.body.L_y
+# R = (1/sol.material.κ_m)*(md.body.L_z/2 + sol.material.z0)/A + (1/sol.material.κ_p)*(md.body.L_z/2 - sol.material.z0)/A
+# U = sol.potential_top - sol.potential_bottom
+# I = U/R
+# Jn_ana = I/A 
+# u_Jn_ori = Vector{Float64}()
+# u_Jn_ana = Vector{Float64}()
+# for i in 1:length(sol.u_Jn) # Unter Annahme das Lös richteges VZ hat!
+#     el = sol.u_Jn[i] * md.w.fns[i][1].coeff
+#     push!(u_Jn_ori, el)
+#     sig = sign(el)
+#     push!(u_Jn_ana, Jn_ana*sig)
+# end
+# u_Jn_ori
+# u_Jn_ana
+# display("Stromdichte auf Platten:")
+# @show norm(u_Jn_ori-u_Jn_ana)/norm(u_Jn_ana)
+
 
 # Strom durch Platten
 println()
@@ -188,7 +244,7 @@ J_ana_x = IP.solution_J_ana(md.body, sol.material, md, sol, points_x, J_MoM_x)
 Plots.plot(x, -J_z_ana, label = "J_z_ana", size=(700,600))
 plot!(x, -J_z, label = "J_z")
 #xlims!(0.0, 1.0)
-#ylims!(-0.3, 0.0)
+#ylims!(1600, 2000)
 title!("J_z(x, y0, z0)")
 xlabel!("x")
 
