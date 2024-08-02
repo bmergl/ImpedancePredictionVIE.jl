@@ -25,7 +25,7 @@ print("tehrahedrons: ", length(md.Ω.faces))
 
 #Quadstrat
 qs3D = BEAST.SingleNumQStrat(4)
-qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+qs4D = BEAST.DoubleNumSauterQstrat(3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
 # qs3D = BEAST.SingleNumQStrat(6)
 # qs4D = BEAST.DoubleNumWiltonSauter>QStrat(6,6,6,6,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
@@ -129,10 +129,9 @@ md = load(datapath, "md")
 
 ##
 
-#using GR
-#using GLMakie
+
 gr()
-MATR = log.(abs.(S) .+1.0e-2)
+MATR = log.(abs.(S) .+1.0e-6)
 p = Plots.heatmap(MATR, title = "2D Rasterplot des Betrags der Systemmatrix", aspect_ratio=:equal)
 yflip!(p; size=(1200,1000))
 
@@ -240,6 +239,7 @@ J_ana_x = IP.solution_J_ana(md.body, sol.material, md, sol, points_x, J_MoM_x)
 
 Plots.plot(x, -J_z_ana, label = "J_z_ana", size=(700,600))
 plot!(x, -J_z, label = "J_z")
+#plot!(x, J_z*600, label = "J_z_modified")
 #xlims!(0.0, 1.0)
 #ylims!(1600, 2000)
 title!("J_z(x, y0, z0)")

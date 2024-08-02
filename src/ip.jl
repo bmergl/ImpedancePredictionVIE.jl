@@ -245,17 +245,18 @@ function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
     ntrcX = ntrc(X)
 
     # PWC on Γ_c (vanish on Γ_nc)
-    #w = lagrangecxd0(Γ_c)
-    newfns = Vector{Vector{BEAST.Shape{Float64}}}()
-    newpos = Vector{SVector{3, Float64}}()
-    for (i,shs) in enumerate(ntrcX.fns)
-        newshs = Vector{BEAST.Shape{Float64}}()
-        shs == [] && continue
-        @assert length(shs) == 1
-        push!(newfns, shs)
-        push!(newpos, ntrcX.pos[i])
-    end
-    w = BEAST.LagrangeBasis{0,-1,1}(ntrcX.geo.supermesh, newfns, newpos)
+    w = lagrangecxd0(Γ_c)
+    @warn "If w is involved problems can occur now - see setup()"
+    # newfns = Vector{Vector{BEAST.Shape{Float64}}}()
+    # newpos = Vector{SVector{3, Float64}}()
+    # for (i,shs) in enumerate(ntrcX.fns)
+    #     newshs = Vector{BEAST.Shape{Float64}}()
+    #     shs == [] && continue
+    #     @assert length(shs) == 1
+    #     push!(newfns, shs)
+    #     push!(newpos, ntrcX.pos[i])
+    # end
+    # w = BEAST.LagrangeBasis{0,-1,1}(ntrcX.geo.supermesh, newfns, newpos)
 
     # FEM only
     nondirichletnodes = Vector{Int64}()
@@ -514,7 +515,7 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     B12_ΓΓ =  IP.MaterialSL(T(0.0), 1.0, inv_τ)
 
     B13_ΓΓ = IP.MaterialSL(T(0.0), 1.0, χ)
-    B13_ΓΩ = IP.gradG_Γ1Ω(T(0.0), -1.0, χ)
+    B13_ΓΩ = IP.gradG_ΓΩ(T(0.0), -1.0, χ)
 
 
     # Operators row 2
@@ -547,15 +548,19 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     w = md.w
     X = md.X
     ntrcX = md.ntrcX 
+    wdual = duallagrangec0d1(md.Γ_c) # DoubleNumSauterQstrat ist ohne wilton!
+    ydual = duallagrangecxd0(md.Γ_nc)
+    t_eq1 = ydual
+    t_eq2 = wdual
 
     # assemble
-    B11 = assemble(B11_Γ, w, y) + assemble(B11_ΓΓ, w, y) -(1/2)*assemble(Identity(), w, y)
-    B12 = assemble(B12_ΓΓ, w, w)
-    B13 = assemble(B13_ΓΓ, w, ntrcX) + assemble(B13_ΓΩ, w, X) 
+    B11 = assemble(B11_Γ, t_eq1, y) + assemble(B11_ΓΓ, t_eq1, y) -(1/2)*assemble(Identity(), t_eq1, y)
+    B12 = assemble(B12_ΓΓ, t_eq1, w)
+    B13 = assemble(B13_ΓΓ, t_eq1, ntrcX) + assemble(B13_ΓΩ, t_eq1, X) 
 
-    B21 = assemble(B21_ΓΓ, y, y)
-    B22 = assemble(B22_Γ, y, w) + assemble(B22_ΓΓ, y, w)
-    B23 = assemble(B23_ΓΓ, y, ntrcX) + assemble(B23_ΓΩ, y, X)
+    B21 = assemble(B21_ΓΓ, t_eq2, y)
+    B22 = assemble(B22_Γ, t_eq2, w) + assemble(B22_ΓΓ, t_eq2, w)
+    B23 = assemble(B23_ΓΓ, t_eq2, ntrcX) + assemble(B23_ΓΩ, t_eq2, X)
     
     B31 = assemble(B31_ΓΓ, ntrcX, y) -(1/2)*assemble(Identity(), ntrcX, y) + assemble(B31_ΩΓ, X, y) 
     B32 = assemble(B32_ΓΓ, ntrcX, w) + assemble(B32_ΩΓ, X, w)
@@ -565,15 +570,21 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
         assemble(B33_ΩΓ, X, ntrcX) + 
         assemble(B33_ΩΩ, X, X)
 
-    R11 = -assemble(B11_Γ, w, y_d) -assemble(B11_ΓΓ, w, y_d) +(1/2)*assemble(Identity(), w, y_d)
-    R21 = -assemble(B21_ΓΓ, y, y_d) 
+    R11 = -assemble(B11_Γ, t_eq1, y_d) -assemble(B11_ΓΓ, t_eq1, y_d) +(1/2)*assemble(Identity(), t_eq1, y_d)
+    R21 = -assemble(B21_ΓΓ, t_eq2, y_d)
     R31 = -assemble(B31_ΓΓ, ntrcX, y_d) +(1/2)*assemble(Identity(), ntrcX, y_d) -assemble(B31_ΩΓ, X, y_d)
+
+    #error("STOP HERE!")
 
     ROW1 = hcat(B11,B12,B13)
     ROW2 = hcat(B21,B22,B23)
     ROW3 = hcat(B31,B32,B33)
     S = vcat(ROW1,ROW2,ROW3)
     R = vcat(R11,R21,R31)
+
+    # display(B11)
+    # display(B22)
+    # display(B33)
 
     # S*u = R*v, solve for u
     b = R*v
