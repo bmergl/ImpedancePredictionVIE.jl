@@ -507,112 +507,73 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
 
     # Operators row 1
+    B11_Γ = Identity() #Verschwindet!!! <---- klären....
+    B11_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)
+        # + (-1/2)*Identity()
 
-    B11_Γ = IPVIE.B11_Γ(alpha = 1.0) #Verschwindet!!! <---- klären....
-    #assemble(B11_Γ, w, y)
-    B11_ΓΓ = IPVIE.B11_ΓΓ(alpha = 1.0, gammatype = Float64) # Float64 wenn kein Material
-    #assemble(B11_ΓΓ, w, y)
+    B12_ΓΓ =  IP.MaterialSL(T(0.0), 1.0, inv_τ)
 
-    B12_ΓΓ = IPVIE.B12_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
-    #assemble(B12_ΓΓ, w, w)
-
-    B13_ΓΓ = IPVIE.B13_ΓΓ(alpha = 1.0, gammatype = T, chi = χ)
-    #assemble(B13_ΓΓ, w, ntrc(X))
-    B13_ΓΩ = IPVIE.B13_ΓΩ(alpha = -1.0, gammatype = T, chi = χ)
-    #assemble(B13_ΓΩ, w, X)
+    B13_ΓΓ = IP.MaterialSL(T(0.0), 1.0, χ)
+    B13_ΓΩ = IP.gradG_Γ1Ω(T(0.0), -1.0, χ)
 
 
     # Operators row 2
+    B21_ΓΓ = Helmholtz3D.hypersingular(gamma = T(0.0), beta = -1.0) # das versteckt alpha std. Null für gamma =0.0!!!  # -1.0 siehe BEAST & Steinbach 6.5, Ja, Float64 statt T
 
-    B21_ΓΓ = IPVIE.B21_ΓΓ(beta = -1.0, gammatype = Float64) # -1.0 siehe BEAST & Steinbach 6.5, Ja, Float64 statt T
-    #assemble(B21_ΓΓ, y, y)
+    B22_Γ = IP.MatId(T(-1.0), inv_τ)
+    B22_ΓΓ = IP.MaterialADL(T(0.0), 1.0, inv_τ)
 
-    B22_Γ = IPVIE.B22_Γ(alpha = -1.0, invtau = inv_τ) # !!! ggf hier T(-1.0) statt -1.0 ...fraglich wieso nur unten Fehler
-    #assemble(B22_Γ, y, w)
-    B22_ΓΓ = IPVIE.B22_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
-    #assemble(B22_ΓΓ, y, w)
-
-    B23_ΓΓ = IPVIE.B23_ΓΓ(alpha = 1.0, gammatype = T, chi = χ) #VZ? sollte passen
-    #assemble(B23_ΓΓ, y, ntrc(X))
-    B23_ΓΩ = IPVIE.B23_ΓΩ(alpha = 1.0, gammatype = T, chi = χ)
-    #assemble(B23_ΓΩ, y, X)
+    B23_ΓΓ = IP.MaterialADL(T(0.0), 1.0, χ)
+    B23_ΓΩ = IP.ncgrad_gradGc_ΓΩ(T(0.0), 1.0, χ)
 
 
     # Operators row 3
+    B31_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)
+        # + (-1/2)*Identity()
+    B31_ΩΓ = IP.div_ngradG_ΩΓ(T(0.0), -1.0, x->1.0)
 
-    B31_ΓΓ = IPVIE.B31_ΓΓ(alpha = 1.0, gammatype = Float64)
-    #assemble(B31_ΓΓ, ntrc(X), y)
-    B31_ΩΓ = IPVIE.B31_ΩΓ(alpha = -1.0, gammatype = Float64)
-    #assemble(B31_ΩΓ, X, y)
+    B32_ΓΓ = IP.MaterialSL(T(0.0), 1.0, inv_τ)
+    B32_ΩΓ = IP.div_G_ΩΓ(T(0.0), -1.0, inv_τ)
 
-    B32_ΓΓ = IPVIE.B32_ΓΓ(alpha = 1.0, gammatype = T, invtau = inv_τ)
-    #assemble(B32_ΓΓ, ntrc(X), w)
-    B32_ΩΓ = IPVIE.B32_ΩΓ(alpha = -1.0, gammatype = T, invtau = inv_τ)
-    #assemble(B32_ΩΓ, X, w)
-
-    B33_Ω = IPVIE.B33_Ω(alpha = T(-1.0), invtau = inv_τ) # def scalartype(MaterialIdentity) = alpha ...
-    #assemble(B33_Ω, X, X)
-    B33_ΓΓ = IPVIE.B33_ΓΓ(alpha = 1.0, gammatype = T, chi = χ)
-    #assemble(B33_ΓΓ, ntrc(X), ntrc(X))
-    B33_ΓΩ = IPVIE.B33_ΓΩ(alpha = -1.0, gammatype = T, chi = χ)
-    #assemble(B33_ΓΩ, ntrc(X), X)
-    B33_ΩΓ = IPVIE.B33_ΩΓ(alpha = -1.0, gammatype = T, chi = χ)
-    #assemble(B33_ΩΓ, X, ntrc(X))
-    B33_ΩΩ = IPVIE.B33_ΩΩ(alpha = 1.0, gammatype = T, chi = χ)
-    #assemble(B33_ΩΩ, X, X)
-    
+    B33_Ω =  IP.MatId(T(-1.0), inv_τ) # different_tau scalartype(MaterialIdentity) = alpha ...
+    B33_ΓΓ = IP.MaterialSL(T(0.0), 1.0, χ)
+    B33_ΓΩ = IP.n_gradG_ΓΩ(T(0.0), -1.0, χ)
+    B33_ΩΓ = IP.div_G_ΩΓ(T(0.0), -1.0, χ)
+    B33_ΩΩ = IP.div_gradG_ΩΩ(T(0.0), 1.0, χ)
 
     # fns spaces
     y_d = md.y_d
     y = md.y
     w = md.w
     X = md.X
-    ntrc = md.ntrc 
+    ntrcX = md.ntrcX 
 
-    # LHS
-    @hilbertspace i j k # row    -> test
-    @hilbertspace l m n # col    -> trial
-    lhs = @varform(
-        B11_Γ[i,l] + B11_ΓΓ[i,l] +
-        B12_ΓΓ[i,m] +
-        B13_ΓΓ[i,ntrc(n)] + B13_ΓΩ[i,n] + 
+    # assemble
+    B11 = assemble(B11_Γ, w, y) + assemble(B11_ΓΓ, w, y) -(1/2)*assemble(Identity(), w, y)
+    B12 = assemble(B12_ΓΓ, w, w)
+    B13 = assemble(B13_ΓΓ, w, ntrcX) + assemble(B13_ΓΩ, w, X) 
 
-        B21_ΓΓ[j,l] + 
-        B22_Γ[j,m] + B22_ΓΓ[j,m] +
-        B23_ΓΓ[j,ntrc(n)] + 
-        B23_ΓΩ[j,n] +
-
-        B31_ΓΓ[ntrc(k),l] + B31_ΩΓ[k,l] +
-        B32_ΓΓ[ntrc(k),m] + B32_ΩΓ[k,m] +
-        B33_Ω[k,n] + B33_ΓΓ[ntrc(k),ntrc(n)] + B33_ΓΩ[ntrc(k),n] + B33_ΩΓ[k,ntrc(n)] + B33_ΩΩ[k,n]
-    )
-    lhsd = @discretise lhs i∈w j∈y k∈X l∈y m∈w n∈X # w und y swapped for test!
+    B21 = assemble(B21_ΓΓ, y, y)
+    B22 = assemble(B22_Γ, y, w) + assemble(B22_ΓΓ, y, w)
+    B23 = assemble(B23_ΓΓ, y, ntrcX) + assemble(B23_ΓΩ, y, X)
     
-    lhsd_test = lhsd.test_space_dict
-    lhsd_trial = lhsd.trial_space_dict
-    testSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_test)
-    trialSpace_lhs = BEAST._spacedict_to_directproductspace(lhsd_trial)
-    M = assemble(lhs, testSpace_lhs, trialSpace_lhs)
-    S = Matrix(M)
+    B31 = assemble(B31_ΓΓ, ntrcX, y) -(1/2)*assemble(Identity(), ntrcX, y) + assemble(B31_ΩΓ, X, y) 
+    B32 = assemble(B32_ΓΓ, ntrcX, w) + assemble(B32_ΩΓ, X, w)
+    B33 = assemble(B33_Ω, X, X) +
+        assemble(B33_ΓΓ, ntrcX, ntrcX) +
+        assemble(B33_ΓΩ, ntrcX, X) +
+        assemble(B33_ΩΓ, X, ntrcX) + 
+        assemble(B33_ΩΩ, X, X)
 
+    R11 = -assemble(B11_Γ, w, y_d) -assemble(B11_ΓΓ, w, y_d) +(1/2)*assemble(Identity(), w, y_d)
+    R21 = -assemble(B21_ΓΓ, y, y_d) 
+    R31 = -assemble(B31_ΓΓ, ntrcX, y_d) +(1/2)*assemble(Identity(), ntrcX, y_d) -assemble(B31_ΩΓ, X, y_d)
 
-    # RHS
-    @hilbertspace o # col, only one blockcol
-    rhs = @varform(
-        -B11_Γ[i,o] -B11_ΓΓ[i,o] +
-
-        -B21_ΓΓ[j,o] + 
-
-        -B31_ΓΓ[ntrc(k),o] -B31_ΩΓ[k,o]
-    )
-    rhsd = @discretise rhs i∈w j∈y k∈X o∈y_d # w und y swapped for test!
-
-    rhsd_test = rhsd.test_space_dict
-    rhsd_trial = rhsd.trial_space_dict
-    testSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_test)
-    trialSpace_rhs = BEAST._spacedict_to_directproductspace(rhsd_trial)
-    R = Matrix(assemble(rhs, testSpace_rhs, trialSpace_rhs))
-    
+    ROW1 = hcat(B11,B12,B13)
+    ROW2 = hcat(B21,B22,B23)
+    ROW3 = hcat(B31,B32,B33)
+    S = vcat(ROW1,ROW2,ROW3)
+    R = vcat(R11,R21,R31)
 
     # S*u = R*v, solve for u
     b = R*v
