@@ -245,18 +245,18 @@ function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
     ntrcX = ntrc(X)
 
     # PWC on Γ_c (vanish on Γ_nc)
-    w = lagrangecxd0(Γ_c)
-    @warn "If w is involved problems can occur now - see setup()"
-    # newfns = Vector{Vector{BEAST.Shape{Float64}}}()
-    # newpos = Vector{SVector{3, Float64}}()
-    # for (i,shs) in enumerate(ntrcX.fns)
-    #     newshs = Vector{BEAST.Shape{Float64}}()
-    #     shs == [] && continue
-    #     @assert length(shs) == 1
-    #     push!(newfns, shs)
-    #     push!(newpos, ntrcX.pos[i])
-    # end
-    # w = BEAST.LagrangeBasis{0,-1,1}(ntrcX.geo.supermesh, newfns, newpos)
+    #w = lagrangecxd0(Γ_c)
+    #@warn "If w is involved problems can occur now - see setup()"
+    newfns = Vector{Vector{BEAST.Shape{Float64}}}()
+    newpos = Vector{SVector{3, Float64}}()
+    for (i,shs) in enumerate(ntrcX.fns)
+        newshs = Vector{BEAST.Shape{Float64}}()
+        shs == [] && continue
+        @assert length(shs) == 1
+        push!(newfns, shs)
+        push!(newpos, ntrcX.pos[i])
+    end
+    w = BEAST.LagrangeBasis{0,-1,1}(ntrcX.geo.supermesh, newfns, newpos)
 
     # FEM only
     nondirichletnodes = Vector{Int64}()
@@ -550,8 +550,8 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     ntrcX = md.ntrcX 
     wdual = duallagrangec0d1(md.Γ_c) # DoubleNumSauterQstrat ist ohne wilton!
     ydual = duallagrangecxd0(md.Γ_nc)
-    t_eq1 = ydual
-    t_eq2 = wdual
+    t_eq1 = w
+    t_eq2 = y
 
     # assemble
     B11 = assemble(B11_Γ, t_eq1, y) + assemble(B11_ΓΓ, t_eq1, y) -(1/2)*assemble(Identity(), t_eq1, y)
@@ -600,6 +600,105 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, u_Jn, u_J), S, R
 end
 
+
+function solvefembem(;
+    md::meshdata,
+    material::material,
+    κ0::Union{Float64, Nothing} = nothing, 
+    ϵ0::Union{Float64, Nothing} = nothing, # VORSICHT zsh zum echten epsilon0 nicht unbed. gegeben!
+    ω::Union{Float64, Nothing} = nothing, 
+    potential_top::Float64, 
+    potential_bottom::Float64,
+    qs3D = BEAST.SingleNumQStrat(3), 
+    qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4), #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+    qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4))
+
+    println("2×2 block matrix - fembem formulation")
+
+    # Material
+    κ, ϵ = material()
+    τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
+    p = point(0.0,0.0,0.0)
+    @show τ(p)
+    @show inv_τ(p)
+    @show τ0
+    @show χ(p)
+    @show T
+
+    # Excitation
+    v_top = ones(length(md.topnodes)) * potential_top
+    v_bottom = ones(length(md.bottomnodes)) * potential_bottom
+    v = vcat(v_top, v_bottom)
+
+
+    # Operators row 1
+    B11_Ω = IP.grad_grad_Ω(T(1.0), τ)
+
+    B12_Ω = IP.grad__Ω(T(1.0), x->1.0)
+
+    # Operators row 2
+    B21_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0) # + (-1/2)*Identity()
+    B21_ΩΓ = IP.div_ngradG_ΩΓ(T(0.0), -1.0, x->1.0)
+
+    B22_ΓΓ_ = IP.MaterialSL(T(0.0), 1.0, inv_τ)
+    B22_ΩΓ_ = IP.div_G_ΩΓ(T(0.0), -1.0, inv_τ)
+    B22_Ω =  IP.MatId(T(-1.0), inv_τ) # different_tau scalartype(MaterialIdentity) = alpha ...
+    B22_ΓΓ = IP.MaterialSL(T(0.0), 1.0, χ)
+    B22_ΓΩ = IP.n_gradG_ΓΩ(T(0.0), -1.0, χ)
+    B22_ΩΓ = IP.div_G_ΩΓ(T(0.0), -1.0, χ)
+    B22_ΩΩ = IP.div_gradG_ΩΩ(T(0.0), 1.0, χ)
+
+    # fns spaces
+    y_d = md.y_d
+    y = md.y
+    w = md.w
+    X = md.X
+    ntrcX = md.ntrcX 
+    X = md.X
+    Y = md.Y
+    Y_d = md.Y_d
+    strcY = strace(Y, md.Γ_nc)
+    strcY_d = strace(Y_d, md.Γ_c)
+
+    # assemble
+    B11 = assemble(B11_Ω, Y, Y)
+    B12 = assemble(B12_Ω, Y, X)
+    
+    B21 = assemble(B21_ΓΓ, ntrcX, strcY) -(1/2)*assemble(Identity(), ntrcX, strcY) + assemble(B21_ΩΓ, X, strcY)
+    B22 = assemble(B22_ΓΓ_, ntrcX, ntrcX) +
+        assemble(B22_ΩΓ_, X, ntrcX) +
+        assemble(B22_Ω, X, X) +
+        assemble(B22_ΓΓ, ntrcX, ntrcX) +
+        assemble(B22_ΓΩ, ntrcX, X) +
+        assemble(B22_ΩΓ, X, ntrcX) + 
+        assemble(B22_ΩΩ, X, X)
+        
+
+    R11 = -assemble(B11_Ω, Y, Y_d)
+    R21 = -assemble(B21_ΓΓ, ntrcX, strcY_d) +(1/2)*assemble(Identity(), ntrcX, strcY_d) - assemble(B21_ΩΓ, X, strcY_d)
+
+    #error("STOP HERE!")
+    
+    ROW1 = hcat(B11,B12)
+    ROW2 = hcat(B21,B22)
+    S = vcat(ROW1,ROW2)
+    R = vcat(R11,R21)
+
+    # display(B11)
+    # display(B22)
+    # display(B33)
+
+    # S*u = R*v, solve for u
+    b = R*v
+    u = S \ b # it solver...
+    @assert norm(S*u - b) < 1e-8
+    u_Φ = u[1:length(Y)]
+    u_J = u[length(Y)+1:end]
+    @assert length(u_Φ) == length(Y.fns)
+    @assert length(u_J) == length(X.fns)
+
+    return solution(material, κ0, ϵ0, ω, τ0, potential_top, potential_bottom, qs3D, qs4D, qs5D6D, v, b, u, u_Φ, nothing, u_J), S, R
+end
 
 
 function solvefem(; # FEM formulation

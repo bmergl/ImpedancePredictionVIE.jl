@@ -446,8 +446,38 @@ function BEAST.integrand(localop::MatLoc, kerneldata, x, g, f)
     return α * dot(gx, Tx * fx) # geht auch wenn g und f skalar sind
 end
 
+struct grad__Ω{T,U} <: MaterialLocalOp
+    α::T
+    tau::U
+end
+function BEAST.integrand(localop::grad__Ω, kerneldata, x, g, f)
+
+    dgx = g.gradient
+    fx = f.value
 
 
+    Tx = kerneldata.tau
+
+    α = localop.α
+
+    return α * dot(dgx, Tx * fx)
+end
+struct grad_grad_Ω{T,U} <: MaterialLocalOp
+    α::T
+    tau::U
+end
+function BEAST.integrand(localop::grad_grad_Ω, kerneldata, x, g, f)
+
+    dgx = g.gradient
+    dfx = f.gradient
+
+
+    Tx = kerneldata.tau
+
+    α = localop.α
+
+    return α * dot(dgx, Tx * dfx)
+end
 
 struct _grad_Ω{T,U} <: MaterialLocalOp
     α::T

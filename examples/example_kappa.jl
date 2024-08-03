@@ -28,7 +28,7 @@ qs3D = BEAST.SingleNumQStrat(4)
 qs4D = BEAST.DoubleNumSauterQstrat(3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
 # qs3D = BEAST.SingleNumQStrat(6)
-# qs4D = BEAST.DoubleNumWiltonSauter>QStrat(6,6,6,6,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+# qs4D = BEAST.DoubleNumWiltonSauterQStrat(6,6,6,6,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 # qs5D6D = BEAST.SauterSchwab3DQStrat(6,6,6,6,6,6)
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
@@ -37,9 +37,9 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 # STANDARD-TESTMATERIAL: IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2])
 
-sol, S, R = IP.solve0(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
+sol, S, R = IP.solvefembem(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    material = IP.constantmaterial(1000.0, nothing), #IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing),, #  ,#, # #, #
     κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = nothing,
     ω = nothing, 
@@ -165,6 +165,8 @@ display("Stromdichte bei Platten: Ebene z=0.49")
 @show norm(J_MoM3-J_ana3)/norm(J_ana3) 
 println()
 
+##
+
 # Stromdicht auf Platten mit Flächenbasisfunktion - HIER NUR für constant z-split Fall!
 # sol.u_Jn
 # A = md.body.L_x * md.body.L_y
@@ -199,8 +201,9 @@ println()
 println()
 
 # Potential: Randknoten vs. Analytisch
+@warn "check FEM settings"
 u_Φ = sol.u_Φ
-u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol)
+u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol, FEM = true)
 @show norm(u_Φ-u_Φ_ana)/norm(u_Φ_ana)
 
 
@@ -239,7 +242,7 @@ J_ana_x = IP.solution_J_ana(md.body, sol.material, md, sol, points_x, J_MoM_x)
 
 Plots.plot(x, -J_z_ana, label = "J_z_ana", size=(700,600))
 plot!(x, -J_z, label = "J_z")
-#plot!(x, J_z*600, label = "J_z_modified")
+#plot!(x, J_z*100, label = "J_z_modified")
 #xlims!(0.0, 1.0)
 #ylims!(1600, 2000)
 title!("J_z(x, y0, z0)")
