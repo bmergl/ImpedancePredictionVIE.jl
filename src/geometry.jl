@@ -156,8 +156,8 @@ function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<-----
 
     enumerated_tupel = collect(enumerate(all_charts_centers))
     #Threads.@threads for (j,pos) in enumerated_tupel#enumerate(all_charts_centers)
-    println("Time for findchart in swgfaces")
-    @time Threads.@threads for k in 1:length(enumerated_tupel)  #enumerated_tupel#enumerate(all_charts_centers)
+    #println("Time for findchart in swgfaces")
+    Threads.@threads for k in 1:length(enumerated_tupel)  #enumerated_tupel#enumerate(all_charts_centers)
         j, pos = enumerated_tupel[k]
 
         i = CompScienceMeshes.findchart(excluded_charts, excluded_charts_tree, pos)
@@ -201,19 +201,33 @@ function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<-----
     return swg_faces
 end
 
-function swgfaces2(volmesh::Mesh, ncbndmesh::Mesh)
+function swgfaces_set_approach(volmesh::Mesh, ncbndmesh::Mesh)
     
     #circshift damit dreichssortierung passt? oder mit pos arbeiten? ist aber kein int...
 
     all_faces_mesh = skeleton(volmesh,2)
 
     all_faces = all_faces_mesh.faces
-
     nc_faces = ncbndmesh.faces
 
+    # Diese Schritte ändern die normale, sollte aber egal sein...
+    all_faces_sort = sort.(all_faces)
+    nc_faces_sort = sort.(nc_faces)
+
+    # #Achtung! geht wieder nur wenn die normalen auch passen... !!!!!!!!
+
+    # min_ind_1 = findmin.(all_faces)
+    # min_ind_2 = findmin.(nc_faces)
+
+    # min_index_list1 = vec([t[2] for t in min_ind_1])
+    # min_index_list2 = vec([t[2] for t in min_ind_2])
+
+    # all_faces_s = [BEAST.circshift(all_faces[i],1-min_index_list1[i]) for i in 1:length(all_faces)]
+    # nc_faces_s = [BEAST.circshift(nc_faces[i],1-min_index_list2[i]) for i in 1:length(nc_faces)]
+
     # Konvertiere Arrays in Sets für schnelles Nachschlagen
-    set1 = Set(all_faces)
-    set2 = Set(nc_faces)
+    set1 = Set(all_faces_sort)
+    set2 = Set(nc_faces_sort)
 
     # Berechne die Differenzmenge
     result_set = setdiff(set1, set2)
@@ -625,7 +639,70 @@ function BEAST.lagrangec0d1(mesh, vertexlist::Vector, ::Type{Val{4}})
     NF = 4
     BEAST.LagrangeBasis{1,0,NF}(mesh, fns, pos)
 end
+###############################################################
 
+
+"""
+    IP.grideval(points, coeffs, basis; type=nothing)
+"""
+function grideval(points, coeffs, basis; type=nothing)
+
+    # charts: active charts
+    # ad: assembly data (active_cell_idx, local_shape_idx) -> [dof1, dfo2, ...]
+    # ag: active_cell_idx -> global_cell_idx
+    charts, ad, ag = assemblydata(basis)
+    refs = refspace(basis)
+
+    V = valuetype(refs, eltype(charts))
+    T = promote_type(eltype(coeffs), eltype(V))
+    P = similar_type(V, T)
+
+    type != nothing && (P = type)
+
+    chart_tree = BEAST.octree(charts)
+
+    ######## Multi Threading ############
+    
+    values = zeros(P, size(points)) # über index j ansteuern später...
+
+    # Threads Anzahl
+    # nthreads = Threads.nthreads()
+    # Initialisierung eines Arrays von leeren Vektoren für jedes Thread
+    #thread_results = [Vector{SVector{3, Int64}}() for i in 1:nthreads]
+
+    enumerated_tupel = collect(enumerate(points))
+
+    Threads.@threads for k in 1:length(enumerated_tupel)  #enumerated_tupel#enumerate(all_charts_centers)
+        j, point = enumerated_tupel[k]
+
+        i = CompScienceMeshes.findchart(charts, chart_tree, point)
+        if i !== nothing
+            # @show i
+            chart = charts[i]
+            u = carttobary(chart, point)
+            vals = refs(neighborhood(chart,u))
+            for r in 1 : numfunctions(refs)
+                for (m,w) in ad[i, r]
+                    values[j] += w * coeffs[m] * vals[r][1]
+                end
+            end
+            continue
+        end
+        # if i === nothing
+        #     push!(thread_results[threadid()], all_faces_mesh.faces[j])
+        # else
+        #     # gefunden! => face liegt auf Γ_nc und muss ausgeschlossen werden!
+        # end
+    end
+
+    # Zusammenführen aller Thread-spezifischen Vektoren
+    # for t in 1:nthreads
+    #     append!(swg_faces, thread_results[t])
+    # end
+    ####################################
+
+    return values
+end
 
 
 

@@ -238,7 +238,10 @@ function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
     y = lagrangec0d1(Γ_nc, dirichlet = true) 
 
     # SWG on Ω (without faces on Γ_nc)
-    swg_faces = swgfaces(Ω, Γ_nc, fast = true)
+    #swg_faces = swgfaces(Ω, Γ_nc, fast = true)
+    println("Time for calculation of swg_faces:")
+    @time swg_faces = swgfaces_set_approach(Ω, Γ_nc)
+    println()
     X = nedelecd3d(Ω, Mesh(Ω.vertices, swg_faces))
     @assert length(X.pos) == length(swg_faces)
     ntrc = X -> BEAST.ntrace(X, Γ)
