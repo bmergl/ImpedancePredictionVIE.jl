@@ -24,13 +24,15 @@ function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::I
 
     #Γ = weld(Γ_c_t, Γ_c_b, Γ_nc) !!!! hat die vertices nicht zusammengeführt!!!
 
-    faces = deepcopy(Γ_c_t.faces) #weld in CSM als Alternatives! "verschweißen"
-    append!(faces, Γ_c_b.faces)
-    append!(faces, Γ_nc.faces)
+    #faces = deepcopy(Γ_c_t.faces) #weld in CSM als Alternatives! "verschweißen"
+    #append!(faces, Γ_c_b.faces)
+    #append!(faces, Γ_nc.faces)
+    faces = vcat(Γ_c_t.faces, Γ_c_b.faces, Γ_nc.faces)
     Γ = Mesh(Ω.vertices, faces)
 
-    faces2 = deepcopy(Γ_c_t.faces)
-    append!(faces2, Γ_c_b.faces)
+    #faces2 = deepcopy(Γ_c_t.faces)
+    #append!(faces2, Γ_c_b.faces)
+    faces2 = vcat(Γ_c_t.faces, Γ_c_b.faces)
     Γ_c = Mesh(Ω.vertices, faces2)
 
     @warn "Assumed that .geo has correct format: BodyVolume, TopE...!"
@@ -199,7 +201,28 @@ function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<-----
     return swg_faces
 end
 
+function swgfaces2(volmesh::Mesh, ncbndmesh::Mesh)
+    
+    #circshift damit dreichssortierung passt? oder mit pos arbeiten? ist aber kein int...
 
+    all_faces_mesh = skeleton(volmesh,2)
+
+    all_faces = all_faces_mesh.faces
+
+    nc_faces = ncbndmesh.faces
+
+    # Konvertiere Arrays in Sets für schnelles Nachschlagen
+    set1 = Set(all_faces)
+    set2 = Set(nc_faces)
+
+    # Berechne die Differenzmenge
+    result_set = setdiff(set1, set2)
+
+    # Ausgabe des Ergebnisses
+    swg_faces = collect(result_set)
+    
+    return swg_faces
+end
 
 
 
