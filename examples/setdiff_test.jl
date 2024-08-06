@@ -44,3 +44,24 @@ using Test
 @show sum(norm.(swg_faces2))
 @test sum(norm.(swg_faces)) ≈ sum(norm.(swg_faces2))
 @test sum(norm.(swg_faces)) ≈ sum(norm.(swg_faces3))
+
+
+
+
+##
+
+wdual = duallagrangec0d1(md.Γ) # DoubleNumSauterQstrat ist ohne wilton!
+
+duallagrangec0d1(md.Γ, md.Γ_c)
+
+
+Visu.fnspos(wdual)
+
+br = barycentric_refinement(md.Γ)
+
+wdual = duallagrangec0d1(md.Γ, md.Γ_nc)
+
+ydual = duallagrangecxd0(md.Γ_nc)
+
+
+a = inclosure_gpredicate(md.Γ_nc)

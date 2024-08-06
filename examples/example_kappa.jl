@@ -37,9 +37,9 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 # STANDARD-TESTMATERIAL: IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2])
 
-sol, S, R = IP.solvefembem(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
+sol, S, R = IP.solve0(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constantmaterial(1000.0, nothing), #IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing),, #  ,#, # #, #
+    material = IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing),, #  ,#, # #, #
     κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = nothing,
     ω = nothing, 
@@ -55,45 +55,11 @@ sol, S, R = IP.solvefembem(;   # solve -> arb. Mat. / solve1 -> high contrast fo
 #dataname = "test" # for JLD2 save
 #jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
-# cond(S)
-# D_S = Diagonal(S)
-
-# C = D_S #inv(D_S)*0.01
-
-
-
-# # Zeilenskalierungsfaktoren berechnen
-# row_scale_factors = maximum(abs, S, dims=2)
-# D_r = Diagonal(Vector(1.0 ./ row_scale_factors[:,1]))
-
-# # Spaltenskalierungsfaktoren berechnen
-# col_scale_factors = maximum(abs, S, dims=1)
-# D_c = Diagonal(1.0 ./ col_scale_factors[1,:])
-
-# # Beidseitige Skalierung der Matrix
-# S_scaled = D_r * S * D_c
-
-# # Skaliere die RHS
-# b_scaled = D_r * sol.b
-
-# # Löse das skalierte System
-# y = S_scaled \ b_scaled
-
-# # Transformiere die Lösung zurück
-# x = D_c * y
-
-# sol.u
-
-# norm(x-sol.u)
-
-# cond(S)
-# cond(S_scaled)
 
 
 
 
 ##
-
 
 ##
 using MKL
@@ -131,7 +97,7 @@ md = load(datapath, "md")
 
 
 gr()
-MATR = log.(abs.(S) .+1.0e-6)
+MATR = log.(abs.(S) .+1.0e-10)
 p = Plots.heatmap(MATR, title = "2D Rasterplot des Betrags der Systemmatrix", aspect_ratio=:equal)
 yflip!(p; size=(1200,1000))
 

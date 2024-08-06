@@ -497,23 +497,15 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     # Material
     κ, ϵ = material()
     τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
-    p = point(0.0,0.0,0.0)
-    @show τ(p)
-    @show inv_τ(p)
-    @show τ0
-    @show χ(p)
-    @show T
 
     # Excitation
     v_top = ones(length(md.topnodes)) * potential_top
     v_bottom = ones(length(md.bottomnodes)) * potential_bottom
     v = vcat(v_top, v_bottom)
 
-
     # Operators row 1
     B11_Γ = Identity() #Verschwindet!!! <---- klären....
-    B11_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)
-        # + (-1/2)*Identity()
+    B11_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)# + (-1/2)*Identity()
 
     B12_ΓΓ =  IP.MaterialSL(T(0.0), 1.0, inv_τ)
 
@@ -532,8 +524,7 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
 
     # Operators row 3
-    B31_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)
-        # + (-1/2)*Identity()
+    B31_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)# + (-1/2)*Identity()
     B31_ΩΓ = IP.div_ngradG_ΩΓ(T(0.0), -1.0, x->1.0)
 
     B32_ΓΓ = IP.MaterialSL(T(0.0), 1.0, inv_τ)
@@ -551,8 +542,8 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     w = md.w
     X = md.X
     ntrcX = md.ntrcX 
-    wdual = duallagrangec0d1(md.Γ_c) # DoubleNumSauterQstrat ist ohne wilton!
-    ydual = duallagrangecxd0(md.Γ_nc)
+    #wdual = duallagrangec0d1(md.Γ, md.Γ_c) # DoubleNumSauterQstrat ist ohne wilton!
+    #ydual = duallagrangecxd0(md.Γ, md.Γ_nc)
     t_eq1 = w
     t_eq2 = y
 
@@ -579,23 +570,60 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
     #error("STOP HERE!")
 
-    ROW1 = hcat(B11,B12,B13)
-    ROW2 = hcat(B21,B22,B23)
-    ROW3 = hcat(B31,B32,B33)
-    S = vcat(ROW1,ROW2,ROW3)
-    R = vcat(R11,R21,R31)
-
-    # display(B11)
-    # display(B22)
-    # display(B33)
-
-    # S*u = R*v, solve for u
+    #ROW1 = hcat(B21,B22,B23) #swap 1&2
+    #ROW2 = hcat(B11,B12,B13) # "-"
+    #ROW3 = hcat(B31,B32,B33)
+    #S = vcat(ROW1,ROW2,ROW3)
+    R = vcat(R21,R11,R31) # "-"
     b = R*v
+
+
+    nrmB21 = norm(B21)
+    nrmB12 = norm(B12)
+    nrmB33 = norm(B33)
+    α_T = 1/norm(b[1:length(w.fns)]) 
+    α_B = 1/(α_T*nrmB21)
+
+    β_T = 1/norm(b[length(w.fns)+1:length(w.fns)+length(y.fns)]) 
+    β_B = 1/(β_T*nrmB12)
+
+    γ_T = 1#/norm(b[length(w.fns)+length(y.fns)+1:end]) 
+    γ_B = 1#/(γ_T*nrmB33)
+
+    @show α_T
+    @show α_B
+    @show β_T
+    @show β_B
+    @show γ_T
+    @show γ_B
+
+    ROW1 = α_T*hcat(α_B*B21, β_B*B22, γ_B*B23) #swap 1&2
+    ROW2 = β_T*hcat(α_B*B11, β_B*B12, γ_B*B13) # "-"
+    ROW3 = γ_T*hcat(α_B*B31, β_B*B32, γ_B*B33)
+    S = vcat(ROW1,ROW2,ROW3)
+    R = vcat(α_T*R21, β_T*R11, γ_T*R31) # new
+    b = R*v
+
+    # @show cond(B11)
+    # @show cond(B12)
+    # @show cond(B13)
+
+    # @show cond(B21)
+    # @show cond(B22)
+    # @show cond(B23)
+
+    # @show cond(B31)
+    # @show cond(B32)
+    # @show cond(B33)
+
+
+    # S*u = b, solve for u
     u = S \ b # it solver...
-    #@assert norm(S*u - b) < 1e-8
-    u_Φ = u[1:length(y)]
-    u_Jn = u[length(y)+1:length(y)+length(w)]
-    u_J = u[length(y)+length(w)+1:end]
+    @assert norm(S*u - b) < 1e-8
+    u_Φ = u[1:length(y)]#/α_B
+    u_Jn = u[length(y)+1:length(y)+length(w)]/β_B
+    u_J = u[length(y)+length(w)+1:end]/γ_B
+    #u = [u_Φ, u_Jn, u_J]
     @assert length(u_Φ) == length(y.fns)
     @assert length(u_Jn) == length(w.fns)
     @assert length(u_J) == length(X.fns)
@@ -737,11 +765,11 @@ function solvefem(; # FEM formulation
     I = assemble(BEAST.Identity(), X, X)
 
 
-    Op_A = IP._grad_Ω(1.0, τ)
+    Op_A = IP._grad_Ω(T(1.0), τ)
     A = assemble(Op_A, X, Y)
     Ã = -assemble(Op_A, X, Y_d)
 
-    Op_B = IP._div_Ω(1.0, τ)
+    Op_B = IP._div_Ω(T(1.0), τ)
     B = assemble(Op_B, Y, X)
 
     row1 = hcat(O,B)
