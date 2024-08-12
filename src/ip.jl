@@ -578,17 +578,18 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     b = R*v
 
 
-    nrmB21 = norm(B21)
-    nrmB12 = norm(B12)
-    nrmB33 = norm(B33)
-    α_T = 1/norm(b[1:length(w.fns)]) 
-    α_B = 1/(α_T*nrmB21)
+    rownrmB21 = norm(B21) #[norm(B21[i, :]) for i in 1:size(B21, 1)] #
+    rownrmB12 = norm(B12) #[norm(B12[i, :]) for i in 1:size(B12, 1)] #
+    rownrmB33 = norm(B33) #[norm(B33[i, :]) for i in 1:size(B33, 1)] #
 
-    β_T = 1/norm(b[length(w.fns)+1:length(w.fns)+length(y.fns)]) 
-    β_B = 1/(β_T*nrmB12)
+    α_T = 1.0 #./norm(b[1:length(w.fns)]) 
+    α_B = 1.0 #./(α_T.*rownrmB21)
 
-    γ_T = 1#/norm(b[length(w.fns)+length(y.fns)+1:end]) 
-    γ_B = 1#/(γ_T*nrmB33)
+    β_T = 1.0 #./norm(b[length(w.fns)+1:length(w.fns)+length(y.fns)]) 
+    β_B = 1.0 #./(β_T.*rownrmB12)
+
+    γ_T = 1.0 #./norm(b[length(w.fns)+length(y.fns)+1:end]) 
+    γ_B = 1.0 #./(γ_T.*rownrmB33)
 
     @show α_T
     @show α_B
@@ -597,32 +598,46 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     @show γ_T
     @show γ_B
 
-    ROW1 = α_T*hcat(α_B*B21, β_B*B22, γ_B*B23) #swap 1&2
-    ROW2 = β_T*hcat(α_B*B11, β_B*B12, γ_B*B13) # "-"
-    ROW3 = γ_T*hcat(α_B*B31, β_B*B32, γ_B*B33)
+    ROW1 = α_T.*hcat(α_B.*B21, β_B.*B22, γ_B.*B23) #swap 1&2
+    ROW2 = β_T.*hcat(α_B.*B11, β_B.*B12, γ_B.*B13) # "-"
+    ROW3 = γ_T.*hcat(α_B.*B31, β_B.*B32, γ_B.*B33)
     S = vcat(ROW1,ROW2,ROW3)
-    R = vcat(α_T*R21, β_T*R11, γ_T*R31) # new
+    R = vcat(α_T.*R21, β_T.*R11, γ_T.*R31) # new
     b = R*v
 
-    # @show cond(B11)
-    # @show cond(B12)
-    # @show cond(B13)
+    @show opnorm(B11)
+    @show opnorm(B12)
+    @show opnorm(B13)
 
-    # @show cond(B21)
-    # @show cond(B22)
-    # @show cond(B23)
+    @show opnorm(B21)
+    @show opnorm(B22)
+    @show opnorm(B23)
 
-    # @show cond(B31)
-    # @show cond(B32)
-    # @show cond(B33)
+    @show opnorm(B31)
+    @show opnorm(B32)
+    @show opnorm(B33)
+
+
+
+    @show cond(B11)
+    @show cond(B12)
+    @show cond(B13)
+
+    @show cond(B21)
+    @show cond(B22)
+    @show cond(B23)
+
+    @show cond(B31)
+    @show cond(B32)
+    @show cond(B33)
 
 
     # S*u = b, solve for u
     u = S \ b # it solver...
     @assert norm(S*u - b) < 1e-8
-    u_Φ = u[1:length(y)]#/α_B
-    u_Jn = u[length(y)+1:length(y)+length(w)]/β_B
-    u_J = u[length(y)+length(w)+1:end]/γ_B
+    u_Φ = u[1:length(y)].*α_B
+    u_Jn = u[length(y)+1:length(y)+length(w)].*β_B
+    u_J = u[length(y)+length(w)+1:end].*γ_B
     #u = [u_Φ, u_Jn, u_J]
     @assert length(u_Φ) == length(y.fns)
     @assert length(u_Jn) == length(w.fns)

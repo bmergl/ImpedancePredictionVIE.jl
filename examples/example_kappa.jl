@@ -39,7 +39,7 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol, S, R = IP.solve0(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing),, #  ,#, # #, #
+    material = IP.constantmaterial(10.0, nothing), # IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing),, #  ,#, # #, #
     κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = nothing,
     ω = nothing, 
@@ -131,8 +131,6 @@ display("Stromdichte bei Platten: Ebene z=0.49")
 @show norm(J_MoM3-J_ana3)/norm(J_ana3) 
 println()
 
-##
-
 # Stromdicht auf Platten mit Flächenbasisfunktion - HIER NUR für constant z-split Fall!
 # sol.u_Jn
 # A = md.body.L_x * md.body.L_y
@@ -167,9 +165,9 @@ println()
 println()
 
 # Potential: Randknoten vs. Analytisch
-@warn "check FEM settings"
+#@warn "check FEM settings"
 u_Φ = sol.u_Φ
-u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol, FEM = true)
+u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol, FEM = false)
 @show norm(u_Φ-u_Φ_ana)/norm(u_Φ_ana)
 
 

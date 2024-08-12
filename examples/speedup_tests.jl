@@ -36,7 +36,7 @@ BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
 
 sol, S, R = IP.solve0(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constantmaterial(2.0, nothing), # IP.pwlinx([[1.0, 1.2],[1.4, 1.7],[1.9, 1.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing),, #  ,#, # #, #
+    material = IP.pwlinx([[1.0, 1.2],[1.4, 1.7],[100000.9, 1.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constant_zsplit(100.0, nothing, 0.0001, 10.0, nothing), #IP.pwlinx([[1.0, 20.0],[40.0, 100.0],[200.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), # # IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing),, #  ,#, # #, #
     κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
     ϵ0 = nothing,
     ω = nothing, 
@@ -65,15 +65,13 @@ S_scaled = D_r * S * D_c
 b_scaled = D_r * sol.b
 
 # Löse das skalierte System
-y = S_scaled \ b_scaled
+u_scaled = S_scaled \ b_scaled
 
 # Transformiere die Lösung zurück
-x = D_c * y
+u_ = D_c * u_scaled
 
-sol.u
-x
 
-norm(x-sol.u)
+norm(u_-sol.u)
 
 cond(S)
 cond(S_scaled)
@@ -81,7 +79,7 @@ cond(S_scaled)
 
 b_test = ones(length(b_scaled))
 
-u_it, ch = IterativeSolvers.gmres!(x, S_scaled, b_test; maxiter=4000, log=true, reltol = 1.0e-3)
+u_it, ch = IterativeSolvers.gmres(S_scaled, b_scaled; maxiter=4000, log=true, reltol = 1.0e-3)
 rank(S_scaled)
 S_scaled
 
