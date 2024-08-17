@@ -1273,19 +1273,25 @@ function getcurrent2(m::IP.meshdata, s::IP.solution)
     for (j, pos) in enumerate(ntrcX.pos)
         ntrcX.fns[j] == [] && continue
 
-        i = CompScienceMeshes.findchart(top_charts, chart_tree_top, pos)      # ja...hier wäre das nicht nötig assemblydata?
+        i = CompScienceMeshes.findchart(top_charts, chart_tree_top, pos)
         k = CompScienceMeshes.findchart(bottom_charts, chart_tree_bottom, pos)
 
         if i !== nothing
             A = top_charts[i].volume 
             @assert A > 0.0
-            I_top += -A * u_J[j] * ntrcX.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
+            I_part = -A * u_J[j] * ntrcX.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
+            I_top += I_part
+            @assert length(ntrcX.fns[j]) == 1
+            @assert I_part >= -0.0
             #@show -A * u_J[j] * ntrcX.fns[j][1].coeff
             cnt_top += 1
         elseif k !== nothing
             A = bottom_charts[k].volume 
             @assert A > 0.0
-            I_bottom += A * u_J[j] * ntrcX.fns[j][1].coeff
+            I_part = A * u_J[j] * ntrcX.fns[j][1].coeff
+            I_bottom += I_part
+            @assert length(ntrcX.fns[j]) == 1
+            @assert I_part >= -0.0
             #@show A * u_J[j] * ntrcX.fns[j][1].coeff
             cnt_bottom += 1
         else

@@ -23,15 +23,9 @@ function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::I
     Γ_nc = CompScienceMeshes.read_gmsh_mesh("$meshpath", physical= "InsulatingContact")
 
     #Γ = weld(Γ_c_t, Γ_c_b, Γ_nc) !!!! hat die vertices nicht zusammengeführt!!!
-
-    #faces = deepcopy(Γ_c_t.faces) #weld in CSM als Alternatives! "verschweißen"
-    #append!(faces, Γ_c_b.faces)
-    #append!(faces, Γ_nc.faces)
     faces = vcat(Γ_c_t.faces, Γ_c_b.faces, Γ_nc.faces)
     Γ = Mesh(Ω.vertices, faces)
 
-    #faces2 = deepcopy(Γ_c_t.faces)
-    #append!(faces2, Γ_c_b.faces)
     faces2 = vcat(Γ_c_t.faces, Γ_c_b.faces)
     Γ_c = Mesh(Ω.vertices, faces2)
 
@@ -71,22 +65,6 @@ function pointlist2xyzlist(pointlist)
     return allx, ally, allz
 end
 
-
-# function dirichlet_n2f(y_d::BEAST.LagrangeBasis{1,0}, dirichletnodes)           #<--------SPEED? Distanz Octree...
-#     # input: glob node nr. 12 => glob fns nr. = n2f[12]   !!! geht nur für knotenbasierte fns...
-#     n2f = Int64[]
-#     vertices = y_d.geo.vertices[dirichletnodes]
-#     for mvert in vertices
-#         for (j,Xvert) in enumerate(y_d.pos)
-#             if norm(mvert - Xvert) < 1e-12
-#                 push!(n2f, j)
-#                 break
-#             end
-#         end
-#     end
-#     @assert length(dirichletnodes) == length(n2f)
-#     return n2f # Vektor
-# end
 
 function swgfaces(volmesh::Mesh, ncbndmesh::Mesh; fast = true)           #<--------SPEED? Distanz Octree...
     
@@ -203,8 +181,6 @@ end
 
 function swgfaces_set_approach(volmesh::Mesh, ncbndmesh::Mesh)
     
-    #circshift damit dreichssortierung passt? oder mit pos arbeiten? ist aber kein int...
-
     all_faces_mesh = skeleton(volmesh,2)
 
     all_faces = all_faces_mesh.faces
@@ -213,17 +189,6 @@ function swgfaces_set_approach(volmesh::Mesh, ncbndmesh::Mesh)
     # Diese Schritte ändern die normale, sollte aber egal sein...
     all_faces_sort = sort.(all_faces)
     nc_faces_sort = sort.(nc_faces)
-
-    # #Achtung! geht wieder nur wenn die normalen auch passen... !!!!!!!!
-
-    # min_ind_1 = findmin.(all_faces)
-    # min_ind_2 = findmin.(nc_faces)
-
-    # min_index_list1 = vec([t[2] for t in min_ind_1])
-    # min_index_list2 = vec([t[2] for t in min_ind_2])
-
-    # all_faces_s = [BEAST.circshift(all_faces[i],1-min_index_list1[i]) for i in 1:length(all_faces)]
-    # nc_faces_s = [BEAST.circshift(nc_faces[i],1-min_index_list2[i]) for i in 1:length(nc_faces)]
 
     # Konvertiere Arrays in Sets für schnelles Nachschlagen
     set1 = Set(all_faces_sort)
@@ -237,12 +202,6 @@ function swgfaces_set_approach(volmesh::Mesh, ncbndmesh::Mesh)
     
     return swg_faces
 end
-
-
-
-
-
-
 
 
 
@@ -300,24 +259,51 @@ end
 
 
 
+"""
+    IP.grideval(points, coeffs, basis; type=nothing)
+"""
+function grideval(points, coeffs, basis; type=nothing)
 
-#chart(mesh::Mesh, cell) ist simplex, davon kann man center machen
-# s = simplex(volmesh.vertices[f1])
-# cent = CompScienceMeshes.center(s)
-# addf1 && @show cartesian(cent)    
+    # charts: active charts
+    # ad: assembly data (active_cell_idx, local_shape_idx) -> [dof1, dfo2, ...]
+    # ag: active_cell_idx -> global_cell_idx
+    charts, ad, ag = assemblydata(basis)
+    refs = refspace(basis)
 
-# for f1 in excluded_faces
-#     err = true
-#     for f2 in all_faces
-#         ap = collect(BEAST.permutations(f2))
-#         @assert length(ap) == 6
-#         if (f1 == ap[1]) || (f1 == ap[2]) ||(f1 == ap[3]) ||(f1 == ap[4]) ||(f1 == ap[5]) ||(f1 == ap[6])
-#             err = false
-#         end
-#     end
-#     err && @show f1
-#     err && error("Diese excluded face existiert in all_faces gar nicht")
-# end
+    V = valuetype(refs, eltype(charts))
+    T = promote_type(eltype(coeffs), eltype(V))
+    P = similar_type(V, T)
+
+    type != nothing && (P = type)
+
+    chart_tree = BEAST.octree(charts)
+    
+    
+    values = zeros(P, size(points)) # über index j ansteuern später...
+
+    enumerated_tupel = collect(enumerate(points))
+
+    Threads.@threads for k in 1:length(enumerated_tupel) 
+        j, point = enumerated_tupel[k]
+
+        i = CompScienceMeshes.findchart(charts, chart_tree, point)
+        if i !== nothing
+            # @show i
+            chart = charts[i]
+            u = carttobary(chart, point)
+            vals = refs(neighborhood(chart,u))
+            for r in 1 : numfunctions(refs)
+                for (m,w) in ad[i, r]
+                    values[j] += w * coeffs[m] * vals[r][1]
+                end
+            end
+            continue
+        end
+    end
+
+    return values
+end
+
 
 
 
@@ -640,69 +626,6 @@ function BEAST.lagrangec0d1(mesh, vertexlist::Vector, ::Type{Val{4}})
     BEAST.LagrangeBasis{1,0,NF}(mesh, fns, pos)
 end
 ###############################################################
-
-
-"""
-    IP.grideval(points, coeffs, basis; type=nothing)
-"""
-function grideval(points, coeffs, basis; type=nothing)
-
-    # charts: active charts
-    # ad: assembly data (active_cell_idx, local_shape_idx) -> [dof1, dfo2, ...]
-    # ag: active_cell_idx -> global_cell_idx
-    charts, ad, ag = assemblydata(basis)
-    refs = refspace(basis)
-
-    V = valuetype(refs, eltype(charts))
-    T = promote_type(eltype(coeffs), eltype(V))
-    P = similar_type(V, T)
-
-    type != nothing && (P = type)
-
-    chart_tree = BEAST.octree(charts)
-
-    ######## Multi Threading ############
-    
-    values = zeros(P, size(points)) # über index j ansteuern später...
-
-    # Threads Anzahl
-    # nthreads = Threads.nthreads()
-    # Initialisierung eines Arrays von leeren Vektoren für jedes Thread
-    #thread_results = [Vector{SVector{3, Int64}}() for i in 1:nthreads]
-
-    enumerated_tupel = collect(enumerate(points))
-
-    Threads.@threads for k in 1:length(enumerated_tupel)  #enumerated_tupel#enumerate(all_charts_centers)
-        j, point = enumerated_tupel[k]
-
-        i = CompScienceMeshes.findchart(charts, chart_tree, point)
-        if i !== nothing
-            # @show i
-            chart = charts[i]
-            u = carttobary(chart, point)
-            vals = refs(neighborhood(chart,u))
-            for r in 1 : numfunctions(refs)
-                for (m,w) in ad[i, r]
-                    values[j] += w * coeffs[m] * vals[r][1]
-                end
-            end
-            continue
-        end
-        # if i === nothing
-        #     push!(thread_results[threadid()], all_faces_mesh.faces[j])
-        # else
-        #     # gefunden! => face liegt auf Γ_nc und muss ausgeschlossen werden!
-        # end
-    end
-
-    # Zusammenführen aller Thread-spezifischen Vektoren
-    # for t in 1:nthreads
-    #     append!(swg_faces, thread_results[t])
-    # end
-    ####################################
-
-    return values
-end
 
 
 

@@ -15,7 +15,7 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0009)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0018)
 print("tehrahedrons: ", length(md.Ω.faces))
 #Visu.mesh(md.Ω) 
 
@@ -110,7 +110,7 @@ yflip!(p; size=(1200,1000))
 # Stomdichte
 range_ = range(-0.0049,stop=0.0049,length=9)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
-J_MoM = BEAST.grideval(points, sol.u_J, md.X)#, type=Float64)
+J_MoM = IP.grideval(points, sol.u_J, md.X)#, type=Float64)
 J_ana = IP.solution_J_ana(md.body, sol.material, md, sol, points, J_MoM)
 display("Stomdichte Gesamtvolumen")
 @show norm(J_MoM-J_ana)/norm(J_ana)# = norm(norm.(J_MoM-J_ana))/norm(J_ana)
@@ -118,14 +118,14 @@ display("Stomdichte Gesamtvolumen")
 # Stromdichte Mitte: Ebene z=0.0
 range_xy = range(-0.005,stop=0.005,length=9)
 points2 = [point(x,y,0.0) for x in range_xy for y in range_xy]
-J_MoM2 = BEAST.grideval(points2, sol.u_J, md.X)
+J_MoM2 = IP.grideval(points2, sol.u_J, md.X)
 J_ana2 = IP.solution_J_ana(md.body, sol.material, md, sol, points2, J_MoM2)
 display("Stromdichte Mitte: Ebene z=0.0")
 @show norm(J_MoM2-J_ana2)/norm(J_ana2)
 
 # Stromdichte bei Platten: Ebene z=0.49
 points3 = [point(x,y,0.0049) for x in range_xy for y in range_xy]
-J_MoM3 = BEAST.grideval(points3, sol.u_J, md.X)
+J_MoM3 = IP.grideval(points3, sol.u_J, md.X)
 J_ana3 = IP.solution_J_ana(md.body, sol.material, md, sol, points3, J_MoM3)
 display("Stromdichte bei Platten: Ebene z=0.49")
 @show norm(J_MoM3-J_ana3)/norm(J_ana3) 

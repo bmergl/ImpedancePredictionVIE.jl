@@ -115,9 +115,7 @@ struct gradG_ΓΩ{T,U,P} <: BEAST.BoundaryOperator
     tau::P
 end
 function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo) # 5D
-    # neuer Stil!!!!!!!! Trotzdem sollte zwischen skalar und vekt unterschieden werden...
 
-    #G = kerneldata.green
     gradG = -kerneldata.gradgreen # "-" to get nabla'G(r,r')
     Ty = kerneldata.tau
     α = viop.α
@@ -127,15 +125,6 @@ function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
     return BEAST._integrands(tvals,bvals) do fi, gj # f ist jetzt test, g ist jetzt basis!
        dot(fi.value*αgradGTy, gj.value)
     end
-
-
-    # f = tvals
-    # g = bvals
-
-    # fvalue = BEAST.getvalue(f)
-    # gvalue = BEAST.getvalue(g)
-
-    # return BEAST._krondot(fvalue*αgradGTy,gvalue) .... wann geht krondot???
 end
 
 struct gradG_Γ1Ω{T,U,P} <: BEAST.BoundaryOperator#ΓΩ
