@@ -15,7 +15,7 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0005)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0009)
 print("tehrahedrons: ", length(md.Ω.faces))
 
 
@@ -30,18 +30,18 @@ BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
 
 sol, S, R = IP.solvefem(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.constantmaterial(0.2, 10000.0*IP.ε0), #IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constantmaterial(1.0, nothing), #IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    material = IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constantmaterial(1.0, nothing), #IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
     κ0 = 1.0, # möglichst in der nähe der realen Größen wählen damit cond(S) klein?
-    ϵ0 = 1.0*IP.ε0,
-    ω = 2*pi*1000.0, 
+    ϵ0 = nothing, #1.0*IP.ε0,
+    ω = nothing, #2*pi*1000.0, 
     potential_top = 0.5, 
     potential_bottom = -0.5,
     qs3D = qs3D, 
     #matalloc = :center,
 )
 
-dataname = "test" # for JLD2 save
-jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
+#dataname = "test" # for JLD2 save
+#jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, sol) 
 
 
 ##
@@ -89,7 +89,6 @@ u_Φ = sol.u_Φ
 u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol; FEM = true)
 @show norm(u_Φ-u_Φ_ana)/norm(u_Φ_ana)
 
-
 ##
 #display(Visu.fieldplot(points, J_MoM, 0.0007, Visu.mesh(md.Γ_c)))
 
@@ -125,7 +124,6 @@ plot!(x, -J_z, label = "J_z")
 #ylims!(-0.3, 0.0)
 title!("J_z(x, y0, z0)")
 xlabel!("x")
-
 
 
 

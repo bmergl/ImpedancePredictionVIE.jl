@@ -591,12 +591,12 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     γ_T = 1.0 #./norm(b[length(w.fns)+length(y.fns)+1:end]) 
     γ_B = 1.0 #./(γ_T.*rownrmB33)
 
-    @show α_T
-    @show α_B
-    @show β_T
-    @show β_B
-    @show γ_T
-    @show γ_B
+    # @show α_T
+    # @show α_B
+    # @show β_T
+    # @show β_B
+    # @show γ_T
+    # @show γ_B
 
     ROW1 = α_T.*hcat(α_B.*B21, β_B.*B22, γ_B.*B23) #swap 1&2
     ROW2 = β_T.*hcat(α_B.*B11, β_B.*B12, γ_B.*B13) # "-"
@@ -605,31 +605,31 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     R = vcat(α_T.*R21, β_T.*R11, γ_T.*R31) # new
     b = R*v
 
-    @show opnorm(B11)
-    @show opnorm(B12)
-    @show opnorm(B13)
+    # @show opnorm(B11)
+    # @show opnorm(B12)
+    # @show opnorm(B13)
 
-    @show opnorm(B21)
-    @show opnorm(B22)
-    @show opnorm(B23)
+    # @show opnorm(B21)
+    # @show opnorm(B22)
+    # @show opnorm(B23)
 
-    @show opnorm(B31)
-    @show opnorm(B32)
-    @show opnorm(B33)
+    # @show opnorm(B31)
+    # @show opnorm(B32)
+    # @show opnorm(B33)
 
 
 
-    @show cond(B11)
-    @show cond(B12)
-    @show cond(B13)
+    # @show cond(B11)
+    # @show cond(B12)
+    # @show cond(B13)
 
-    @show cond(B21)
-    @show cond(B22)
-    @show cond(B23)
+    # @show cond(B21)
+    # @show cond(B22)
+    # @show cond(B23)
 
-    @show cond(B31)
-    @show cond(B32)
-    @show cond(B33)
+    # @show cond(B31)
+    # @show cond(B32)
+    # @show cond(B33)
 
 
     # S*u = b, solve for u
