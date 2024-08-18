@@ -43,6 +43,7 @@ export IPVIE1
 export IPVIE2
 export IPVIE3
 export geo2mesh
+export msh2mesh
 export showxvec
 export MaterialIdentity
 

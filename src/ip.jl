@@ -68,23 +68,6 @@ struct constant_zsplit <: material
 end
 function (mat::constant_zsplit)()
 
-    # κ_p = mat.κ_p # Beobachtung: mach das so und die funktionen unten sind extrem langsam 
-    # ϵ_p = mat.ϵ_p # d.h. unten natürlich auch mat.κ_p durch κ_p ersetzen oder so....
-    # κ_m = mat.κ_m # UNTERSUCHEN!!!!
-    # ϵ_m = mat.ϵ_m
-
-    
-    # if (κ_p === nothing && κ_m !== nothing) || (κ_p !== nothing && κ_m === nothing)
-    #     error("check....")
-    #     κ_p === nothing && (κ_p = 0.0)
-    #     κ_m === nothing && (κ_m = 0.0)
-    # end
-    # if (ϵ_p === nothing && ϵ_m !== nothing) || (ϵ_p !== nothing && ϵ_m === nothing)
-    #     error("check....")
-    #     ϵ_p === nothing && (ϵ_p = 0.0)
-    #     ϵ_m === nothing && (ϵ_m = 0.0)
-    # end
-
     function gen()
         function kappa(x) 
             x[3] >= mat.z0 && (return mat.κ_p)
@@ -215,18 +198,24 @@ end
 
 
 
-function setup(; geoname::String = "cube.geo", meshname::String = "cube.msh",
+function setup(; geoname::Union{String, Nothing} = nothing, meshname::Union{String, Nothing} = nothing,
     body::geometric_body = cuboid(1.0, 1.0, 1.0), h = 0.18)
 
-    #geoname = "name.geo"
-    geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
+    if geoname === nothing && meshname === nothing
+        error("Missing geoname/meshname")
+    elseif geoname === nothing && meshname !== nothing
+        meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
+        Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = msh2mesh(meshpath)
+    elseif meshname === nothing && geoname !== nothing
+        geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
+        meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/($geoname)_"
+        Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h, body = body)
+    else  
+        geopath = "$(pkgdir(ImpedancePredictionVIE))/geo/$geoname"
+        meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
+        Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h, body = body)
+    end
 
-    #meshname = "name.msh"
-    meshpath = "$(pkgdir(ImpedancePredictionVIE))/geo/$meshname"
-
-    Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc = geo2mesh(geopath, meshpath, h, body = body)
-
-    
     # LinearLag  on Γ_c (dirichlet)
     topnodes = realnodes(Γ_c_t) # wichtig denn später z.B. 10V
     bottomnodes = realnodes(Γ_c_b) # ""  z.B. 0V

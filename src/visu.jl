@@ -87,12 +87,12 @@ function fnspos(X::BEAST.Space, plt = iplot())
 end
 
 
-function add1(plt, simplex0, refsp) #adds one cell field...
+function add1(plt, simplex0, refsp, scale) #adds one cell field...
 
     bary_list = [[u, v, w] for u in 0.1:0.3:1.0 for v in 0.1:0.3:1.0-u for w in 0.1:0.3:1.0-u-v]
 
-    scale = norm(simplex0.tangents[1])*0.05
-    @show scale
+    #scale = norm(simplex0.tangents[1])*0.05
+    #@show scale
 
 
     for bary in bary_list

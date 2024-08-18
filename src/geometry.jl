@@ -22,7 +22,7 @@ function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::I
     Γ_c_b = CompScienceMeshes.read_gmsh_mesh("$meshpath", physical= "BottomElectrode")
     Γ_nc = CompScienceMeshes.read_gmsh_mesh("$meshpath", physical= "InsulatingContact")
 
-    #Γ = weld(Γ_c_t, Γ_c_b, Γ_nc) !!!! hat die vertices nicht zusammengeführt!!!
+    #Γ = weld(Γ_c_t, Γ_c_b, Γ_nc) hatte die vertices damals nicht zusammengeführt
     faces = vcat(Γ_c_t.faces, Γ_c_b.faces, Γ_nc.faces)
     Γ = Mesh(Ω.vertices, faces)
 
@@ -33,6 +33,26 @@ function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::I
 
     return Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc
 end
+
+function msh2mesh(meshpath::String)
+    
+    Ω = CompScienceMeshes.read_gmsh3d_mesh("$meshpath", physical="BodyVolume")
+
+    Γ_c_t = CompScienceMeshes.read_gmsh_mesh("$meshpath", physical= "TopElectrode")
+    Γ_c_b = CompScienceMeshes.read_gmsh_mesh("$meshpath", physical= "BottomElectrode")
+    Γ_nc = CompScienceMeshes.read_gmsh_mesh("$meshpath", physical= "InsulatingContact")
+
+    #Γ = weld(Γ_c_t, Γ_c_b, Γ_nc) hatte die vertices damals nicht zusammengeführt
+    faces = vcat(Γ_c_t.faces, Γ_c_b.faces, Γ_nc.faces)
+    Γ = Mesh(Ω.vertices, faces)
+
+    faces2 = vcat(Γ_c_t.faces, Γ_c_b.faces)
+    Γ_c = Mesh(Ω.vertices, faces2)
+
+    return Ω, Γ, Γ_c, Γ_c_t, Γ_c_b, Γ_nc
+end
+
+
 
 
 function realvertices(mesh::Mesh) # mesh.vertices includes vertices that are not used but impotant to handle...
