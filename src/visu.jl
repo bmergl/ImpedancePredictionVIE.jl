@@ -20,10 +20,16 @@ using StaticArrays
 
 
 
-function iplot(; size=(1000,800))
-    plotly()
+function iplot(; size=(900,700))
     #plotlyjs()
+    plotly()
     plt = Plots.plot(size = size, xlabel = "x", ylabel = "y", zlabel = "z")
+    return plt
+end
+
+function iplot2(; kwargs...)
+    plotly()
+    plt = Plots.plot(; kwargs...)
     return plt
 end
 
@@ -41,7 +47,7 @@ function mesh(m::Mesh, plt = iplot() )# = nothing)
     points = realvertices(m)
     Allx, Ally, Allz = pointlist2xyzlist(points)
 
-    scatter!(plt, Allx, Ally, Allz, markersize = 1, color = "blue", label="")
+    scatter!(plt, Allx, Ally, Allz, markersize = 0.5, color = "blue", label="")
 
     all_edges = skeleton(m,1).faces
     #@show length(all_edges)
