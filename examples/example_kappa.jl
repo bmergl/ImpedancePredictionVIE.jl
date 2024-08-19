@@ -188,6 +188,8 @@ Plotly.plot(patch(geo1, fcr1))      #MANCHMAL FALSCH ORIENTIERT!!! je nach tau0+
 # J_n auf Γ_c mittels u_J d.h. mittels ntrace der Volumenlösung
 fcr3, geo3 = facecurrents(sol.u_J, md.ntrcX)
 Plotly.plot(patch(geo3, fcr3))
+help = patch(geo3, fcr3)
+Plots.plot(patch(geo3, fcr3))
 
 
 ## x-line at y0, z0 - J_z only inside the sphere mesh valid!

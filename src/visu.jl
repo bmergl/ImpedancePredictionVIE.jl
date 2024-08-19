@@ -42,20 +42,19 @@ function points(pointlist, plt = iplot())
 end
 
 
-function mesh(m::Mesh, plt = iplot() )# = nothing)
+function mesh(m::Mesh, plt = iplot(); nodesize = 0.5, nodecolor = "blue", linewidth = 1.0, linecolor = "green")
 
     points = realvertices(m)
     Allx, Ally, Allz = pointlist2xyzlist(points)
 
-    scatter!(plt, Allx, Ally, Allz, markersize = 0.5, color = "blue", label="")
+    scatter!(plt, Allx, Ally, Allz, markersize = nodesize, color = nodecolor, label="")
 
     all_edges = skeleton(m,1).faces
-    #@show length(all_edges)
 
     for edge in all_edges
         a = m.vertices[edge[1]]
         b = m.vertices[edge[2]]
-        plot!(plt, [a[1], b[1]], [a[2], b[2]], [a[3], b[3]], color="green", label="")
+        plot!(plt, [a[1], b[1]], [a[2], b[2]], [a[3], b[3]], lcolor=linecolor, linewidth = linewidth, label="")
     end
 
     return plt
@@ -87,21 +86,34 @@ function fnspos(X::BEAST.Space, plt = iplot())
 end
 
 
-function add1(plt, simplex0, refsp, scale) #adds one cell field...
+function add1(plt, simplex0, refsp, scale, locfnsnr, locsign) #adds one cell field...
 
     bary_list = [[u, v, w] for u in 0.1:0.3:1.0 for v in 0.1:0.3:1.0-u for w in 0.1:0.3:1.0-u-v]
+    #bary_list = [[u, v, w] for u in 0.0:0.3:1.0 for v in 0.0:0.26:1.0-u for w in 0.0:0.26:1.0-u-v]
 
-    #scale = norm(simplex0.tangents[1])*0.05
-    #@show scale
-
+    # b1 = 0.25
+    # b2 = 0.5
+    # b3 = 0.75
+    # bary_list = [
+    # [b1, b1, b1],
+    # [b1, b1, b2],
+    # [b1, b1, b3],
+    # [b1, b2, b1],
+    # [b1, b2, b2],
+    # [b1, b3, b1],
+    # [b2, b1, b1],
+    # [b2, b1, b2],
+    # [b2, b2, b1],
+    # [b3, b1, b1],
+    # ]
 
     for bary in bary_list
         @assert norm(bary) <= 1.0
         n = neighborhood(simplex0, bary) #CSM-MP
         p = n.cart
-        v = refsp(n)[1].value  #<------- achtung tet hat 4 flächen muss man später spezifizieren.... erstmal die erste
+        v = refsp(n)[locfnsnr].value*locsign  #<------- achtung tet hat 4 flächen muss man später spezifizieren.... erstmal die erste
         @assert length(v) == 3
-        draw_arrow!(plt, p, v; scale = scale, arrcolor = "red", arrwidth = 2)
+        draw_arrow!(plt, p, v; scale = scale, arrcolor = "red", arrwidth = 2.5)
     end
 
 
@@ -109,21 +121,36 @@ function add1(plt, simplex0, refsp, scale) #adds one cell field...
 end
 
 
-function simplex(plt, simplex0::CompScienceMeshes.Simplex) #adds one cell field...
-    a = simplex0.vertices[1]
-    b = simplex0.vertices[2]
-    c = simplex0.vertices[3]
-    d = simplex0.vertices[4]
+function simplex(plt, simplex0::CompScienceMeshes.Simplex; linewidth = 1.0, color = "red") #adds one cell field...
 
-    plt = plot!(plt,[a[1], b[1]], [a[2], b[2]], [a[3], b[3]], color="red", label="")
-    plt = plot!(plt,[a[1], c[1]], [a[2], c[2]], [a[3], c[3]], color="red", label="")
-    plt = plot!(plt,[a[1], d[1]], [a[2], d[2]], [a[3], d[3]], color="red", label="")
+    if length(simplex0.vertices) == 4
+        a = simplex0.vertices[1]
+        b = simplex0.vertices[2]
+        c = simplex0.vertices[3]
+        d = simplex0.vertices[4]
+
+        plt = plot!(plt,[a[1], b[1]], [a[2], b[2]], [a[3], b[3]], linewidth=linewidth, color=color, label="")
+        plt = plot!(plt,[a[1], c[1]], [a[2], c[2]], [a[3], c[3]], linewidth=linewidth, color=color, label="")
+        plt = plot!(plt,[a[1], d[1]], [a[2], d[2]], [a[3], d[3]], linewidth=linewidth, color=color, label="")
 
 
-    plt = plot!(plt,[b[1], c[1]], [b[2], c[2]], [b[3], c[3]], color="red", label="")
-    plt = plot!(plt,[b[1], d[1]], [b[2], d[2]], [b[3], d[3]], color="red", label="")
+        plt = plot!(plt,[b[1], c[1]], [b[2], c[2]], [b[3], c[3]], linewidth=linewidth, color=color, label="")
+        plt = plot!(plt,[b[1], d[1]], [b[2], d[2]], [b[3], d[3]], linewidth=linewidth, color=color, label="")
 
-    plt = plot!(plt,[c[1], d[1]], [c[2], d[2]], [c[3], d[3]], color="red", label="")
+        plt = plot!(plt,[c[1], d[1]], [c[2], d[2]], [c[3], d[3]], linewidth=linewidth, color=color, label="")
+
+    elseif length(simplex0.vertices) == 3
+        a = simplex0.vertices[1]
+        b = simplex0.vertices[2]
+        c = simplex0.vertices[3]
+    
+        plt = plot!(plt,[a[1], b[1]], [a[2], b[2]], [a[3], b[3]], linewidth=linewidth, color=color, label="")
+        plt = plot!(plt,[a[1], c[1]], [a[2], c[2]], [a[3], c[3]], linewidth=linewidth, color=color, label="")
+    
+        plt = plot!(plt,[b[1], c[1]], [b[2], c[2]], [b[3], c[3]], linewidth=linewidth, color=color, label="")
+    else
+        error()
+    end
 
     return plt
 end
