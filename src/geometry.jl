@@ -10,7 +10,7 @@ function geo2mesh(geopath::String, meshpath::String, meshparam::Float64; body::I
         L_x = body.L_x
         L_y = body.L_y
         L_z = body.L_z
-        run(`gmsh $geopath -3 -clmin $h -format msh2 -setnumber lx $L_x -setnumber ly $L_y -setnumber lz $L_z -o $meshpath`)
+        run(`gmsh $geopath -3 -clmax $h -format msh2 -setnumber lx $L_x -setnumber ly $L_y -setnumber lz $L_z -o $meshpath`)
     else
         #general formulation, use values from gmsh skript
         run(`gmsh $geopath -3 -clmax $h -format msh2 -setnumber var 55 -o $meshpath`) 
