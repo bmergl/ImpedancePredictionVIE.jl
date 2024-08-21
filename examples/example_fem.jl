@@ -15,7 +15,7 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0002)
+md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0001)
 print("tehrahedrons: ", length(md.Ω.faces))
 
 
@@ -96,8 +96,19 @@ u_Φ_ana = IP.solution_Φ_ana(md.body, sol.material, md, sol; FEM = true)
 ## facecurrents Tests
 
 # Φ auf Γ_nc -> Achtung an Plattengrenzen fehlt noch Dirichlet Beitrag!
-fcr1, geo1 = facecurrents(sol.u_Φ, md.y)
-Plotly.plot(patch(geo1, fcr1))      #MANCHMAL FALSCH ORIENTIERT!!! je nach tau0+-   => vmtl doch irgendwie * τ0
+u_Φ_full = vcat(sol.u_Φ,sol.v)
+Y_full = BEAST.LagrangeBasis{1,0,4}(md.Ω, vcat(md.Y.fns,md.Y_d.fns), vcat(md.Y.pos,md.Y_d.pos))
+fcr1, geo1 = facecurrents(u_Φ_full, strace(Y_full,md.Γ))
+Plotly.plot(patch(geo1, fcr1))
+
+u_Φ_full = vcat(sol.u_Φ,sol.v)
+Y_full = BEAST.LagrangeBasis{1,0,4}(md.Ω, vcat(md.Y.fns,md.Y_d.fns), vcat(md.Y.pos,md.Y_d.pos))
+fcr1, geo1 = facecurrents(u_Φ_full, Y_full)
+Plotly.plot(patch(geo1, fcr1))
+
+
+
+
 
 # J_n auf Γ_c mittels u_J d.h. mittels ntrace der Volumenlösung
 fcr3, geo3 = facecurrents(sol.u_J, md.ntrcX)

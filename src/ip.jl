@@ -224,7 +224,14 @@ function setup(; geoname::Union{String, Nothing} = nothing, meshname::Union{Stri
     # dirichletnodes[i] <=> y_d.pos[i] ====> [10V 10V ..... 10V 0V 0V ..... 0V 0V] (example)
 
     # LinearLag on Γ_nc
-    y = lagrangec0d1(Γ_nc, dirichlet = true) 
+    #y = lagrangec0d1(Γ_nc, dirichlet = true) <----problem beim plotten...
+    bndnodes = realnodes(Γ)
+    set1 = Set(bndnodes) # Konvertiere Arrays in Sets für schnelles Nachschlagen
+    set2 = Set(dirichletnodes)
+    result_set = setdiff(set1, set2) # Berechne die Differenzmenge
+    dofnodes = collect(result_set) # Ausgabe des Ergebnisses
+    y = lagrangec0d1(Γ, dofnodes, Val{3})
+
 
     # SWG on Ω (without faces on Γ_nc)
     #swg_faces = swgfaces(Ω, Γ_nc, fast = true)
@@ -251,18 +258,26 @@ function setup(; geoname::Union{String, Nothing} = nothing, meshname::Union{Stri
     w = BEAST.LagrangeBasis{0,-1,1}(ntrcX.geo.supermesh, newfns, newpos)
 
     # FEM only
-    nondirichletnodes = Vector{Int64}()
-    println("Time for FEM node preparation")
-    @time for k in 1:length(Ω.vertices)
-        push_ = true
-        for n in dirichletnodes 
-            if k == n 
-                push_ = false
-                break
-            end
-        end
-        push_ && push!(nondirichletnodes, k)
-    end
+    # nondirichletnodes = Vector{Int64}()
+    # println("Time for FEM node preparation")
+    # @time for k in 1:length(Ω.vertices)
+    #     push_ = true
+    #     for n in dirichletnodes 
+    #         if k == n 
+    #             push_ = false
+    #             break
+    #         end
+    #     end
+    #     push_ && push!(nondirichletnodes, k)
+    # end
+    # @assert length(nondirichletnodes) + length(dirichletnodes) == length(Ω.vertices)
+    # Y_d = lagrangec0d1(Ω, dirichletnodes, Val{4})
+    # Y = lagrangec0d1(Ω, nondirichletnodes, Val{4})
+    allnodes = collect(1:length(Ω.vertices))
+    set1 = Set(allnodes) # Konvertiere Arrays in Sets für schnelles Nachschlagen
+    set2 # = Set(dirichletnodes)
+    result_set = setdiff(set1, set2) # Berechne die Differenzmenge
+    nondirichletnodes = collect(result_set) # Ausgabe des Ergebnisses
     @assert length(nondirichletnodes) + length(dirichletnodes) == length(Ω.vertices)
     Y_d = lagrangec0d1(Ω, dirichletnodes, Val{4})
     Y = lagrangec0d1(Ω, nondirichletnodes, Val{4})
