@@ -779,8 +779,10 @@ function solvefem(; # FEM formulation
 
     # Operators
 
-    O = zeros(T,length(Y.fns),length(Y.fns))
-    Õ = zeros(T,length(Y.fns),length(Y_d.fns)) 
+    #O = zeros(T,length(Y.fns),length(Y.fns))
+    #Õ = zeros(T,length(Y.fns),length(Y_d.fns))
+    O = spzeros(T, length(Y.fns),length(Y.fns))
+    Õ = spzeros(T, length(Y.fns),length(Y_d.fns))
     I = assemble(BEAST.Identity(), X, X)
 
 
