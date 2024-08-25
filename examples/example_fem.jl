@@ -15,16 +15,16 @@ using Plots
 using Plotly
 
 
-md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0001)
-print("tehrahedrons: ", length(md.Ω.faces))
+#md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0001)
+#print("tehrahedrons: ", length(md.Ω.faces))
 # hlp = 1.0
 # dataname = ""
 # jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md, hlp) 
 
 
-# dataname = "md_h0.0001m"
-# datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
-# md = load(datapath, "md")
+dataname = "md_h0.0001m"
+datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
+md = load(datapath, "md")
 
 ##
 
@@ -48,10 +48,9 @@ sol, S, R = IP.solvefem(;   # solve -> arb. Mat. / solve1 -> high contrast formu
     #matalloc = :center,
 )
 
-
-##
-#dataname = "test" # for JLD2 save
-#jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md)#, sol) 
+hlp = 1.0
+dataname = "sol_h0.0001m" # for JLD2 save
+jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; sol, hlp) 
 
 
 ##
