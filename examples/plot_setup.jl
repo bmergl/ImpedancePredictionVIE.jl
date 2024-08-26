@@ -19,10 +19,19 @@ md = IP.setup(; meshname = "coarsecube.msh", body = IP.cuboid(0.01, 0.01, 0.01),
 print("tehrahedrons: ", length(md.Ω.faces))
 
 
+## Volumenmesh #######################################################
+
+p = Visu.iplot2(; size=(800,600), xticks = ([],[]), yticks = ([],[]), zticks = ([],[]))
+p = Visu.mesh(md.Ω, p, nodesize = 0.02, nodecolor = "blue", linewidth = 1.0, linecolor = "green")
+p = Visu.mesh(md.Γ_c, p, nodesize = 0.02, nodecolor = "blue", linewidth = 1.0, linecolor = "blue")
+
+
+
 ## SWG ###############################################################
 
 p = Visu.iplot2(; size=(800,600), xticks = ([],[]), yticks = ([],[]), zticks = ([],[]))
-p = Visu.mesh(md.Ω, p, nodesize = 0.3, nodecolor = "blue", linewidth = 0.4, linecolor = "green")
+p = Visu.mesh(md.Ω, p, nodesize = 0.02, nodecolor = "blue", linewidth = 0.5, linecolor = "green")
+p = Visu.mesh(md.Γ_c, p, nodesize = 0.02, nodecolor = "blue", linewidth = 0.5, linecolor = "blue")
 
 
 els, _, _ = assemblydata(md.X)
@@ -43,11 +52,79 @@ j_min = findmin(distances)[2]
 tetnr2 = inds[j_min] 
 s2 = els[tetnr2]
 
-p = Visu.simplex(p, s1; linewidth = 2.0, color = "black")
-p = Visu.simplex(p, s2; linewidth = 2.0, color = "black")
+r = rand(3)
 
-p = Visu.add1(p, s1, refspace(md.X), 3e-9, 4, 1.0)
-p = Visu.add1(p, s2, refspace(md.X), 3e-9, 3, -1.0)
+p = Visu.simplex(p, s1; linewidth = 3.0, color = "black")
+p = Visu.simplex(p, s2; linewidth = 3.0, color = "black")
+p = Visu.add1(p, s1, refspace(md.X), 3e-9, 4, 1.2, r)
+p = Visu.add1(p, s2, refspace(md.X), 3e-9, 3, -1.2, r)
+
+
+stetnr1 = 157 #130 #110
+#stetnr2 = 30
+t1 = els[stetnr1]
+#t2 = els[stetnr2]
+p = Visu.simplex(p, t1; linewidth = 3.0, color = "black")
+#p = Visu.simplex(p, t2; linewidth = 2.0, color = "black")
+p = Visu.add1(p, t1, refspace(md.X), 3e-9, 3, 0.7, r)
+#p = Visu.add1(p, t2, refspace(md.X), 3e-9, 3, -1.0)
+
+
+
+
+
+## LinearLagrange #######################################
+
+p = Visu.iplot2(; size=(800,600), xticks = ([],[]), yticks = ([],[]), zticks = ([],[]))
+p = Visu.mesh(md.Γ_nc, p, nodesize = 1.0, nodecolor = "green", linewidth = 0.8, linecolor = "green")
+p = Visu.mesh(md.Γ_c, p, nodesize = 1.0, nodecolor = "blue", linewidth = 0.8, linecolor = "blue")
+#p = Visu.fnspos(md.y, p, color = 1, markersize = 1.0)
+
+y = lagrangec0d1(md.Γ)
+els, ad, nr = assemblydata(y)
+
+node = 17
+point_ = y.pos[node]
+shs_list = y.fns[node]
+cell_numbers = Vector{Int64}()
+for shs in shs_list
+    push!(cell_numbers, shs.cellid)
+end
+s_list = [els[i] for i in cell_numbers]
+for s in s_list
+    p = Visu.simplex(p, s; linewidth = 6.0, color = "blue")
+end
+
+
+node = 61
+point_ = y.pos[node]
+shs_list = y.fns[node]
+cell_numbers = Vector{Int64}()
+for shs in shs_list
+    push!(cell_numbers, shs.cellid)
+end
+s_list = [els[i] for i in cell_numbers]
+for s in s_list
+    p = Visu.simplex(p, s; linewidth = 6.0, color = "green")
+end
+
+display(p)
+
+
+
+## PWC ####################################################
+
+p = Visu.iplot2(; size=(800,600), xticks = ([],[]), yticks = ([],[]), zticks = ([],[]))
+p = Visu.mesh(md.Γ_nc, p, nodesize = 0.01, nodecolor = "green", linewidth = 0.8, linecolor = "green")
+p = Visu.mesh(md.Γ_c, p, nodesize = 0.01, nodecolor = "blue", linewidth = 0.8, linecolor = "blue")
+
+y = lagrangec0d1(md.Γ) #ja...
+els, _, _ = assemblydata(y)
+s1 = els[20]
+p = Visu.simplex(p, s1; linewidth = 6.0, color = "red")
+s2 = els[104]
+p = Visu.simplex(p, s2; linewidth = 6.0, color = "black")
+
 
 
 ## LinLag excitation ###########################################
@@ -70,7 +147,7 @@ els, _, _ = assemblydata(md.y)
 p = Visu.mesh(md.Γ_nc, p)
 
 node = 30
-point = md.y.pos[node]
+point_ = md.y.pos[node]
 shs_list = md.y.fns[node]
 cell_numbers = Vector{Int64}()
 for shs in shs_list

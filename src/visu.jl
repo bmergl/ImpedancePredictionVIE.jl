@@ -71,7 +71,7 @@ function meshp(m::Mesh, plt = iplot() )# = nothing)
 end
 
 
-function fnspos(X::BEAST.Space, plt = iplot())
+function fnspos(X::BEAST.Space, plt = iplot();  color = "red", markersize = 1.0)
 
     active_positions = Vector{SVector{3, Float64}}()
     
@@ -80,13 +80,13 @@ function fnspos(X::BEAST.Space, plt = iplot())
     end
 
     Allx, Ally, Allz = pointlist2xyzlist(active_positions)
-    scatter!(plt, Allx, Ally, Allz, markersize = 2.2, color ="red", label="")
+    scatter!(plt, Allx, Ally, Allz, markersize = markersize, color = color, label="")
     
     return plt
 end
 
 
-function add1(plt, simplex0, refsp, scale, locfnsnr, locsign) #adds one cell field...
+function add1(plt, simplex0, refsp, scale, locfnsnr, locsign, r) #adds one cell field...
 
     bary_list = [[u, v, w] for u in 0.1:0.3:1.0 for v in 0.1:0.3:1.0-u for w in 0.1:0.3:1.0-u-v]
     #bary_list = [[u, v, w] for u in 0.0:0.3:1.0 for v in 0.0:0.26:1.0-u for w in 0.0:0.26:1.0-u-v]
@@ -113,7 +113,7 @@ function add1(plt, simplex0, refsp, scale, locfnsnr, locsign) #adds one cell fie
         p = n.cart
         v = refsp(n)[locfnsnr].value*locsign  #<------- achtung tet hat 4 flächen muss man später spezifizieren.... erstmal die erste
         @assert length(v) == 3
-        draw_arrow!(plt, p, v; scale = scale, arrcolor = "red", arrwidth = 2.5)
+        draw_arrow!(plt, p, v; scale = scale, arrcolor = "red", arrwidth = 3.0, r=r)
     end
 
 
@@ -178,7 +178,7 @@ end
 
 
 
-function draw_arrow!(plt, pnt, v; scale = 1.0, arrcolor = "red", arrwidth = 1)
+function draw_arrow!(plt, pnt, v; scale = 1.0, arrcolor = "red", arrwidth = 1, r = rand(3))
     # Funktion zum Zeichnen eines Pfeils von Punkt a nach Punkt b
 
     a = pnt
@@ -188,7 +188,7 @@ function draw_arrow!(plt, pnt, v; scale = 1.0, arrcolor = "red", arrwidth = 1)
 
     # Berechnen Sie die Punkte für die Pfeilspitze
     
-    r = rand(3)
+    #r = rand(3)
     k1 = (a - b)/norm(a - b) # k1 und k2 sind nicht orthogonale Einheitsvektoren
     k2 = (r - b)/norm(r - b)
 
