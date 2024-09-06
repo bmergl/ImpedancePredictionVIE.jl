@@ -33,12 +33,26 @@ f_list = [1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 10000000.0] # 
 Z_mom_list = []
 Z_fem_list = []
 Z_ana_list = []
-mat = IP.constantmaterial(0.2, 10000.0*IP.ε0)
+mat = IP.constantmaterial(0.2, 10000.0*IP.ε0) #<------------------------------------------------------- KLÄREN!!!!
 lastsol = nothing
 
 for f in f_list
 
     solmom, S, R = IP.solve0(;
+        md = md, 
+        material = mat,
+        κ0 = 0.1,
+        ϵ0 = 1.0*IP.ε0,
+        ω = 2*pi*f,  
+        potential_top = 0.5, 
+        potential_bottom = -0.5,
+        qs3D = qs3D, 
+        qs4D = qs4D, 
+        qs5D6D = qs5D6D,
+    )
+
+    error("UNTEN QUADSTRAT ERHÖHEN!!!!")
+    solmom_hq, S, R = IP.solve0(;
         md = md, 
         material = mat,
         κ0 = 0.1,
@@ -114,7 +128,7 @@ end
 
 
 
-##
+## 4 Kurven !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 ## Plot: Re
