@@ -386,14 +386,28 @@ function solution_I_ana(body::IP.cuboid, mat::IP.pwlinx, m::IP.meshdata, s::IP.s
     xpos = mat.xpos
     κ_vec = mat.κ
 
+    
+
     I_ana = 0.0
     for i in 1:length(xpos)-1
         x1 = xpos[i]
         x2 = xpos[i+1]
-        I_part = U*(Ly/Lz)*(κ_vec[i][2]+κ_vec[i][1])*(x2-x1)/2
+        I_part = U*(Ly/Lz)*(κ_vec[i][2]+κ_vec[i][1] )*(x2-x1)/2
         @assert I_part >= 0.0
         I_ana += I_part
     end
+
+    if mat.ϵ !== nothing# \epsilon 
+        ϵ_vec = mat.ϵ 
+        for i in 1:length(xpos)-1
+            x1 = xpos[i]
+            x2 = xpos[i+1]
+            I_part = U*(Ly/Lz)*(im*s.ω*ϵ_vec[i][2] + im*s.ω*ϵ_vec[i][1] )*(x2-x1)/2
+            #@assert I_part >= 0.0
+            I_ana += I_part
+        end
+    end
+
 
     return I_ana
 end

@@ -320,12 +320,7 @@ function solve(; # low contrast formulation
     # Material
     κ, ϵ = material()
     τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
-    p = point(0.0,0.0,0.0)
-    @show τ(p)
-    @show inv_τ(p)
-    @show τ0
-    @show χ(p)
-    @show T
+
 
     # τ(p) < 1e-12 && error("Disable the following lines...")
     # @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
@@ -518,7 +513,7 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
 
     # Operators row 2
-    B21_ΓΓ = Helmholtz3D.hypersingular(gamma = T(0.0), beta = -1.0) # das versteckt alpha std. Null für gamma =0.0!!!  # -1.0 siehe BEAST & Steinbach 6.5, Ja, Float64 statt T
+    B21_ΓΓ = Helmholtz3D.hypersingular(gamma = 0.0, beta = -1.0) # das versteckt alpha std. Null für gamma =0.0!!!  # -1.0 siehe BEAST & Steinbach 6.5, Ja, Float64 statt T
 
     B22_Γ = IP.MatId(T(-1.0), inv_τ)
     B22_ΓΓ = IP.MaterialADL(T(0.0), 1.0, inv_τ)
@@ -1288,7 +1283,7 @@ function getcurrent2(m::IP.meshdata, s::IP.solution)
             I_part = -A * u_J[j] * ntrcX.fns[j][1].coeff # "-" because dÂ of ∫∫J_vec*dÂ in opposite dir
             I_top += I_part
             @assert length(ntrcX.fns[j]) == 1
-            @assert I_part >= -0.0
+            #@assert I_part >= -0.0
             #@show -A * u_J[j] * ntrcX.fns[j][1].coeff
             cnt_top += 1
         elseif k !== nothing
@@ -1297,7 +1292,7 @@ function getcurrent2(m::IP.meshdata, s::IP.solution)
             I_part = A * u_J[j] * ntrcX.fns[j][1].coeff
             I_bottom += I_part
             @assert length(ntrcX.fns[j]) == 1
-            @assert I_part >= -0.0
+            #@assert I_part >= -0.0
             #@show A * u_J[j] * ntrcX.fns[j][1].coeff
             cnt_bottom += 1
         else
