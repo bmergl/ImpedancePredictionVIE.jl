@@ -91,8 +91,41 @@ for h in h_vec
     push!(err_I_fem_vec, norm(I_top2_FEM-I_ana)/norm(I_ana))
 end
 
-dataname = "kappaconv1" # for JLD2 save
-jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md_vec, solmom_vec, solfem_vec, h_vec, err_J_mom_vec, err_J_fem_vec) 
+dataname = "test" # for JLD2 save
+jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md_vec, solmom_vec, solfem_vec, h_vec, err_J_mom_vec, err_J_fem_vec, err_I_mom_vec, err_I_fem_vec) 
+
+##
+
+##
+
+##
+
+using MKL
+
+using LinearAlgebra
+using StaticArrays
+using SparseArrays
+using BEAST
+using ImpedancePredictionVIE
+using CompScienceMeshes
+
+using JLD2
+
+using Plots
+using Plotly
+
+#load 
+dataname = "kappaconv1"
+datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
+
+md_vec = load(datapath, "md_vec")
+solmom_vec = load(datapath, "solmom_vec")
+solfem_vec = load(datapath, "solfem_vec") 
+h_vec = load(datapath, "h_vec") 
+err_J_mom_vec = load(datapath, "err_J_mom_vec")
+err_J_fem_vec = load(datapath, "err_J_fem_vec")
+#err_I_mom_vec = load(datapath, "err_I_mom_vec")
+#err_I_fem_vec = load(datapath, "err_I_fem_vec")
 
 ##
 
@@ -136,17 +169,17 @@ plot!(plt,size=(500,400))
 
 ## Φ auf Γ ######################################################
 nr = 1
-sol = solmom_vec[nr]
-#sol = solfem_vec[nr] 
 md = md_vec[nr]
 
 ## MoM
+sol = solmom_vec[nr]
 u_Φ_full = vcat(sol.u_Φ,sol.v)
 y_full = BEAST.LagrangeBasis{1,0,3}(md.y_d.geo, vcat(md.y.fns,md.y_d.fns), vcat(md.y.pos,md.y_d.pos))
 fcr1, geo1 = facecurrents(u_Φ_full, y_full)
 Plotly.plot(patch(geo1, fcr1))
 
 ## FEM
+sol = solfem_vec[nr] 
 u_Φ_full = vcat(sol.u_Φ,sol.v)
 Y_full = BEAST.LagrangeBasis{1,0,4}(md.Ω, vcat(md.Y.fns,md.Y_d.fns), vcat(md.Y.pos,md.Y_d.pos))
 fcr1, geo1 = facecurrents(u_Φ_full, strace(Y_full,md.Γ))
@@ -156,42 +189,46 @@ Plotly.plot(patch(geo1, fcr1))
 
 ## J_n auf Γ_c mittels u_Jn ##########################################
 nr = 1
-sol = solmom_vec[nr]
-#sol = solfem_vec[nr] 
 md = md_vec[nr]
 
 ## MoM (only)
+sol = solmom_vec[nr]
 fcr0, geo0 = facecurrents(sol.u_Jn, md.w)
 Plotly.plot(patch(geo0, fcr0))
 
-## MoM/FEM mittels ntrace der Volumenlösung u_J  
+## MoM mittels ntrace der Volumenlösung u_J
+sol = solmom_vec[nr]
+fcr3, geo3 = facecurrents(sol.u_J, md.ntrcX)
+Plotly.plot(patch(geo3, fcr3))
+## FEM mittels ntrace der Volumenlösung u_J 
+sol = solfem_vec[nr]  
 fcr3, geo3 = facecurrents(sol.u_J, md.ntrcX)
 Plotly.plot(patch(geo3, fcr3))
 
 
-
 ## J-Vektorfeld  #######################################################
-nr = 1
+nr = 4
 sol = solmom_vec[nr]
 #sol = solfem_vec[nr] 
 md = md_vec[nr]
 
 # Stomdichte MoM/FEM 
-range_ = range(-0.0049,stop=0.0049,length=9)
+range_ = range(-0.0049,stop=0.0049,length=17)
 points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
 J_MoM = IP.grideval(points, sol.u_J, md.X)#, type=Float64)
 J_ana = IP.solution_J_ana(md.body, sol.material, md, sol, points, J_MoM)
 @show norm(J_MoM-J_ana)/norm(J_ana)# = norm(norm.(J_MoM-J_ana))/norm(J_ana)
 
+##
 p = Visu.iplot2(; size=(800,600), xticks = ([],[]), yticks = ([],[]), zticks = ([],[]))
-p = Visu.mesh(md.Ω, p, nodesize = 0.02, nodecolor = "blue", linewidth = 1.0, linecolor = "green")
-p = Visu.mesh(md.Γ_c, p, nodesize = 0.02, nodecolor = "blue", linewidth = 1.0, linecolor = "blue")
+#p = Visu.mesh(md.Ω, p, nodesize = 0.02, nodecolor = "blue", linewidth = 0.3, linecolor = "green")
+p = Visu.mesh(md.Γ_c, p, nodesize = 0.02, nodecolor = "blue", linewidth = 0.3, linecolor = "blue")
 display(Visu.fieldplot(points, J_MoM, 0.0007, p)) #Visu.mesh(md.Γ_c)
 
 
 
 ## J_z on an x-line at y0, z0  ##################################################
-nr = 1
+nr = 4
 sol2 = solmom_vec[nr]
 sol1 = solfem_vec[nr] 
 md = md_vec[nr]
