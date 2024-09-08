@@ -1,18 +1,19 @@
-using MKL
+    using MKL
 
-using LinearAlgebra
-using StaticArrays
-using SparseArrays
-using BEAST
-using FastBEAST
-using ImpedancePredictionVIE
-using CompScienceMeshes
-using IterativeSolvers
+    using LinearAlgebra
+    using StaticArrays
+    using SparseArrays
+    using BEAST
+    using FastBEAST
+    using ImpedancePredictionVIE
+    using CompScienceMeshes
+    using IterativeSolvers
 
-using JLD2
+    using JLD2
 
-using Plots
-using Plotly
+    using Plots
+    using Plotly
+
 
 
 #md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = 0.0001)
@@ -34,18 +35,19 @@ qs3D = BEAST.SingleNumQStrat(3)
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
 
 
-# STANDARD-TESTMATERIAL: IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2])
+# STANDARD-TESTMATERIAL:
+mat = IP.pwlinx([[100.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-0.01/2, -0.01/6, 0.01/6, 0.01/2])
+
 
 sol, S, R = IP.solvefem(;   # solve -> arb. Mat. / solve1 -> high contrast formulation
     md = md, 
-    material = IP.pwlinx([[1.0, 2000.0],[4000.0, 10000.0],[20000.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]), #IP.constantmaterial(1.0, nothing), #IP.pwlinx([[1.0, 2.0],[4.0, 10.0],[20.0, 5.0]], nothing, [-md.body.L_x/2, -0.01/6, 0.01/6, md.body.L_x/2]),   #IP.general_material(κ, nothing),  #  IP.constant_xsplit(0.13, nothing, 0.0, 0.00007, nothing), #IP.constant_zsplit(10.0, nothing, 0.0, 0.001, nothing), ,#, # #, #
+    material = mat,
     κ0 = 1.0,
     ϵ0 = nothing, #1.0*IP.ε0,
     ω = nothing, #2*pi*1000.0, 
     potential_top = 0.5, 
     potential_bottom = -0.5,
-    qs3D = qs3D, 
-    #matalloc = :center,
+    qs3D = qs3D,
 )
 
 hlp = 1.0
@@ -57,9 +59,34 @@ jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; sol, hlp)
 
 
 
-
 ##
 
+## load
+using MKL
+
+using LinearAlgebra
+using StaticArrays
+using SparseArrays
+using BEAST
+using FastBEAST
+using ImpedancePredictionVIE
+using CompScienceMeshes
+using IterativeSolvers
+
+using JLD2
+
+using Plots
+using Plotly
+
+dataname = "md_h0.0001m"
+datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
+md = load(datapath, "md")
+
+dataname = "sol_h0.0001m"
+datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
+sol = load(datapath, "sol")
+
+##
 
 # Stomdichte
 range_ = range(-0.0049,stop=0.0049,length=9)
@@ -116,7 +143,7 @@ fcr1, geo1 = facecurrents(u_Φ_full, Y_full)
 Plotly.plot(patch(geo1, fcr1))
 
 
-
+Visu.mesh(md.Γ_c)
 
 
 # J_n auf Γ_c mittels u_J d.h. mittels ntrace der Volumenlösung

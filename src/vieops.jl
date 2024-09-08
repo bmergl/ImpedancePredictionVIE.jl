@@ -530,6 +530,32 @@ end
 
 
 
+# J_ana ....
+mutable struct Jana{P} <: BEAST.Functional
+    J::P #function
+end
+
+BEAST.scalartype(x::Jana{P}) where {P} = Float64
+
+function setup_Jana(; J = error("J=...as Function...")) #generator
+    P = Function
+    return Jana{P}(J)
+end
+
+function (e::Jana)(p) # p is CSM MP
+    return e.J(BEAST.cartesian(p))
+end
+
+#*(a::Number, e::LinearPotentialVIE) = LinearPotentialVIE_(e.direction, a*e.amplitude)
+
+BEAST.integrand(::Jana, test_vals, field_val) = test_vals[1] ⋅ field_val
+
+
+
+
+
+
+
 
 #####  kernelvals für Dyadische VIE Operatoren  ######################################################################
 # struct KernelValsVIEdyad{T,U,P,Q,K} # ÄNDERN!!!!!!
