@@ -211,12 +211,12 @@ for (i,h) in enumerate(h_vec)
     # push!(err_J_fem_vec, norm(J_FEM-J_ana)/norm(J_ana))
 
     # Strom - vermutlich überflüssig...
-    # I_ana = IP.solution_I_ana(md.body, solmom.material, md, solmom)
-    # I_top2_MoM, I_bottom2_MoM = IP.getcurrent2(md, solmom)
-    # I_top2_FEM, I_bottom2_FEM = IP.getcurrent2(md, solfem)
+    I_ana = IP.solution_I_ana(md.body, solmom.material, md, solmom)
+    I_top2_MoM, I_bottom2_MoM = IP.getcurrent2(md, solmom)
+    I_top2_FEM, I_bottom2_FEM = IP.getcurrent2(md, solfem)
 
-    # push!(err_I_mom_vec, norm(I_top2_MoM-I_ana)/norm(I_ana))
-    # push!(err_I_fem_vec, norm(I_top2_FEM-I_ana)/norm(I_ana))
+    push!(err_I_mom_vec, norm(I_top2_MoM-I_ana)/norm(I_ana))
+    push!(err_I_fem_vec, norm(I_top2_FEM-I_ana)/norm(I_ana))
 end
 
 
@@ -232,18 +232,19 @@ end
 
 ## Konvergenz: h,errJ #########################################
 
-plt = Plots.plot(h_vec, err_J_mom_vec, line=:scatter, marker = :utriangle, label = "Error J MoM", legend=:bottomright, xscale=:log10, yscale=:log10, color = 1)
-plot!(plt,h_vec, err_J_mom_vec, label = "", color = 1)
-plot!(plt,h_vec, err_J_fem_vec, label = "Error J FEM", color = 2, line=:scatter, marker = :dtriangle)
-plot!(plt,h_vec, err_J_fem_vec, label = "", color = 2)
-plot!(plt,size=(500,400))
+plt = Plots.plot(h_vec, err_J_mom_vec, line=:scatter, marker = :utriangle, label = "           ", legend=:bottomright, xscale=:log10, yscale=:log10, color = 2)
+plot!(plt,h_vec, err_J_mom_vec, label = "", color = 2)
+plot!(plt,h_vec, err_J_fem_vec, label = "           ", color = 3, line=:scatter, marker = :dtriangle)
+plot!(plt,h_vec, err_J_fem_vec, label = "", color = 3)
+plot!(plt,size=(400,300))
 plot!(plt,minorgrid=true)
+plot!(plt,legendfontsize=10)
 #plot!(plt,h_vec,10*h_vec.^0.5)
-#plot!(plt,h_vec,100*h_vec.^1.0)
+plot!(plt,h_vec,200*h_vec.^1.0)
 #plot!(plt,h_vec,100000*h_vec.^2.0)
 #plot!(plt,h_vec, err_J_fem_vec, line=:scatter, marker = :dtriangle, label = "Error J FEM", xscale=:log10, yscale=:log10)
 
-xlims!(2e-4, 3e-3)
+xlims!(3e-4, 3e-3)
 ylims!(1e-3, 1e+0)
 
 #xlabel!("h in m")
@@ -257,7 +258,7 @@ plt = Plots.plot(h_vec, err_I_mom_vec, line=:scatter, marker = :utriangle, label
 plot!(plt,h_vec, err_I_mom_vec, label = "", color = 1)
 plot!(plt,h_vec, err_I_fem_vec, label = "Error I FEM", color = 2, line=:scatter, marker = :dtriangle)
 plot!(plt,h_vec, err_I_fem_vec, label = "", color = 2)
-plot!(plt,size=(500,400))
+plot!(plt,size=(400,300))
 
 #xlims!(3e-4, 3e-3)
 #ylims!(1e-2, 1e+0)
@@ -335,7 +336,7 @@ md = md_vec[nr]
 
 y0 = 0.0
 z0 = 0.0
-x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 200)
+x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 800)
 points_x = [point(x, y0, z0) for x in x_range]
 x = collect(x_range)
 
@@ -347,14 +348,39 @@ J_ana_x = IP.solution_J_ana(md.body, sol2.material, md, sol2, points_x, J_MoM_x)
 ~, ~, J_z_ana = pointlist2xyzlist(J_ana_x)
 
 ## Plot
-Plots.plot(x, -J_z_ana, label = "-J_z_ana")#, size=(700,600))
-plot!(x, -J_z_FEM, label = "-J_z_FEM")
-plot!(x, -J_z_MoM, label = "-J_z_MoM")
-plot!(size=(700,600))
+Plots.plot(x, -J_z_ana, label = "                        ")#, size=(700,600))
+plot!(x, -J_z_MoM, label = "                        ")
+plot!(x, -J_z_FEM, label = "                        ")
+plot!(legend=:topleft,legendfontsize=12)
+plot!(size=(400,300))
 #xlims!(0.0, 1.0)
 #ylims!(1600, 2000)
-title!("J_z(x, y0, z0)")
-xlabel!("x")
+#title!("J_z(x, y0, z0)")
+#xlabel!("x")
+
+##
+
+## κ(x) on an x-line at y0, z0  ##################################################
+nr = 4
+sol2 = solmom_vec[nr]
+sol1 = solfem_vec[nr] 
+md = md_vec[nr]
+κ,ε = sol2.material()
+
+
+y0 = 0.0
+z0 = 0.0
+x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 800)
+points_x = [point(x, y0, z0) for x in x_range]
+x = collect(x_range)
+κ_x = κ.(x)
+
+## Plot
+Plots.plot(x, κ_x, label = "           ")#, size=(700,600))
+plot!(size=(400,300))
+#xlims!(0.0, 1.0)
+#ylims!(1600, 2000)
+#xlabel!("x")
 
 ##
 
