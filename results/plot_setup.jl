@@ -125,6 +125,19 @@ p = Visu.simplex(p, s1; linewidth = 6.0, color = "red")
 s2 = els[104]
 p = Visu.simplex(p, s2; linewidth = 6.0, color = "black")
 
+## Current calculation ##################################################
+
+p = Visu.iplot2(; size=(800,600), xticks = ([],[]), yticks = ([],[]), zticks = ([],[]))
+p = Visu.mesh(md.Γ_nc, p, nodesize = 0.01, nodecolor = "green", linewidth = 0.8, linecolor = "green")
+p = Visu.mesh(md.Γ_c, p, nodesize = 0.01, nodecolor = "blue", linewidth = 0.8, linecolor = "blue")
+
+y = lagrangec0d1(md.Γ) #ja...
+els, _, _ = assemblydata(y)
+s1 = els[20]
+p = Visu.simplex(p, s1; linewidth = 6.0, color = "blue")
+#s2 = els[104]
+#p = Visu.simplex(p, s2; linewidth = 6.0, color = "black")
+
 
 
 ## LinLag excitation ###########################################
