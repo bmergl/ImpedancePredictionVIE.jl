@@ -312,19 +312,9 @@ function solve(; # low contrast formulation
 
     println("3×3 block matrix - classical formulation")
 
-    # if typeof(material) == general_material
-        # save some points, and ...
-        # material = general_material(...,...,This time not nothing here=>some test points with mat values)
-    # end
-
     # Material
     κ, ϵ = material()
     τ, inv_τ, τ0, χ, T = gen_tau_chi(kappa = κ, kappa0 = κ0, epsilon = ϵ, epsilon0 = ϵ0, omega = ω)
-
-
-    # τ(p) < 1e-12 && error("Disable the following lines...")
-    # @assert χ(p) - (τ(p)/τ0 - 1)*1/τ(p) < 1e-10
-    # @assert abs(1/inv_τ(p) -  τ(p)) < 1e-10
 
     # Excitation
     v_top = ones(length(md.topnodes)) * potential_top
@@ -504,7 +494,7 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
     # Operators row 1
     B11_Γ = Identity() #Verschwindet!!! <---- klären....
-    B11_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)# + (-1/2)*Identity()
+    B11_ΓΓ = Helmholtz3D.doublelayer(gamma = 0.0, alpha = 1.0)# + (-1/2)*Identity()
 
     B12_ΓΓ =  IP.MaterialSL(T(0.0), 1.0, inv_τ)
 
@@ -523,7 +513,7 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
 
     # Operators row 3
-    B31_ΓΓ = Helmholtz3D.doublelayer(gamma = T(0.0), alpha = 1.0)# + (-1/2)*Identity()
+    B31_ΓΓ = Helmholtz3D.doublelayer(gamma = 0.0, alpha = 1.0)# + (-1/2)*Identity()
     B31_ΩΓ = IP.div_ngradG_ΩΓ(T(0.0), -1.0, x->1.0)
 
     B32_ΓΓ = IP.MaterialSL(T(0.0), 1.0, inv_τ)
@@ -569,26 +559,27 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
     #error("STOP HERE!")
 
-    #ROW1 = hcat(B21,B22,B23) #swap 1&2
-    #ROW2 = hcat(B11,B12,B13) # "-"
-    #ROW3 = hcat(B31,B32,B33)
-    #S = vcat(ROW1,ROW2,ROW3)
-    R = vcat(R21,R11,R31) # "-"
+    ROW1 = hcat(B11,B12,B13)
+    ROW2 = hcat(B21,B22,B23)
+    ROW3 = hcat(B31,B32,B33)
+    S = vcat(ROW1,ROW2,ROW3)
+
+    R = vcat(R11,R21,R31)
     b = R*v
 
 
-    rownrmB21 = norm(B21) #[norm(B21[i, :]) for i in 1:size(B21, 1)] #
-    rownrmB12 = norm(B12) #[norm(B12[i, :]) for i in 1:size(B12, 1)] #
-    rownrmB33 = norm(B33) #[norm(B33[i, :]) for i in 1:size(B33, 1)] #
+    #rownrmB21 = norm(B21) #[norm(B21[i, :]) for i in 1:size(B21, 1)] #
+    #rownrmB12 = norm(B12) #[norm(B12[i, :]) for i in 1:size(B12, 1)] #
+    #rownrmB33 = norm(B33) #[norm(B33[i, :]) for i in 1:size(B33, 1)] #
 
-    α_T = 1.0 #./norm(b[1:length(w.fns)]) 
-    α_B = 1.0 #./(α_T.*rownrmB21)
+    # α_T = 1.0 #./norm(b[1:length(w.fns)]) 
+    # α_B = 1.0 #./(α_T.*rownrmB21)
 
-    β_T = 1.0 #./norm(b[length(w.fns)+1:length(w.fns)+length(y.fns)]) 
-    β_B = 1.0 #./(β_T.*rownrmB12)
+    # β_T = 1.0 #./norm(b[length(w.fns)+1:length(w.fns)+length(y.fns)]) 
+    # β_B = 1.0 #./(β_T.*rownrmB12)
 
-    γ_T = 1.0 #./norm(b[length(w.fns)+length(y.fns)+1:end]) 
-    γ_B = 1.0 #./(γ_T.*rownrmB33)
+    # γ_T = 1.0 #./norm(b[length(w.fns)+length(y.fns)+1:end]) 
+    # γ_B = 1.0 #./(γ_T.*rownrmB33)
 
     # @show α_T
     # @show α_B
@@ -597,12 +588,12 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
     # @show γ_T
     # @show γ_B
 
-    ROW1 = α_T.*hcat(α_B.*B21, β_B.*B22, γ_B.*B23) #swap 1&2
-    ROW2 = β_T.*hcat(α_B.*B11, β_B.*B12, γ_B.*B13) # "-"
-    ROW3 = γ_T.*hcat(α_B.*B31, β_B.*B32, γ_B.*B33)
-    S = vcat(ROW1,ROW2,ROW3)
-    R = vcat(α_T.*R21, β_T.*R11, γ_T.*R31) # new
-    b = R*v
+    # ROW1 = α_T.*hcat(α_B.*B21, β_B.*B22, γ_B.*B23) #swap 1&2
+    # ROW2 = β_T.*hcat(α_B.*B11, β_B.*B12, γ_B.*B13) # "-"
+    # ROW3 = γ_T.*hcat(α_B.*B31, β_B.*B32, γ_B.*B33)
+    # S = vcat(ROW1,ROW2,ROW3)
+    # R = vcat(α_T.*R21, β_T.*R11, γ_T.*R31) # new
+    # b = R*v
 
     # @show opnorm(B11)
     # @show opnorm(B12)
@@ -632,11 +623,11 @@ function solve0(; # low contrast formulation, same as solve but operators are ea
 
 
     # S*u = b, solve for u
-    u = S \ b # it solver...
-    @assert norm(S*u - b) < 1e-8
-    u_Φ = u[1:length(y)].*α_B
-    u_Jn = u[length(y)+1:length(y)+length(w)].*β_B
-    u_J = u[length(y)+length(w)+1:end].*γ_B
+    u = S \ b
+    #@assert norm(S*u - b) < 1e-8
+    u_Φ = u[1:length(y)]#.*α_B
+    u_Jn = u[length(y)+1:length(y)+length(w)]#.*β_B
+    u_J = u[length(y)+length(w)+1:end]#.*γ_B
     #u = [u_Φ, u_Jn, u_J]
     @assert length(u_Φ) == length(y.fns)
     @assert length(u_Jn) == length(w.fns)

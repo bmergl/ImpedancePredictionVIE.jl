@@ -21,9 +21,9 @@ qs3D = BEAST.SingleNumQStrat(4)
 qs4D = BEAST.DoubleNumSauterQstrat(3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
 
-qs3D = BEAST.SingleNumQStrat(6)
-qs4D = BEAST.DoubleNumSauterQstrat(5,5,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
-qs5D6D = BEAST.SauterSchwab3DQStrat(5,5,6,6,6,6)
+# qs3D = BEAST.SingleNumQStrat(6)
+# qs4D = BEAST.DoubleNumSauterQstrat(5,5,6,6,6,6) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
+# qs5D6D = BEAST.SauterSchwab3DQStrat(5,5,6,6,6,6)
 
 
 BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
@@ -48,7 +48,7 @@ for h in h_vec
 
     md = IP.setup(geoname = "cube.geo", meshname = "cube.msh", body = IP.cuboid(0.01, 0.01, 0.01), h = h)
 
-    solmom, S, R = IP.solve0(;
+    solmom, S, R = IP.solve1(;
         md = md, 
         material = mat,
         κ0 = 1.0,
@@ -240,7 +240,7 @@ plot!(plt,size=(400,300))
 plot!(plt,minorgrid=true)
 plot!(plt,legendfontsize=10)
 #plot!(plt,h_vec,10*h_vec.^0.5)
-plot!(plt,h_vec,200*h_vec.^1.0)
+#plot!(plt,h_vec,200*h_vec.^1.0)
 #plot!(plt,h_vec,100000*h_vec.^2.0)
 #plot!(plt,h_vec, err_J_fem_vec, line=:scatter, marker = :dtriangle, label = "Error J FEM", xscale=:log10, yscale=:log10)
 
@@ -269,7 +269,7 @@ plot!(plt,size=(400,300))
 
 
 ## Φ auf Γ ######################################################
-nr = 4
+nr = 3
 md = md_vec[nr]
 
 ## MoM
@@ -289,7 +289,7 @@ Plotly.plot(patch(geo1, fcr1),Layout(width=500, height=400))
 
 
 ## J_n auf Γ_c mittels u_Jn ##########################################
-nr = 4
+nr = 3
 md = md_vec[nr]
 
 ## MoM (only)
@@ -329,7 +329,7 @@ display(Visu.fieldplot(points, J_MoM, 0.0009, p)) #Visu.mesh(md.Γ_c)
 
 
 ## J_z on an x-line at y0, z0  ##################################################
-nr = 4
+nr = 3
 sol2 = solmom_vec[nr]
 sol1 = solfem_vec[nr] 
 md = md_vec[nr]

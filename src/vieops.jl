@@ -120,10 +120,11 @@ function BEAST.integrand(viop::gradG_ΓΩ, kerneldata, tvals, tgeo, bvals, bgeo)
     Ty = kerneldata.tau
     α = viop.α
 
-    αgradGTy = α * gradG * Ty # Ty kein tensor...
+    #αgradGTy = α * gradG * Ty # VORSICHT! Wenn Ty ComplexF64 darf es NICHT im ersten Argument des Skalarprodukt stehen!!!
+    αgradG = α * gradG
 
     return BEAST._integrands(tvals,bvals) do fi, gj # f ist jetzt test, g ist jetzt basis!
-       dot(fi.value*αgradGTy, gj.value)
+       dot(fi.value*αgradG, Ty*gj.value)
     end
 end
 
