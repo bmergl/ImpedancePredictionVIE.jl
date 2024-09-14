@@ -43,6 +43,8 @@ err_J_mom_vec = []
 err_J_fem_vec = []
 err_I_mom_vec = []
 err_I_fem_vec = []
+condS_mom_vec = []
+condS_fem_vec = []
 
 for h in h_vec
 
@@ -60,6 +62,7 @@ for h in h_vec
         qs4D = qs4D, 
         qs5D6D = qs5D6D,
     )
+    push!(condS_mom_vec, cond(S))
 
     solfem, S, R = IP.solvefem(;
     md = md, 
@@ -71,6 +74,7 @@ for h in h_vec
     potential_bottom = -0.5,
     qs3D = qs3D, 
     )
+    push!(condS_fem_vec, cond(Array(S),2))
 
     #solmom = solfem#!!!!!!!! deaktivieren !!!!!!!!!
 
