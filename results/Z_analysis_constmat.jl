@@ -22,7 +22,7 @@ println("tehrahedrons: ", length(md.Ω.faces))
 
 
 #Quadstrat
-qs3D = BEAST.SingleNumQStrat(1)
+qs3D = BEAST.SingleNumQStrat(4)
 qs4D = BEAST.DoubleNumWiltonSauterQStrat(3,3,3,3,4,4,4,4) #BEAST.DoubleNumWiltonSauterQStrat(2,3,2,3,4,4,4,4)
 qs5D6D = BEAST.SauterSchwab3DQStrat(3,3,4,4,4,4)
 
@@ -43,39 +43,39 @@ lastsol = nothing
 
 for f in f_list
 
-    # BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
-    # BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
-    # BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
-    # solmom, S, R = IP.solve0(;
-    #     md = md, 
-    #     material = mat,
-    #     κ0 = 0.1,#0.1,
-    #     ϵ0 = 1.0*IP.ε0,
-    #     ω = 2*pi*f,  
-    #     potential_top = Φtop, 
-    #     potential_bottom = Φbottom,
-    #     qs3D = qs3D, 
-    #     qs4D = qs4D, 
-    #     qs5D6D = qs5D6D,
-    # )
-    # println("cond mom:")
-    # println(cond(S))
+    BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
+    BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D
+    BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D
+    solmom, S, R = IP.solve0(;
+        md = md, 
+        material = mat,
+        κ0 = 0.1,#0.1,
+        ϵ0 = 1.0*IP.ε0,
+        ω = 2*pi*f,  
+        potential_top = Φtop, 
+        potential_bottom = Φbottom,
+        qs3D = qs3D, 
+        qs4D = qs4D, 
+        qs5D6D = qs5D6D,
+    )
+    #println("cond mom:")
+    #println(cond(S))
 
-    # BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D_high
-    # BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D_high
-    # BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D_high
-    # solmom_hq, S, R = IP.solve0(;
-    #     md = md, 
-    #     material = mat,
-    #     κ0 = 0.1,#0.1,
-    #     ϵ0 = 1.0*IP.ε0,
-    #     ω = 2*pi*f,  
-    #     potential_top = Φtop, 
-    #     potential_bottom = Φbottom,
-    #     qs3D = qs3D_high, # das alleine reicht nicht!!! 
-    #     qs4D = qs4D_high, 
-    #     qs5D6D = qs5D6D_high,
-    # )
+    BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D_high
+    BEAST.defaultquadstrat(op::BEAST.Helmholtz3DOp, tfs, bfs) = qs4D_high
+    BEAST.defaultquadstrat(op::BEAST.VIEOperator, tfs, bfs) = qs5D6D_high
+    solmom_hq, S, R = IP.solve0(;
+        md = md, 
+        material = mat,
+        κ0 = 0.1,#0.1,
+        ϵ0 = 1.0*IP.ε0,
+        ω = 2*pi*f,  
+        potential_top = Φtop, 
+        potential_bottom = Φbottom,
+        qs3D = qs3D_high, # das alleine reicht nicht!!! 
+        qs4D = qs4D_high, 
+        qs5D6D = qs5D6D_high,
+    )
 
     BEAST.defaultquadstrat(op::BEAST.LocalOperator, tfs, bfs) = qs3D
     solfem, S, R = IP.solvefem(;
@@ -88,33 +88,32 @@ for f in f_list
     potential_bottom = Φbottom,
     qs3D = qs3D, 
     )
-    println("cond fem:")
-    println(cond(Array(S),2))
+    #println("cond fem:")
+    #println(cond(Array(S),2))
 
     # # Strom durch Platten
-    # I_top2_mom, I_bottom2_mom = IP.getcurrent2(md, solmom)
-    # @show norm(I_top2_mom-I_bottom2_mom)# < 0.05
+    I_top2_mom, I_bottom2_mom = IP.getcurrent2(md, solmom)
+    @show norm(I_top2_mom-I_bottom2_mom)# < 0.05
 
-    # I_top2_momhq, I_bottom2_momhq = IP.getcurrent2(md, solmom_hq)
-    # @show norm(I_top2_momhq-I_bottom2_momhq)# < 0.05
+    I_top2_momhq, I_bottom2_momhq = IP.getcurrent2(md, solmom_hq)
+    @show norm(I_top2_momhq-I_bottom2_momhq)# < 0.05
 
     I_top2_fem, I_bottom2_fem = IP.getcurrent2(md, solfem)
     @show norm(I_top2_fem-I_bottom2_fem)# < 0.05
 
     U =  Φtop - Φbottom
 
-    # Zmom = U/I_top2_mom
-    # Zmomhq = U/I_top2_momhq
+    Zmom = U/I_top2_mom
+    Zmomhq = U/I_top2_momhq
     Zfem = U/I_top2_fem
     
     # #Z_ana = U/IP.solution_I_ana(md.body, solmom.material, md, solmom)
     # #push!(Z_ana_list, Z_ana)
     
-    # push!(Z_mom_list, Zmom)
-    # push!(Z_momhq_list, Zmomhq)
+    push!(Z_mom_list, Zmom)
+    push!(Z_momhq_list, Zmomhq)
     push!(Z_fem_list, Zfem)
     
-
     #lastsol = solmom
 end
 
@@ -126,7 +125,8 @@ end
 #dataname = "Z_constmat" # for JLD2 save
 #jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; f_list, Z_mom_list, Z_momhq_list, Z_fem_list) 
 
-##load 
+## load 
+
 dataname = "Z_constmat"
 datapath = "$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"
 
@@ -149,8 +149,10 @@ U = Φtop - Φbottom
 R = (1/κ)*L_z/(L_x*L_y)
 C = ϵ*(L_x*L_y)/L_z
 
-f_list_ext = collect(range(f_list[1], stop = f_list[end], step = 80.0))
+#f_list_ext = collect(range(f_list[1], stop = f_list[end], step = 80.0))
 #f_list_ext = collect(range(1.0, stop = 10^7, step = 100.0))
+f_list_ext = 10 .^ range(0, 7, length=1000)
+
 
 for f in f_list_ext
     ω = 2*pi*f
@@ -183,7 +185,7 @@ plot!(plt, size=(400,300))
 #xlabel!("f in Hz")
 #ylabel!("Angle in °")
 ylims!(-90.0, 5.0)
-
+ylims!(-1.0, 0.1)
 
 
 ##
@@ -207,3 +209,26 @@ plot!(plt, f_list, imag.(Z_momhq_list), line=:scatter, label = "Im{Z_momhq}")
 plot!(plt, f_list, imag.(Z_fem_list), line=:scatter, label = "Im{Z_fem}")
 xlabel!("f in Hz")
 ylabel!("Impedance in Ω")
+
+
+
+
+
+
+
+
+
+## speichern
+
+x_values = f_list_ext
+y_values = angle.(Z_ana_list_ext)/(2*pi)*360
+
+# Öffne eine Datei zum Schreiben
+open("results/argZ_ana.txt", "w") do file
+    for i in eachindex(x_values)
+        # Schreibe die Werte von x und y nebeneinander
+        # \t fügt einen Tabulator zwischen die Werte
+        write(file, "$(x_values[i])\t$(y_values[i])\n")
+    end
+end
+

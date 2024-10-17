@@ -187,45 +187,56 @@ for (i,h) in enumerate(h_vec)
     solmom = solmom_vec[i]
     solfem = solfem_vec[i]
 
-    # Stromdichte analytisch
+    # Stomdichte - neues Verfahren
     Jana_fnc = gen_Jana(md.body, solmom.material, md, solmom) # gleich für fem/mom wenn oben alles korrekt....
     @show Jana_fnc(point(0.0,0.0,0.0))
     X = md.X
     M = assemble(Identity(), X, X)
 
     Jana = IP.setup_Jana(J = Jana_fnc)
-    @time rhs = real.(assemble(Jana, X))
+    rhs = real.(assemble(Jana, X))
 
     u_J_ana = M \ rhs
     #@assert norm(M*u_J_ana-rhs) < 1.0e-8
     push!(u_J_ana_vec, u_J_ana)
-
-    # Stomdichte 
     push!(err_J_mom_vec, norm(solmom.u_J-u_J_ana)/norm(u_J_ana))
     push!(err_J_fem_vec, norm(solfem.u_J-u_J_ana)/norm(u_J_ana))
+
     
     # Stomdichte - altes Verfahren
-    # range_ = range(-0.0049,stop=0.0049,length=25)
+    # range_ = range(-0.0049,stop=0.0049,length=60)
     # points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
-    # J_MoM = IP.grideval(points, solmom.u_J, md.X)
+    # @show length(points)
+    # @time J_MoM = IP.grideval(points, solmom.u_J, md.X)
     # J_ana = IP.solution_J_ana(md.body, solmom.material, md, solmom, points, J_MoM)
-    # J_FEM = IP.grideval(points, solfem.u_J, md.X)
-    
     # push!(err_J_mom_vec, norm(J_MoM-J_ana)/norm(J_ana))
+    # @time J_FEM = IP.grideval(points, solfem.u_J, md.X)
+    # J_ana = IP.solution_J_ana(md.body, solfem.material, md, solfem, points, J_FEM)
     # push!(err_J_fem_vec, norm(J_FEM-J_ana)/norm(J_ana))
 
-    # Strom - vermutlich überflüssig...
-    I_ana = IP.solution_I_ana(md.body, solmom.material, md, solmom)
-    I_top2_MoM, I_bottom2_MoM = IP.getcurrent2(md, solmom)
-    I_top2_FEM, I_bottom2_FEM = IP.getcurrent2(md, solfem)
 
-    push!(err_I_mom_vec, norm(I_top2_MoM-I_ana)/norm(I_ana))
-    push!(err_I_fem_vec, norm(I_top2_FEM-I_ana)/norm(I_ana))
+    # Strom - vermutlich überflüssig...
+    # I_ana = IP.solution_I_ana(md.body, solmom.material, md, solmom)
+    # I_top2_MoM, I_bottom2_MoM = IP.getcurrent2(md, solmom)
+    # I_top2_FEM, I_bottom2_FEM = IP.getcurrent2(md, solfem)
+
+    # push!(err_I_mom_vec, norm(I_top2_MoM-I_ana)/norm(I_ana))
+    # push!(err_I_fem_vec, norm(I_top2_FEM-I_ana)/norm(I_ana))
 end
 
 
 #dataname = "test" # for JLD2 save
 #jldsave("$(pkgdir(ImpedancePredictionVIE))/data/$dataname.jld2"; md_vec, solmom_vec, solfem_vec, h_vec, err_J_mom_vec, err_J_fem_vec, err_I_mom_vec, err_I_fem_vec) 
+
+
+##
+
+range_ = range(-0.0049,stop=0.0049,length=10)
+points = [point(x,y,z) for x in range_ for y in range_ for z in range_]
+@time J_MoM = IP.grideval(points, solmom_vec[4].u_J, md_vec[4].X)
+@time J_MoM = BEAST.grideval(points, solmom_vec[4].u_J, md_vec[4].X)
+
+
 
 
 ##
@@ -251,6 +262,8 @@ plot!(plt,legendfontsize=10)
 xlims!(3e-4, 3e-3)
 ylims!(1e-3, 1e+0)
 
+# xlims!(3e-4, 3e-3)
+# ylims!(4e-2, 1e+0)
 #xlabel!("h in m")
 #ylabel!("rel. Error")
 
@@ -333,14 +346,14 @@ display(Visu.fieldplot(points, J_MoM, 0.0009, p)) #Visu.mesh(md.Γ_c)
 
 
 ## J_z on an x-line at y0, z0  ##################################################
-nr = 3
-sol2 = solmom_vec[nr]
+nr = 4
 sol1 = solfem_vec[nr] 
+sol2 = solmom_vec[nr]
 md = md_vec[nr]
 
 y0 = 0.0
 z0 = 0.0
-x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 800)
+x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 1000)
 points_x = [point(x, y0, z0) for x in x_range]
 x = collect(x_range)
 
@@ -374,7 +387,7 @@ md = md_vec[nr]
 
 y0 = 0.0
 z0 = 0.0
-x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 800)
+x_range = range(-md.body.L_x/2, stop = md.body.L_x/2, length = 1000)
 points_x = [point(x, y0, z0) for x in x_range]
 x = collect(x_range)
 κ_x = κ.(x)
@@ -386,8 +399,22 @@ plot!(size=(400,300))
 #ylims!(1600, 2000)
 #xlabel!("x")
 
-##
 
+
+
+## speichern
+
+x_values = x
+y_values = -J_z_FEM
+
+# Öffne eine Datei zum Schreiben
+open("results/J_z_FEM.txt", "w") do file
+    for i in eachindex(x_values)
+        # Schreibe die Werte von x und y nebeneinander
+        # \t fügt einen Tabulator zwischen die Werte
+        write(file, "$(x_values[i])\t$(y_values[i])\n")
+    end
+end
 
 
 

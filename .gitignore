@@ -13,3 +13,4 @@ profile/
 /envs/
 data/
 geo/cube_h0.0001m.msh
+*.txt
